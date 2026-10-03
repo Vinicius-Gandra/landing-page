@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Limiar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vazio:#010605;
+  --fosforo:#4bff9f;
+  --fosforo-med:#3fd08c;
+  --estado-a:#33e6ff;
+  --estado-b:#b26bff;
+  --luz:#e9fff4;
+  --erro:#ff3d5a;
+  --ouro:#ffd66b;
+  --linha:rgba(75,255,159,.26);
+  --mono:"Share Tech Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --titulo:"Major Mono Display", "Share Tech Mono", ui-monospace, monospace;
+  --grego:"Cambria Math", "STIX Two Math", "Times New Roman", serif;
+  color-scheme:dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --vazio:#010605; --fosforo:#4bff9f; --luz:#e9fff4; }
+}
+:root[data-theme="dark"]{ --vazio:#010605; --fosforo:#4bff9f; --luz:#e9fff4; }
+
+*,*::before,*::after{ box-sizing:inherit; }
+html{ height:100%; background:var(--vazio); scroll-padding-top:env(safe-area-inset-top,0px); }
+body{
+  margin:0; min-height:100%; display:grid;
+  background:var(--vazio); color:var(--fosforo);
+  font-family:var(--mono); font-size:16px; line-height:1.55;
+  overflow-x:hidden; -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+}
+button, input{ font:inherit; }
+::selection{ background:rgba(75,255,159,.3); color:var(--luz); }
+.sr{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+/* camadas */
+.camada{ position:fixed; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+#campo{ z-index:0; }
+#chuva{ z-index:1; }
+.veu{
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:
+    radial-gradient(ellipse 30rem 34rem at 50% 50%, rgba(1,6,5,.84) 0%, rgba(1,6,5,.56) 42%, rgba(1,6,5,0) 72%),
+    radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.78) 100%);
+}
+.linhas{ position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.13; background:repeating-linear-gradient(to bottom, transparent 0 2px, #000 2px 3px); }
+.clarao{ position:fixed; inset:0; z-index:4; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, rgba(255,61,90,0) 30%, rgba(255,61,90,.24) 100%); }
+body.decoerencia .clarao{ animation:clarao .7s ease-out; }
+@keyframes clarao{ from{ opacity:1; } to{ opacity:0; } }
+
+.lente{
+  position:fixed; left:0; top:0; z-index:2; width:300px; height:300px; margin:-150px 0 0 -150px;
+  border-radius:50%; pointer-events:none; opacity:0; will-change:transform, opacity;
+  border:1px solid rgba(75,255,159,.2);
+  box-shadow:inset 0 0 60px -22px rgba(75,255,159,.4);
+}
+.lente::before, .lente::after{ content:""; position:absolute; background:rgba(75,255,159,.6); }
+.lente::before{
+  left:50%; top:-7px; width:1px; height:calc(100% + 14px); margin-left:-.5px;
+  -webkit-mask:linear-gradient(to bottom, #000 0 15px, transparent 15px calc(100% - 15px), #000 calc(100% - 15px));
+          mask:linear-gradient(to bottom, #000 0 15px, transparent 15px calc(100% - 15px), #000 calc(100% - 15px));
+}
+.lente::after{
+  top:50%; left:-7px; height:1px; width:calc(100% + 14px); margin-top:-.5px;
+  -webkit-mask:linear-gradient(to right, #000 0 15px, transparent 15px calc(100% - 15px), #000 calc(100% - 15px));
+          mask:linear-gradient(to right, #000 0 15px, transparent 15px calc(100% - 15px), #000 calc(100% - 15px));
+}
+
+/* câmara */
+main{ position:relative; z-index:3; display:grid; place-items:center; padding:clamp(1.25rem,5vh,3rem) 1rem; opacity:0; transition:opacity 1.2s ease .15s; }
+body.vivo main{ opacity:1; }
+.holo{ width:min(100%, 25.5rem); perspective:900px; }
+.camara{ position:relative; padding:clamp(1.5rem,5vw,2.25rem) clamp(1.15rem,4.5vw,2rem); transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)); }
+.canto{ position:absolute; width:16px; height:16px; border:0 solid var(--fosforo); opacity:.75; transition:border-color .8s ease; }
+.c1{ top:0; left:0; border-top-width:1px; border-left-width:1px; }
+.c2{ top:0; right:0; border-top-width:1px; border-right-width:1px; }
+.c3{ bottom:0; left:0; border-bottom-width:1px; border-left-width:1px; }
+.c4{ bottom:0; right:0; border-bottom-width:1px; border-right-width:1px; }
+body.observado .canto{ border-color:var(--ouro); }
+
+body.decoerencia .conteudo{ animation:deco .62s steps(2,end); }
+body.decoerencia .conteudo *{ text-shadow:-2px 0 var(--erro), 2px 0 var(--estado-a); }
+@keyframes deco{
+  0%{ transform:translate(0,0); }
+  16%{ transform:translate(-7px,1px) skewX(-5deg); clip-path:inset(12% 0 40% 0); }
+  32%{ transform:translate(6px,-2px) skewX(4deg); clip-path:inset(45% 0 8% 0); }
+  48%{ transform:translate(-3px,0); clip-path:none; }
+  64%{ transform:translate(2px,1px); }
+  100%{ transform:translate(0,0); }
+}
+
+.titulo{
+  margin:0; text-align:center; font-family:var(--titulo); font-weight:400;
+  font-size:clamp(2.8rem, 12vw, 4.4rem); line-height:1.05; letter-spacing:.03em; color:var(--luz);
+  user-select:none; -webkit-user-select:none;
+}
+.letra{ position:relative; display:inline-block; }
+.letra .real{ display:inline-block; text-shadow:0 0 24px rgba(75,255,159,.5); transition:opacity .16s ease, color .6s ease, text-shadow .6s ease; }
+.letra .fan{ position:absolute; inset:0; text-align:center; opacity:0; transition:opacity .16s ease; mix-blend-mode:screen; pointer-events:none; }
+.letra .fan.a{ color:var(--estado-a); transform:translateX(-.045em); }
+.letra .fan.b{ color:var(--estado-b); transform:translateX(.045em); }
+.letra.sup .real{ opacity:0; }
+.letra.sup .fan{ opacity:.8; }
+body.observado .letra .real{ color:var(--ouro); text-shadow:0 0 28px rgba(255,214,107,.65); }
+
+.sub{ margin:.85rem auto 0; max-width:28ch; text-align:center; font-size:.9rem; color:var(--fosforo-med); }
+.aparece{ opacity:0; transition:opacity .9s ease; }
+body.vivo .aparece{ opacity:1; }
+
+.nucleo{ position:relative; margin-top:1.9rem; }
+.campos{ display:grid; gap:1.3rem; }
+.campo label{ display:flex; align-items:baseline; gap:.55rem; margin:0 0 .5rem; font-size:.875rem; color:var(--luz); }
+.psi{ font-family:var(--grego); font-style:italic; font-size:1.15rem; line-height:1; color:var(--fosforo); }
+
+.caixa{ position:relative; height:3.25rem; border:1px solid var(--linha); background:rgba(0,0,0,.55); transition:border-color .25s, box-shadow .25s, opacity .3s; }
+.caixa::after{ content:""; position:absolute; left:0; bottom:-1px; width:100%; height:1px; background:var(--fosforo); transform:scaleX(0); transform-origin:left; transition:transform .5s cubic-bezier(.2,.7,.2,1); }
+.caixa:focus-within{ border-color:rgba(75,255,159,.6); box-shadow:0 0 0 1px rgba(75,255,159,.16), 0 0 32px -10px rgba(75,255,159,.75); }
+.caixa:focus-within::after{ transform:scaleX(1); }
+.caixa.vazio{ border-color:var(--erro); animation:tremor .42s; }
+@keyframes tremor{ 20%{ transform:translateX(-6px); } 40%{ transform:translateX(5px); } 60%{ transform:translateX(-3px); } 80%{ transform:translateX(2px); } }
+.caixa input{
+  position:absolute; inset:0; z-index:2; width:100%; height:100%; margin:0; padding:0 3.25rem 0 1rem;
+  border:0; border-radius:0; background:transparent; color:transparent; caret-color:transparent;
+  font:16px/1 var(--mono); outline:none; -webkit-appearance:none; appearance:none;
+}
+.caixa input::selection{ background:transparent; color:transparent; }
+.caixa input:disabled{ cursor:not-allowed; }
+.vista{ position:absolute; inset:0; z-index:1; display:flex; align-items:center; padding:0 3.25rem 0 1rem; overflow:hidden; white-space:nowrap; pointer-events:none; font-size:1.1rem; color:var(--luz); }
+.vista-senha{ padding:0; }
+.vista canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.ch{ display:inline-block; width:.68em; text-align:center; transition:color .3s, text-shadow .3s; }
+.ch.novo{ color:var(--luz); text-shadow:0 0 14px var(--fosforo); animation:surge .38s cubic-bezier(.2,.8,.2,1); }
+.ch.sup{ color:rgba(233,255,244,.42); text-shadow:-1.5px 0 var(--estado-a), 1.5px 0 var(--estado-b); }
+.ch.sup.erro{ color:rgba(255,61,90,.75); text-shadow:-1.5px 0 var(--erro), 1.5px 0 var(--estado-b); }
+.ch.visto{ color:var(--luz); text-shadow:0 0 10px rgba(75,255,159,.6); }
+.ch.ouro{ color:var(--ouro); text-shadow:0 0 12px rgba(255,214,107,.7); }
+@keyframes surge{ from{ transform:scale(1.9); opacity:0; filter:blur(4px); } to{ transform:none; opacity:1; filter:none; } }
+.cursor{ display:inline-block; width:.55em; height:1.1em; margin-left:.12em; background:var(--fosforo); opacity:0; }
+.caixa:focus-within .cursor{ opacity:1; animation:pisca 1.06s steps(1) infinite; }
+@keyframes pisca{ 50%{ opacity:0; } }
+
+.olho{
+  position:absolute; z-index:3; right:.3rem; top:50%; transform:translateY(-50%);
+  display:grid; place-items:center; width:2.6rem; height:2.6rem; padding:0;
+  border:0; border-radius:50%; background:transparent; color:var(--fosforo-med); cursor:pointer;
+  touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  transition:color .2s, background .2s;
+}
+.olho svg{ width:1.3rem; height:1.3rem; }
+.olho:hover{ color:var(--luz); background:rgba(75,255,159,.08); }
+.olho[aria-pressed="true"]{ color:var(--luz); background:rgba(75,255,159,.18); }
+.olho:focus-visible{ outline:2px solid var(--luz); outline-offset:0; }
+.olho:disabled{ opacity:.3; cursor:not-allowed; }
+
+.dica{ display:block; width:100%; margin:1.05rem 0 0; padding:.4rem 0; border:0; background:none; color:var(--fosforo-med); font-size:.85rem; line-height:1.65; text-align:left; cursor:help; }
+.dica .psi{ font-size:1rem; margin-right:.45rem; }
+.dica-rotulo{ color:var(--luz); margin-right:.35rem; transition:color .2s; }
+.dica:hover .dica-rotulo, .dica:focus-visible .dica-rotulo{ color:var(--fosforo); }
+.dica:focus-visible{ outline:2px solid var(--luz); outline-offset:3px; }
+.dica-texto .pal{ white-space:nowrap; }
+.dc{ display:inline-block; width:.56em; text-align:center; transition:color .3s ease; }
+.dc.sup{ color:rgba(233,255,244,.3); text-shadow:-1px 0 rgba(51,230,255,.75), 1px 0 rgba(178,107,255,.75); }
+.dc.ok{ color:var(--luz); }
+
+.colapsar{
+  position:relative; display:grid; place-items:center; width:100%; height:3.3rem; margin-top:1.3rem; padding:0; overflow:hidden;
+  border:1px solid var(--fosforo); border-radius:0; background:rgba(75,255,159,.07); color:var(--luz);
+  font-size:1rem; letter-spacing:.16em; cursor:pointer; transition:background .25s, box-shadow .25s, border-color .6s, opacity .3s;
+}
+.colapsar:hover{ background:rgba(75,255,159,.15); box-shadow:0 0 34px -8px rgba(75,255,159,.6); }
+.colapsar:active{ transform:translateY(1px); }
+.colapsar:focus-visible{ outline:2px solid var(--luz); outline-offset:3px; }
+.colapsar:disabled{ cursor:not-allowed; opacity:.4; }
+.carga{ position:absolute; inset:0; display:grid; place-items:center; background:var(--fosforo); clip-path:inset(0 100% 0 0); }
+.rotulo-btn.escuro{ color:#022014; }
+form.colapsando .carga{ clip-path:inset(0 0 0 0); transition:clip-path .95s cubic-bezier(.65,0,.25,1); }
+form.travado .caixa, form.travado .dica{ opacity:.3; }
+
+.trava{ position:absolute; inset:-.5rem; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; padding:1rem; background:rgba(1,6,5,.9); text-align:center; }
+.trava[hidden]{ display:none; }
+.trava svg{ width:6.5rem; height:6.5rem; overflow:visible; }
+.trava .trilho{ fill:none; stroke:rgba(255,61,90,.18); stroke-width:2; }
+.trava .arco{ fill:none; stroke:var(--erro); stroke-width:2; stroke-linecap:round; transform:rotate(-90deg); transform-origin:60px 60px; transition:stroke-dashoffset .2s linear; filter:drop-shadow(0 0 6px rgba(255,61,90,.6)); }
+.trava .num{ font-family:var(--titulo); font-size:26px; fill:var(--luz); }
+.trava p{ margin:0; max-width:26ch; font-size:.9rem; color:var(--luz); }
+
+.acesso{ padding:1.2rem 0 .4rem; text-align:center; animation:entra .8s ease; }
+.acesso[hidden]{ display:none; }
+@keyframes entra{ from{ opacity:0; } to{ opacity:1; } }
+.acesso-grande{ margin:0; font-family:var(--titulo); font-size:clamp(1.3rem,5vw,1.7rem); color:var(--ouro); text-shadow:0 0 24px rgba(255,214,107,.5); }
+.acesso-texto{ margin:.7rem 0 0; color:var(--luz); }
+.acesso-acoes{ display:flex; flex-wrap:wrap; justify-content:center; gap:.75rem; margin-top:1.5rem; }
+.botao-ouro{ padding:.75rem 1.2rem; border:1px solid var(--ouro); border-radius:0; background:rgba(255,214,107,.07); color:var(--luz); letter-spacing:.06em; cursor:pointer; transition:background .2s; }
+.botao-ouro:hover{ background:rgba(255,214,107,.16); }
+.botao-ouro:focus-visible{ outline:2px solid var(--luz); outline-offset:3px; }
+.botao-ouro[hidden]{ display:none; }
+
+.msg{ min-height:1.6em; margin:1rem 0 0; font-size:.85rem; color:var(--fosforo-med); }
+.msg.erro{ color:var(--erro); }
+.msg.aviso{ color:var(--ouro); }
+.msg.info{ color:var(--luz); }
+.rodape{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:.9rem; padding-top:1rem; border-top:1px solid rgba(75,255,159,.12); font-size:.78rem; color:var(--fosforo-med); }
+.qubits{ display:flex; align-items:center; gap:.45rem; }
+.q{ width:.55rem; height:.55rem; border-radius:50%; background:var(--fosforo); box-shadow:0 0 8px rgba(75,255,159,.7); transition:background .35s, box-shadow .35s, transform .35s; }
+.q.gasto{ background:transparent; box-shadow:inset 0 0 0 1px var(--erro); transform:scale(.85); }
+.qubits .t{ margin-left:.3rem; }
+.sistema{ transition:color .3s; }
+.sistema[data-estado="observando"], .sistema[data-estado="colapsando"]{ color:var(--luz); }
+.sistema[data-estado="decoerente"]{ color:var(--erro); }
+.sistema[data-estado="observado"]{ color:var(--ouro); }
+
+.som-wrap{ position:fixed; right:0; bottom:0; z-index:8; padding:0 calc(1rem + env(safe-area-inset-right,0px)) calc(1rem + env(safe-area-inset-bottom,0px)) 0; pointer-events:none; opacity:0; transition:opacity 1s ease 1.4s; }
+body.vivo .som-wrap{ opacity:1; }
+.som{ pointer-events:auto; display:grid; place-items:center; width:2.75rem; height:2.75rem; padding:0; border:1px solid var(--linha); border-radius:50%; background:rgba(1,6,5,.6); color:var(--fosforo-med); cursor:pointer; transition:color .2s, border-color .2s; }
+.som svg{ width:1.25rem; height:1.25rem; }
+.som:hover{ color:var(--luz); border-color:var(--fosforo); }
+.som:focus-visible{ outline:2px solid var(--luz); outline-offset:3px; }
+.som .ondas{ display:none; }
+.som[aria-pressed="true"] .ondas{ display:inline; }
+.som[aria-pressed="true"] .mudo{ display:none; }
+
+.limiar{
+  position:fixed; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.3rem;
+  padding:calc(2rem + env(safe-area-inset-top,0px)) 1.5rem calc(2rem + env(safe-area-inset-bottom,0px));
+  background:rgba(1,6,5,.86); text-align:center; transition:opacity 1.1s ease .5s, visibility 0s linear 1.6s;
+}
+.limiar.aberto{ opacity:0; visibility:hidden; }
+.limiar.aberto .limiar-nome, .limiar.aberto .limiar-frase, .limiar.aberto .limiar-acoes{ opacity:0; transition:opacity .35s ease; }
+.ponto-wrap{ position:relative; width:12px; height:12px; margin-bottom:.6rem; }
+.ponto{ position:absolute; inset:0; border-radius:50%; background:var(--luz); box-shadow:0 0 18px 3px rgba(75,255,159,.65); animation:respira 2.6s ease-in-out infinite; }
+.onda{ position:absolute; left:50%; top:50%; width:12px; height:12px; border:1px solid var(--fosforo); border-radius:50%; transform:translate(-50%,-50%); opacity:0; pointer-events:none; }
+.limiar.aberto .ponto{ animation:encolhe .4s cubic-bezier(.6,0,.4,1) forwards; }
+.limiar.aberto .onda{ animation:onda 1.5s cubic-bezier(.12,.6,.2,1) .32s forwards; }
+@keyframes respira{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.8); opacity:.7; } }
+@keyframes encolhe{ to{ transform:scale(0); } }
+@keyframes onda{ 0%{ width:12px; height:12px; opacity:1; } 100%{ width:260vmax; height:260vmax; opacity:0; } }
+.limiar-nome{ margin:0; font-family:var(--titulo); font-size:clamp(2rem,9vw,3.2rem); line-height:1; color:var(--luz); text-shadow:0 0 24px rgba(75,255,159,.45); }
+.limiar-frase{ margin:0; max-width:30ch; color:var(--fosforo-med); }
+.limiar-acoes{ display:flex; flex-wrap:wrap; justify-content:center; gap:.75rem; margin-top:.4rem; }
+.limiar-acoes button{ padding:.8rem 1.15rem; border:1px solid var(--linha); border-radius:0; background:rgba(75,255,159,.04); color:var(--luz); font-size:.95rem; cursor:pointer; transition:border-color .2s, background .2s; }
+.limiar-acoes button.preferido{ border-color:rgba(75,255,159,.7); }
+.limiar-acoes button:hover{ border-color:var(--fosforo); background:rgba(75,255,159,.12); }
+.limiar-acoes button:focus-visible{ outline:2px solid var(--luz); outline-offset:3px; }
+
+@media (max-width:420px){
+  .caixa{ height:3.1rem; }
+  .colapsar{ height:3.15rem; }
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; transition-delay:0s !important; }
+}
+</style>
+</head>
+<body>
+<canvas class="camada" id="campo" aria-hidden="true"></canvas>
+<canvas class="camada" id="chuva" aria-hidden="true"></canvas>
+<div class="veu" aria-hidden="true"></div>
+<div class="linhas" aria-hidden="true"></div>
+<div class="lente" id="lente" aria-hidden="true"></div>
+<div class="clarao" aria-hidden="true"></div>
+
+<main>
+  <div class="holo">
+    <section class="camara" id="camara" aria-labelledby="titulo">
+      <i class="canto c1" aria-hidden="true"></i><i class="canto c2" aria-hidden="true"></i><i class="canto c3" aria-hidden="true"></i><i class="canto c4" aria-hidden="true"></i>
+      <div class="conteudo">
+        <h1 class="titulo" id="titulo" data-texto="limiar" aria-label="Limiar">limiar</h1>
+        <p class="sub aparece" style="transition-delay:.5s">O acesso só existe quando alguém observa.</p>
+
+        <div class="nucleo">
+          <form id="form" class="aparece" style="transition-delay:.9s" autocomplete="off" novalidate>
+            <div class="campos">
+              <div class="campo">
+                <label for="observador"><span class="psi" aria-hidden="true">ψ</span>Observador</label>
+                <div class="caixa" id="caixaObs">
+                  <div class="vista" id="vistaObs" aria-hidden="true"><span class="cursor"></span></div>
+                  <input id="observador" name="observador" type="text" maxlength="16" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-describedby="ajudaOculta">
+                  <button type="button" class="olho" id="olhoObs" aria-pressed="false" aria-label="Segure para ver o observador">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="campo">
+                <label for="senha"><span class="psi" aria-hidden="true">ψ</span>Senha</label>
+                <div class="caixa" id="caixaSen">
+                  <div class="vista vista-senha" aria-hidden="true"><canvas id="vistaSenha"></canvas></div>
+                  <input id="senha" name="senha" type="text" maxlength="12" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-describedby="ajudaOculta">
+                  <button type="button" class="olho" id="olhoSen" aria-pressed="false" aria-label="Segure para ver a senha">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="dica" id="dica" title="Observe para ler">
+              <span class="psi" aria-hidden="true">ψ</span><span class="dica-rotulo" aria-hidden="true">Dica:</span><span class="dica-texto" aria-hidden="true"></span>
+              <span class="sr">Dica: a senha está em superposição quântica.</span>
+            </button>
+
+            <button type="submit" class="colapsar" id="colapsar">
+              <span class="rotulo-btn" id="rotuloBtn">Colapsar</span>
+              <span class="carga" aria-hidden="true"><span class="rotulo-btn escuro">Colapsando…</span></span>
+            </button>
+          </form>
+
+          <div class="trava" id="trava" hidden>
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="trilho" cx="60" cy="60" r="52"/>
+              <circle class="arco" id="travaArco" cx="60" cy="60" r="52"/>
+              <text class="num" id="travaSeg" x="60" y="60" text-anchor="middle" dominant-baseline="central">30</text>
+            </svg>
+            <p>Decoerência total. O campo volta a aceitar observações quando o anel se fechar.</p>
+          </div>
+
+          <div class="acesso" id="acesso" hidden>
+            <p class="acesso-grande">estado observado</p>
+            <p class="acesso-texto">Acesso concedido.</p>
+            <div class="acesso-acoes">
+              <button type="button" class="botao-ouro" id="continuar" hidden>Continuar</button>
+              <button type="button" class="botao-ouro" id="encerrar">Encerrar sessão</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="msg" id="msg" aria-hidden="true"></p>
+        <div class="rodape aparece" style="transition-delay:1.2s">
+          <div class="qubits" id="qubits" role="img" aria-label="3 observações restantes"></div>
+          <span class="sistema" id="sistema" data-estado="coerente" aria-hidden="true">sistema coerente</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<p class="sr" id="ajudaOculta">O que você digita fica oculto. Segure o botão de olho para conferir.</p>
+<p class="sr" id="anuncio" role="status" aria-live="polite"></p>
+
+<div class="som-wrap">
+  <button type="button" class="som" id="som" aria-pressed="false" aria-label="Ativar som">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/>
+      <g class="ondas"><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/><path d="M18 7a7 7 0 0 1 0 10"/></g>
+      <g class="mudo"><path d="M16 10l4 4M20 10l-4 4"/></g>
+    </svg>
+  </button>
+</div>
+
+<div class="limiar" id="limiar">
+  <div class="ponto-wrap" aria-hidden="true"><span class="ponto"></span><span class="onda"></span></div>
+  <p class="limiar-nome">limiar</p>
+  <p class="limiar-frase">Nada aqui existe até ser observado.</p>
+  <div class="limiar-acoes">
+    <button type="button" data-som="1">Observar com som</button>
+    <button type="button" data-som="0">Observar em silêncio</button>
+  </div>
+</div>
+<noscript><p style="position:fixed;left:0;right:0;bottom:2rem;z-index:30;text-align:center;color:#e9fff4">Este limiar precisa de JavaScript.</p></noscript>
+
+<script>
+(() => {
+"use strict";
+
+const CONFIG = {
+  maxTentativas: 3,
+  bloqueios: [30, 90, 300],
+  folga: 1,
+  destino: "laboratorio-eletrico.html"
+};
+
+/*<selo>*/
+const SAL = "14acbc567275e867d4498424009b9f7a";
+const VOLTAS = 2048;
+const SELO = "7d56336573b6a102fd9083f7e1ea130d5394d95f46203d2e862dd2db297cfad635d65f10d1e953593bd849309e51350cd42004393bb4074675627bed141da365596f7b11c7cb24ce7f82f25ea052691cf76d2d1b62fd901d0a962838ecd7508dc0262c24665e91423a43a155da97fbddb4d1d9f162a37ff733c3b90b63f894f0277e5eaab4084e3f1e639f1cbc12c5ef63682c8b05648940c9f17d4ecf2a50439ce2d2c249e738f882d36c044a2569830cc16c70dac2f15ba8db62bc3f5c5d4da33f69c93cd8adc51fcc73527ff1d608e87e1d2bdd858ad429b8565c285d0aaf656dbf492c5ef0d62c153f138a1459a2f8593e52041053a537e570c0d0d4fcbe313664e12a720e6e2d72bfa8f75caf7bb5a70deb6c9c76b73689beca6ddb3ce74956a4c759a93c6df2da19f8b59ff7f05d7ff65217259d7d10de78c8c5ed21d8a4ea4b75e717192d7fc03834c4181421c9b3b65a34418600c4064a9124a4a6d8ffb28391b3d2d544d8a2c11d1bb31d42dff312b305398db4084007a7b4cb705020ea766b897ecbe4881003671e4859054414a3482643ffc2ed6d1bddc537505b49dcde4102aa7ea5044faa0b668018b37b842e3ae28e560819718937a0ee65cc3bdb0a17b93408f54e4c679a7af95f11bf2752326617478aa07a10ff698ba1557fbf1e5621574f530059da98dff49209c685571467eb4daabf6e91065b969cdf7e758dbf4c0fead8547479a2594201457f5385d990f9e764f3b0ad0f34dd19b6f67c6e55df9bf30ec9a9b7d404bf8e1525f51cca5cfe7194d29d8ca001c7c6c66a7e68859e30c8b9662623ba6b521397bf46a262e497ece4f4e91310249ac2a9a7a27aa65919cb8a3a562ee18daa31098f8cfa4624773acaf42ba831cc6b245306a3b405a0c01287668f4a43a335ed895493090939b19a43d5de5aa286de6fb76f44973a1939baff59d47909cc111792d2ebff1fe369e0ad09fe80dd4f20e096416951d7cdcb1361bcdf13dd7dad2fcb3eb671bfa3d0400a18d7c3022bf3b020e707165a442a520008c2c73ffccf5b6970826b12e1a87e7bfe6d2c365b9ca00f12acca87ed493641709a1e5e546d062981517c1ac8f5aab02cfc95d95f2be3fc4da122013a6244068d9bc1306229defeabd52d8a337854daaceee880afcb366ebf283fd5997e9b70fd6ab4e9914927434e6782b82649e67f03a9ebe9fcb9ffc9e15c20a34ad0e92307faccfba8552690e85980c20cd32082227a211edb7e8fe17c5af0c9879f4ed338213dadb069c110a5fa54a377337e12544a4ee50595f2864be13d44dfb4caf311da0366af6825864948b97ced713bc4a5b75658dd9e4b1a792891eaeaf77634d5e608db4524acc3fd897be7ab37f2151b1ce6063e2eb4d76bc06cec40599bfa2c0ce46edc37420c1140bb1978030fa99a88021cef11fa25f8cccfd5bc95f55148a51310c00f7201895e3cdb918f8e014a3a5015e356de7ce5c196ff751ca2bee5649da6f976b27b6ec0accfb6c856197bc53ff18754d6f4ce91082e7975fe76d9c31e672fb55578213da628ade4febafc1c29a28d872b0a8ec8a51c260fbb2b2097a2d5e59ac09aa0b315e72b68d976062e42459c834d69f754091471c66966f960f0a681d6ad25dbd8dc3e28f57cc11a7608beaece89248ada1fe0ce7aedff093d40f2df8bc0738a262c01ae6c021617f9e28eda00ad8f4ac106e3a28219bf11c534783c544c7855bf6ae44c1d6d1cb7a3c8cdef27bbc898d3979da46b0637b4135a3933a037eb45867c838f3de941c967ccfe87af9687105f2016d75c0919dac4aa32d0f517affd8f433584d7164a43b9391b719ce7b698e22f3a5c91d8ee30188959988c8c9d0342080deb912aa07b2bb4f72f1252c0841c8d55b43351c6d0d97df9143a3343b54e840ee3c8d513fbbf77659df7f588258e74f9f1983b91cfc4b4441c4f969913121c83f02dabd6ceddcbe8bf584291cb4328ff44698116f4fcbc1ed8951aa1b29cd8f238e94363da4530de1183b0a57fa36a630d3fedf24c811bb545a247f1f46a842a89f603785b0af53ce2be2a76368ccd4155da0d8327e67d941c5ba10d6a6c18a2962695daa6f3a6185839da6fc5f77e1a68e59bc298d0fe0dd1eb72e58e6fc566fc554302f40d27d48904231ea9ab5051d67f22832600c7155834bb83707b13cde320df44c4004b19e8660b183063a39147db99d843734e27039510a4dbfbee02c617feb1d2de5b84923260f7f1558696818c1db9a1e987c6921f05cf02bd9592c2d1dd772108a20c72d7e3e4373abdff35a55c6b1a7c87bb9222630d3743b2f817e2c1b5a3c189af3f8441e1928eaf9037364560c54cecfacf2aa06b18ae79930977071cc46296dd69a109871a917482b700282d08ed8957fc56b55370925acefc0f04bd0b11268cefbd0951d74dffed1908af9e0f14dfe29b7d39fb4de385e72bd77ce181b5ace8ba51a0a13de25a453a7bb1b01a3e610a8298a53782c1a3f375b6075311dbe5f70ba78aa84e0b63fb343b44312b0276095e90cd4f6e8afe9504337d04736b4a292793d7cc64518411213c7447ec11c9598a02f9438e7f59bccd50ac498019ee03677367316ca4627dd979e460d669b3e885efcfba76b2ddf76658afc02aa3e48c987c7cf40f55c75fad975bec10b887b42e61dfcb81d754e22f351c1a4997d546dc1a0186c8ea50f5dab47f2209908d284eef807db5baabdc8bdcf8c61f502f1e09f946ff4e3574f1b0686d48cf7704745d4ce1d29f604f52ef4397209ee2ee3c9cadbdc05bf1f7d63a434221acf271f2447f6c2050818fb77ebb4423e7db5f68a0bfa61b3ddd915394605a39728eeb206687132d2552dd1dfd78c763eb9ec0bc82fe911805c0e147d73305cc599fad02a58272c9ff0ff2eb56db9d97f014d534db644de6a55bab066f59da2b3dd0fd4086b6f7e246dae9e0ac129c3e1e9924b53e96a6caeb5fceca141d97717fd80fb3c2d6f747e83d939214f2ad4b3ee2d8e5b5eebeb68e8df8d93c78f2e828ed180c7d68696106a9bf7f5a316381f6a468bf1297bd468946b51299d37dc74e02d768c8b2a60f8fa0d077bd4147abe9e904e8df959c92d9a879124f4b53e0dbb9c7e5bba6b00850c781bec0b08fd9adbb7885ab7b13beb7eac51c50b7947c9663ebf026dcf78f20bddc4611ddf9a1152641674cd7359ac653fb211524f8b31aac2ed6f7cf281863953c15f8ac6c0aa544500c69f5d89a3c7e4ed21eba492d6c566b3df14838888f9460f4668989a458c91baeff5c879ab155eb49919fe0d16bb1daa4b25a209912da3353c04606143a1abf7f9af5dd15bad61e5f8444de71ab12c098800ecb4d3a55e3d7d102aefabdaefea38a3a6c6b20a8753521a7b9583421a2e23d2a578911fc20ca96f5a0000c6c09aa2418ce6fc9d118d0f5b8d23bc661ecd39efdd1aa37c3ccecf36682448d93340a97c7c2618b122ea087dc8120413d46fe190b005ce4b2f3c0e1f8dfa3f89d48fe989d0a52288b6a76198899c7cb52101ed493f4d6c4ee69e49c6afb9563773ed7709b41f307449f73eaa7539add1040082b07a14685971bf7cafc9eb0e68d05eb07b85f00e523d75f6c84c6ce510154c4ae6d7e77ee9e435c33136c9ea1f2ac914b75faeb8c2fa9f9f52601c955a8f796316e0bb4b027a06021f4604f177cb51a1cc51ee07fd0779375698a8af09a50526f5ceb6fa88c984b4a42753cae2003ecc2d56ec933435b5fa594271eaa2d906da1fe9ad72d9c01df731dbbfae4b884e90f767b6c3967393b84fb175081ea6beba56bb672846131aea3fbc2136e59fcd5641c0bb995091cd02b0aa5a3a937e6fd66feed05c08469c4bc3ce5214d6c8dc93a1dfb320b027a099b7ff134a59bacc99f775baaa0a268a538aa40cd7559fef9d0cbb99178a5f47a14b7cb2b75810b5010ee9dab6afde612099fa611a7f7fc2863963e9dfd3ac2a7c725f5186c9994c5449ff3792c55d773472b70a0b97d5b91e9778d043a1a3180326a1cb1c5df6ce1a8c874558405a1212613733507650833c5eed7bbc4125a4333d2efb5e28480738254e5ff9a34cf1fd1d1a375edc568717405c354ab8807e4571cad4bc8f80c297357df267ab71fb04e3763af5cd851d14482d8b45c1308c2d0f1429f3f66d3e9df096a13b30e4df197e50546b79edcec4123d8b6fe4104a6883fc01e3ed65e32f0c88a4294da28bff717764864cbfc696a85d5a08832e371338218f2158d59dcf1714e26011c61f41eb24376390445eb4a86e1191eed59bbecfd394c1f4a4877cb9643472459631fed6f15bb7c7bf2537eb2e7d7ea4320f87e82d79ee9170111494bd3f1d9df51d7e96c1877d6a6e57336f638f1d58d77bd7c6c28e5969891e1c3b07e648c83b6ca791e001712a02dc75b5e78ace706a4e4b10eeb8a46e02f9ca95cf0f24bbcf4284e86aa50d61ba3433fc0c23521ee6c3fb8a399549ab95daf01257e0209459e60ce028be2a6077b6a55b6314fcc6ef0c927484607fd642d917614b9bad2904a1eecb03a3a530335740e01eb9dd9fa5c7abe40e507f2b180dc6e0f10121c1fa2caf1808ed3849ca0b42b94c8c2a7b3cfcbb6dcb2480f3ad4ebf74f911d325ff33e348b126cdd6523835c65da3dc1f87875179fd7c37e95d54a1216adc3cc0e6700642ca27e3f1decd46df3df6f9d72dd1f037bce08923fe665eec25cee6f7b529eea02b4ebaa869b493d5300c69e2f0cee396c551c882620699720cd6ba59f08d0ab3a5c5586a38db106ae13cc289f838fa261c23a1cd23e7b9b2f74f77dddebe91a9f329767801b73d43cc9aad4fd2ed97df3cf1d0909b7c5dd5083241e0c1edab252a665dd34b45322d8b5aef997215b0f9f8313773b1a33b9f05c044eb5ff0482283c178be41454a6acf5c88ca9df4d21f921ce58d74cc60b9eb16cd845b42adeb83eeec56fba512dd4edf042ccfdd4a591da27ddd41e5d979dd7c3b3568e71146d42ed445a245590bd2aa45a72ffb1c030564109fe9f4b0602cdaab58b7914a3baa244b877becfc3794f071a686c1c3db0e5840bae2e66d61194b2a9b6b81ac0a28cda92d5fc73fc54ede91dbb0c8d0fb2d25f9a9a78cbd5f6ca88433c10914de7cc5425106f080ea405b4d05d14c719f667d588bb0d6a17d7d6a4686e3989745f9802c31b7772cb29e4dbe0db6cadd0a236aba44ad77084b6a37a07eff96b3b09782120f1cf523a4d8f03ceff61032276dd9945cc658473849d4452407726db4a42a9de8c5cbbf0c5d35805167c663dd854c0ddfa41370b841bd66128332aa530550ef1cf838f0f9dfa8c9e39996d7fd09eb88eebb858f2fa0db2a555dd2f54856a6df6c52f6e4934bd8f716ac4fead551fc05acb899470767e8087db6af29bcdf3092cfcd28b360237f208e671c0e2a9c30dfe44dbd7242d7a572d1b8dfda94345665b48890b44e6014e398149e017d94ccda6ff0d741ad6d5534522be7d4b735afc15e885b82c38924ee0cf1ccbffa49607b407020c45b6ce35844243ab8deed878774d688c5504482dbc3af171ed0d11c9e4ea0c12df4b923817f47793d3d1a5fd575cd6a7a0bf2af7e96da35a3881810ceade3438bd14a04e6bebdfd26e4358ca29611b8b2fb089ae621e20b7de299cdf4643e34c2dfd5d79ba09521584de24c77858a336cc3a6d716700b14c8fbbabf87900fa99815b381682a3673f1d0afa9a849ab66b743c35f2b4247b8863b2aa4de898c614c0160a8bd5283fa5e828f03956a6b4051a50b267b0891e0dd456ff556db788fa63fdd7c2b220a411b76b6237867897506210932509bac20b77ad919ede069a4c7e8bb4755462d30d1eb4a1d7be6390b5f6ba825f665fed9febb5b8406bbd7f6ef56803572c18f9e70a5cfa2c90b00a7afdfe4fa4a5044526e33d21ade97dd485b953a92a07f855694fb1d39513b90fe0f718706dd8e1d84ffaec709cfb80b219228a16bb465aa960bf4dfef74d1bc60e421c9f05a4ee019e23430e7c1112be059a30dc8139f3f029885e2ab8faf434d7bce005d2a919a7de72cf1f99de3d9ef808e16b17c279e76b39d7b107aa1d3060b0915d25a9dbbbb5c698ebafacd3c13748b41da9cbfc9d39fdf0d0d75e2e0277edf5808018687827948f60c5fb4d93e82261e584eca19aee699d5c38d10ae259395d2924ba6772a9d5e1ea72a637d025c17463e0eeaf6efe02f3b5e509fd6abcab10993fa1c1d72fd464d8b45ca2a0ad8254990093bed845ef414251b70e3131de3412b2648b8b8d6b6a71df608ff72c7733eeb852629e63c8ef198e7ef61602d50d9784b7bd04a519d2ab8650667826c24d168e3177681c1c6d3102fb516132bccd9be33a1e0aa415ddf4b971a131a0fe398591173fc8d80efbfabfd122c0e0a500f84f330621ec3ce6c9eb315f5e8df738316db3bed5ec3506bff0bbe625015a3f8a39714efab541d4e46384d213118faf99c8554d4c7e4753abd2eee8d650e861b6c62f8a1a453aa1c379726d37640132e5f72524f1a284b527530df8709e828d472f5e699ba815fcad5ea1da8d6b9aec3cb35b45cd50ebf703c2cf650a94275e3907651d6521cf49018505e3ff4946658f0a6e2b50dbec575bbdaee8ed9b5b8c2bcd9c300c9f9ba5fd8828770a1b11efb11299fc8f6f7bd308ee0dd91166b0268274635efff58f62edb5d8f96176970b14c75f6df1a9c27673c7a70f5e0fd9223823c2da9220785c0f8b089f556926e9d7f1d05ddf87d08b9fe9656f9289597c37aba85db7742ef68e3b29734e99cf6d7ddc0e2a1344bdd7a8cce0d2cac2619b4e356b6966a9fb914670b2bda7c68cfa3120da185ef36c10ababa36f2418658a9ea4ee0e7fbfc15df370c362e175b09e0fdb1306d0af0a22afb8eb36e1e088a87cfc432e346e39242f466604bb05647f259df1bcd405e34c6995b42bfb5d1654f290edc3e1bf3af14360bc929ed32eb53d01aa6d621ce67f67210a48ad68c32329e2a340aebaaaa2b60c57f43c79a1ac1c4174b08e923ebf29b04f8f543de51f75efae3db364fbd1b23da4eda4b53542750e021b9dcc38d1553430eeffd1302cd01aa9857be0c3dd29585ae3411f483538017f7bede99e201cad67be80d3c4aa406fee313579eb5e4da3545fe6e64576e69b4bcd16d583c450c3e3f16249c9a6cdc4fa7b040b32d0bd859d3eaf263f4985ab69cab4893fbb42ef304eea8089fb9498182d8d184e337060b4a52fbb172c748a148d56923b770f743d573b05659316d78de9c3a4ee2de7978701c84e83fb53c2168324c64d0f8b5e07a9386d6db6819c6fbb9f27c1c191fb6d2e42f7a4c0e9a388c2d4f327b34d5d18cd99a07a867dd0cd47466cd03506ec50004ebd0122a308c089ad779772eafc41e73fa04cc78cea5899d85fde719b9d74074070534ef5d69e4625eea6a1d454fd13adf82298ceac4d1de545f670ede50ddd78fb5f83558bc64c77923cfb464cb008546d28d61d0db707c7fb69f990526301b6393efe59f1cf2c0dfd2779ecf3c746d38728a26527d8079a2e4387280d042aed0d6e518703c7763cdb2d8dd5bb9d7ed3249e43c796f5b25dc8e8e1061502433ca2c7b90b241c4c643d60fa018f4d93c19fdf56f773b4493646fdbcf81464b136a3f4dbd0efecbfef4f59d9bd84f4d94bc39346cf86b62c9882cfc2d06c67c72c6588a1c86238c8a5c713f22f0909d4949d955c68813519387f0f72c88d514951c20bede7300dc50c53f0df753d84b72d72a4f26bf7885ec8c64b659abb0624929d681663870904df4f68a47e2590068fcb6a7891d3a82f2fbb6ecf6b395a5aed8b5c4620e71815667ed8d44499cfbb3b4e5ffd2ecdb75faaf51f3c290f43d6e87c0a78cf867831c90734810eeca5e32ecd4bcb5ed467abad10611eb7c15f95acb7071ce4d958c1bc38d319247bb9d33cd27674e8a2750c7b56277910900a6e0ee5c41fbb323032f5a874fc59c707c25e2572140ef5d334f9c2f42eb3af0c28d105d36a18f2f27051ba53639c84fec9f500c7d1dcd035d34d67f3c3d9942d5d103fa6c6e6a790db8bed7e1a7c4dfe71f36da70e23ade9d73ddaf918702499098a768ad2efefb0661e0d4f3d43e4f4890ae3b81cfca981e2beac26c8bf7820c2dc788a264bb4ac5798c581d8a8bca55a2d81a616acc49fef90fb8244f1c883fd9817c8a302385425988eb635525be682914248b745801ebd0d6f533193d360af934f2b65da88c376ecc605b2f72b6a6750f474d00d9db58af6593a0996d2287b58a66dd0fdda78bb3095328e06d009c53acc8d156f0850533cc5f4f1235d054366509eb7ee6128d6150d72e6680adc91efa6a5ce7505b9fc116a5d2d161d145fb07ba5134a9cb0ac7031da2e5d9c753b06b0cac63ea93bfe3bf3c03b8e6a0d3b09af317b69024d39675c7b95cedc78b2a131a504495a70d169e26d6c17263a104cd0d66c89f5400fac5131e511238311771c9d5970a5b501d12e5cd7a50fbb538508fa72004b1fa9c85071e5f3d00693a3ddca4750307dfcb675e5276dfdb16e55273ea6f6a4a5d947900d8bdde557f2d5a9393a5e32eca908158843d37e02ae03b72afcf728c9ff1c144a3047ccf5df5d631498160480524bfff70848c55a171cd17a4a7e863c6524950b45a56c90af2ea35315b4ed40a655f79d978fb8d56f8be7b02329c6414be4f3df683b45322b19301f3802a409a45ca019d4b8f26779fe3c78dcb9aa6ab573c440cf7962cde336eb9a92b798d73d4cd2c80a526187567f96711f3b77c59c1e5a1366c7c093e79bd1b9c46a96015e2be606551a46988aeca15fcd40a2773d7377968193796c6d57c9120ae7fa46397dd506904bc64615a2cbea72cad98b71913dbc1726745261f8c299a973d6877ea76f638956b119c4dbfa86f9cb64978b71f811a186283497bfacbc508faf23ad6cd83e3b148ab4cd470e016fa218b6dd996fb2cc63eaf9e923c87595f90b6bc4b16c1e9db5cbb29e5cc6304c741e8cf9d9361446a8f5046fe53822d598132dcd46edf3386795cb90f82595c8c13854dc6aa8ddcd55267a3c04db8c894bcecf523e5e84d0a03c7c299c28acbcafd059a8874e294d0af9b67d445ae7ccca85df0a52562b7660e5e2bf1a7d55981b1ca9c9f86adb876523e841f1dfbbb4a0d5c9f64228875e7f22b97265b16b6365a5f811678aeb5f698689a36e8eee498af4a66a8b64fec841874644ff67df576b50adb618d314417c572562d818d7803afe28cf8755c54d3763e2cdfae51c27630c7a17b020f36bb24c8589079a02cc2fe73a56657dba462e134c306f25bdf7ea4b7972cd4d14f9682b517cb4e591fde57003bc1dff62228599e5a466b3b10772c0cf507b24f7361f7f06b77ea8ba7646b684d2b2a40af9b508539d263029f8847ab8f8ff547ab19c2cd90f7c99de4a0a005d72a91bec33decc9f98176f2653f5d64075bb7b59b6f6ab5a5f9ec79a0f59303b014a34b062211ba17360936abd5bad9f8feeb6fdeb1804bcc25c77613e1654f74b09e862e40d2118535291a91bd4ebd834cd06ccca4404262e249d1b2cddb72fb61db69b629bdce9f50d85966d8a36f4daab156bbfc3c40dbac5a7c7701f5e82de7ba6020642aa6115a0651e54204e7649853191bea84f5b24f958d67f0ecbd6ca4044e6959c796eecd3b73c3abf5d0d3299dc2453cefee03e6dc4c1fe942017f1f3cf22ea0cc84651266998d704cd5abe5a9d4f003f633f7326d44a0f2315c99a8122a9dc5404a597b01139da38cdaeb379d51063297adac6b3dfea3c56fab17d0d7b8e22c8cb460bdd22b76d55db6498cfeac7c76ec04d5235e440fa79ff683444d646111451177986fd2e336be693ca933f29864bb133f7f47f1b3e80a24e1aa4502b23b13d730fc373f015d624c0030432e12eb5fd78e8f16a8265572925bc5c0db7e32ad55dce8ede64a506029821f72899ce4ca9d187ba908335c8b25a9fe53724b804b8e3a9e691af98ff7d56e3cb96bcfe36c36a318552e40613c0f787a61a7b5b805bc34e9f5940a2162da647bd8aeca03feb621acee6e0273037b72237f72bf22103b7c2cf7e62c08c62af2bdd9246561b1696850545ae3ef34307e8f9b77504c807cebf250586af5524b9791544f07066aa2e9289df3a2268b36e8b72f805b1940fa99d8c8b218d4f979140b32f68b23fdd91b41d9cfd5570dfe814f22e3adbb289cfc9b7678cb2a97c9093cc94f1b5990ba4a8f6ac8d81a4abe250b640bd458dc7c6aedc8bf656e0b76d4fa587abe3fb2ce6a10632da482bf2e5ebc08baa972330ef209d59ca4c8fabf5f1fc2e3a1560c76b1aa0ff07ac30c5448d4326995e11967ceef44541c77ceb67e620c10710a72f81828e5b74a2612f3e68a980d153133a26fe4e45765d7b209ed61d3eeabfedfb6f976c0c0cfbd83bc05989df36586d7d40bd62d3eb080df15026b42fd71e3b5b2fe394f57e044ef103cee8a9b9b6231da6b29276bc5cbb5ad27e083195e158c8df29dbd00ed526861df3c98fc4cc2b6f925da9926e075d67f2ac77ca8afd12e9fa193c2492dfdb94e8093b523d6adcf966f76e679e1afea4bf98c0424f78aa2f4d8489bd5ca298a84cf4bcdba5732f6c4d5c8efa1dc5d55bf7c446f7d2c3bc791ce90ada725e429dd244d3c305d3e4c3e1582a54452c85926d96d759a92858f06949536f1a4ed17403402ae687677032c3c31a7bb5d4b099f2529aaa027d6de36aefe593938fa7d3256a13aa115711bb2271aefcc154a2681b5c4ea99c5cedd6ca3d85e7bb4d6f0306694dd5059746e11432061c72bf3f247ebd9652f1d04c72126b697b89fbecab8d7077a762ec25afca16aa142fcbecf031693b81dd499db9fc19c63f5ad3d327d0dc4abf53b444e5190738a5cacbc55afae2263420e1cf0f480b709f1188c9eab1dca25b95f4896e375c28ba7571b5fae7d03af09184e98ecf0603804b0b07c09394505aa215df393ba1cb1cd0139278a4b50996c2ce35524597bc1771e31e4f75efde39d73fd2fbf787d09e8ab4d914901c93de0dfd8abcdee6deb778ecc725b55f66a9d37cb81f8223c5c31110d9714f26091b1e6e980b23377aad2ed046d654862e3b261e6d8bb6993e65b71d0a7e6555da6f3b1b08fcf9ca77df78f159de0dc89da4350a5133b5c11170bb2c8499a1992da029e4b6a85c91ebdb1ebfd139a95a0a2384f3aac85dfaa907aecde5bf60a95db2ddfdeed763cdf72d5e7527888576144d2f26511e2f06a78aea22925a20dc643bcb77d73a86ce357534f069553ebc9fdb4f3079c1ea3a80a093a4eeb5332c3f76686311c60e83e8249e1d0f36e41454b93629baf28160272cbc3226c28ca77efea74f1bc721af697ceaa2a697d7ac33ce2ffe786518e44796e0e12ed92876bab3842a33c0aa7950680c59a43ccd9660a9bef3f81e6896c5a634174487b3652e14ec98d19cfa75349c3c34b867e9ea644c9a09d9da8532829c349617fa3aab631dca99d0b60c062b7c00986138585a6e9cae8da697afb310011693b1f589a54ea80d2c928c3ea6b98d8287c520b3a26a4bb6a0caf54a9887088fab2651fddc0a71bd80c3d2d69ed51d8dc72b2760a6fe9009e3120a1d02c7326a17d59d29a6bbdbdee5cd38f09ec6d40f7a4f85c20f49925972a0d23c30bc1eb68dd1a11257f8dccd38a64df0ff8b60f607b33de07eabdc03fe79b6ce4f3d88e4147c92356226e1b24f684e75373eaefec302b06f8ede280202d344191d36fd58a0149e06f9934766a0d44d087594d8cf64d88a99494ef106e3ffded2d27768099c2b785d3aa6795ff0877e1b8628ec347558d0e2a55f25a1b56b279396e607ce0fc82dcca0d2e02e8eea8539020efe9e322521ee5a5861f497e4da97b7992c424effc24d224e9cb724f5cc50e8d878bad0cc4ef8ad1c1adee36af2238458469b502909bf9ae92304f0484392557c9666483ceaad3bb50a136444f98052f16058b7281f30f73f0922a73e9986b5ea5520533a0cb359b4b47d6d0e30f7dfdc4853c8aff3f8cc24979b57f8e18449a45c69f30646f334d59a011a5a66479212235e262ebb22636cdbd5d17e27618372968e5a3fe29fca3acd9ec49ab42ea0818c083dfa3e804ff9f74302e951683796601caddcb08b65f196de3646ca346cfa34f835e4addfff3ffe14480256daca4ff2b9d80019187c50324c241b74cae0f847dffe84d390991c4ea73386aff6d9cd9fafaf02dcb6b8f578921331dd09b039381647ad688b246b5f8455d2234f7ebbe9633d29b43043cfd54d38dabcb7fbc7611358ac0abd9a61d23d8f58592df99738d2ddc37c9caea838b3a8e946d8b563478bb486e9c0d55a59ccb46f38b79c4d961d6c0e56ac70444537e72cce7e28844da580548454fe81ba9e6550374508ef38ae3f4cdf9ce94db83899f51adfb3e7f66b3bfbc723c3f1558fd82dcea1e283d8073001f4bee2f5d1c21a4fa0c40b97d69210e45d5695fccc795c90ed4428493945a9c72a6ff7a3facb9682822c6241aada9abece6986a50239b1fc50edcb770e9a58287952e0a450444fcf2997e74325cfcd6662ba4e5d0dfcd88df5d51250541265105ee082b796b4aadc991d536b66334d8cc78ba1697d8b9ca2b4d5125ececc4f67170a031101816e2ee72d16d5cfeb6a6c224e3f6014901637c62647c98e51d46dc2c12d623e45b1e1f6e0dd20aaea2053d2c9eb53ff9279c5f649a811a3dcb98b94a90b710a81325782d8fd456834c1a899eff2faec48c4a6a8a481405529f2fda7af41158dd735a5ba95206af50c51566d26b628c5122d35a48b259d265a6a3320f87e4fe4fd03bf3bfea062e339df49e3d7c60b7f1229fac920db3da5a76d57ba0b06db5cdb47e1d73a01479c966dd8961eb96194b5895cc8f169385ce569f2cb738e926effa11fb4c3c54199eb09e50d60013c76bace4855d2819f30fc8a9c9ab5debb71724fa34ec8e2cd02f9f66a446554c1396f77f94dc9fcef3058b658e93a8ae08c55df11d8117f328e9af1f05038338caadad10f41730129d670071b93924aad0cad35f47e853e499fa0a57318df0620ab03a976db0b2f2e962a367e590aa89dbef7d484ba9d079878816fb56f17a4751e84b5aca637ba12b9182d7ddb6637f9d07ff438f9a4d638fb9347466792324d15e6806a5508ffbbe8c6ee7ecb6a3f7556f95336632bf562c9d0a8da9fea259adff7c20d403ddd37c69db731e1d7536dbc550b5e9a5c42878a2a946a2fa658c7940542aa25d65786bcff5475aa720825e223fdda9c01b1c68e72b7302d28e5d2d6f08a1335c2c36618a31945fb37bb6db9c87ea24a7c8a193d6ab8e255b30678bf9cdaa1adccce502e96ad1eb3e75f45e016636752d2902925fa80561cbadba8e0a15ff29c2b9b48a636885649074814b054bc28b4778b86853a1c05d0620116d0259d4212bd778b28b437b0226ef66d69103a8ddeb51c45bd6d0644b401096bd292f733ee6489301d1dd390e5aa7767f4a90115aa7a54b4cb5b852a733d7ffb73b097faa269443b9337fb9fba3aa64776fbfeb6a71721e59625021b4c476b7a90d4ff7ea4aa6dec3c572ccec4b6e2f3dd96f4acb54e89e6d0d22fdbc2435fa3e7561bd321698de860a5cd830644c566fc028230769a7a2fd64af83643135f95324f82d31615675b9f9c8a56f00137e3dc8da637b4531a9643b7de53b83e0fffc79754d62d9490e07db037dde98a777c74d9ee03f8250dc4b8fe2f367c7b6f348af69adc1d0336ec861afa18371379849eaa3eb6cac3d3eaa6db6c1014e36c8533df2e48ed3e0b167d0e220bb010999c2430129723c55a49839f6ca5ccb0ca8e13ac1fb27046ec052588eef3852c051fc2d5be1ce2a5b90f454657e3e775c004946096760e82af69bfef5a108f733841f767c8195842c23c034cc1733e32884662e37363d30ec7126f9cc1f5214dce13f6d9885ca48f6fd2ac7e56136b0cfd649b402100b69b7061008882548084cf10ec1c16b0ad3543c4fef4636f7759d9db040008a12d970b418b7f0f2c99bbf45b549615f4f0a25b7047875d101b0b75b794c9dcb66cde37e7de116863a63dea460175eb1734085592e512fd83781359561ffcc18c301b9ee2268e4feb57663a538051aa8d4da8510832c44d021cac46ece37fcfc5f43da7b48fca86004cc093d5a50f49ea059347b6cf8c4ddb7114543d87b217e4171e1c0f0c6d5e4b8de9761ae3e39189af0c8c72f8764ce02452a9c3478d58fab1c7f7d9bfe638227305c1678354ef75a7f069b6197127373dbe12ff187f902b6c983c44e432c0a82ed0fd69935c8b690b3a025136a8d6786f5fffcc77d3a6b86ffd149c5e73c6fb6c0ce7f6fc64a3db9568c527b3d9875c58c4d4d6014c04185c8114ab1f21717c8596365f63652ce819ef277e40254f7ee2f40b710ce62fa8b9ede1e83c09934fc656ed80182202eee7dd29e28f0a0882327d193cd9cf8749c188fdfcf185111d840f36115a3d413323565d614c1ee4f74d0d3f970872e879e993e687349ddf32a6f067583b8b463d1474d7d7e7d49f607124558b262a57d06f3a087035a30f0ca1f21c021901d4d4aef439b11093e6570777ade2f81cc0a4838f6632150db542237d17c47f840c171de6caaf903b84dd7e87a35d2df6295dbd588f9aba78d9f5a6340eb37c6d70c8e441ecba85a6bb04a521aeb12534355db6ac4d5c6678e19bb726b22a6c329846983727550e2d898890b53c19678d532000e70147c40456be63e0ab9ee0f7dc7a210824ee51861ab5b9d621af32d148326722da6fa511a87fce239de476892b47b0909394d841f81f2b69561a0da2a1b66b690abf7179e789e7b48fdd6a28551f94d2e3a6e1bff8d3590567116cbcfe12c647925e3ccb3508a5ff0070e1961dcbf12f7179807aa7acb7b3b349e3996591729aefef6e0967a9122bfe5343fc8c794f3a743b08ebb8b8e3095f9e7b2cc11a022b19badef6e61a8e9d433e4ad097f21b13930abe6b03c5a82f334c49b9dd90b5f807af9007358c405ef1dd025d8cb18f3abc671f027a48c7fb076f558be2720b30e6a40175d6bb9ac49e0df69ebf6d3fc0dbd0790abe7bd261dd1c6e86c26ae55f8914011818201dad8f1c34238dbcbefbd61beb3ee377e5165cea60e3b65487d8b83f3f8fcf773b6ef8d7254f2594e6fec60121397a3fba0e054a8ea5d238e624ae337a9a14efc0bed2fe3b03c84b7c31d4756cb8ce6e29b2cc7a1ef613d5410723d6a1c6e5bf875dc1a36eaa560d6a681b08e77ad2a222add8dfd6f15a7daaba72159d7f735ca78a87180ba1f48caf03c702c200b4a21136700227044f7616fbaf0dc3dd495f2af2c12bf3d7c0fc0120ba51794742eb50579b0fcce1abb4b3bfbb6f8cbda4740b127e06bb7783a9ab8f6bf4c59b22869787fcb05b60745ef6dbc807e9fb7912db1791a34c0d168866d215ec295a896ab547c3427d0d7eadbaed9f326a8959a3703171f84051a951d7f41f99a94ca52ffa3190abd03892023b559343a29d479e5e12507ed0cf8a7308bee2a9a4762125bfd02e107c0cf778ecc7c1f43d821b17442e0b7a1dd6aafac741e223f884135e12d92b99a6641ab2efdc3b2edca92d6920a399ca4a477ecb0413e17104c2f6c05d650defa0ae223710c5c7e3b606f88b43d79d034b5ae68f65ece3e24ebcab6c9621f4198ec347b92cf95c8d352e305a80e501063150b39252705cf77d3760dbf2a1002bddccfb0a5f4c4caff3f39c847f07f3899fc24034f4d267c709c5dd28b7ecd6cddc11a2d279d30d063452fc09b019c93b2aa5b8b76a3866cd804eb49260a8ad14fc492df238f1a3c40daf4f3d4b85d394d28b484beb215a9898fac720dec726f94a59f17168483df5cbc1d8e56162b1ee33c91df46a7e50dcd728cc85af776c212c5bb887141757f49cbe64a5c897e929a5a76d25c5b6043f1abbbc82961538d6327409a4a92ff6bff2f5b63b87f9191c7d3cddf7109c0ac53bece4a265793776b86708175362ab1afb47c34c85af6d81b1e5758f9795981bd9b3edbd12bdf8ddb7950eb05223e9aff6459215312de10fdcdce3e90b9304e55d1b4e4a79b476942f0c19e920b057afda78cf585bedaa14347aa99f843187af4d183c4efcbfebfe53d831a13f8d8867c2e60dac154a4a23df59c6b27b1be48cc58dd7fc0f7aa301510bc24a9d9a16965fd239ad2faaebbd47eb60cdae6051bc074c0b82bd0e59035ff91d8c2291194aef78e65f09";
+/*</selo>*/
+
+const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ponteiroFino = matchMedia("(hover: hover) and (pointer: fine)").matches;
+const $ = id => document.getElementById(id);
+const espera = ms => new Promise(r => setTimeout(r, ms));
+const alea = (a, b) => a + Math.random() * (b - a);
+const relogio = () => (performance.now() / 1000) % 600;
+const guarda = {
+  ler(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  gravar(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+};
+
+let ouro = 0, ouroAlvo = 0, erro = 0, erroAlvo = 0, modoAtual = "normal", tFlash = null, ocupado = false;
+
+/* ---------- verificação ---------- */
+const K256 = new Uint32Array([
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+]);
+const W256 = new Uint32Array(64);
+const codificador = new TextEncoder();
+function sha256(texto){
+  const dados = codificador.encode(texto);
+  const n = dados.length;
+  const total = (((n + 8) >> 6) + 1) << 6;
+  const buf = new Uint8Array(total);
+  buf.set(dados); buf[n] = 0x80;
+  const dv = new DataView(buf.buffer);
+  const bits = n * 8;
+  dv.setUint32(total - 8, Math.floor(bits / 0x100000000));
+  dv.setUint32(total - 4, bits >>> 0);
+  let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a,
+      h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+  const w = W256;
+  for(let o = 0; o < total; o += 64){
+    for(let t = 0; t < 16; t++) w[t] = dv.getUint32(o + t * 4);
+    for(let t = 16; t < 64; t++){
+      const x = w[t - 15], y = w[t - 2];
+      const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+      const s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+    }
+    let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+    for(let t = 0; t < 64; t++){
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K256[t] + w[t]) >>> 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const mj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + mj) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0; h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+  }
+  return [h0, h1, h2, h3, h4, h5, h6, h7].map(v => v.toString(16).padStart(8, "0")).join("");
+}
+function selar(texto){
+  let h = sha256(texto);
+  for(let i = 1; i < VOLTAS; i++) h = sha256(h + SAL);
+  return h.slice(0, 16);
+}
+function indice(ms){ const d = new Date(ms); return d.getHours() * 60 + d.getMinutes(); }
+function verifica(a, b, agora = Date.now()){
+  if(!SELO || SELO.length !== 1440 * 16) return false;
+  const numeros = String(a).match(/\d+/g);
+  const digitos = String(b).replace(/\D/g, "");
+  if(!numeros || !digitos) return false;
+  const A = numeros.map(x => String(Number(x))).join(":");
+  const B = digitos.padStart(4, "0");
+  for(let k = 0; k <= CONFIG.folga; k++){
+    const i = indice(agora - k * 60000);
+    if(selar(`${SAL}|${i}|${A}|${B}`) === SELO.substr(i * 16, 16)) return true;
+  }
+  return false;
+}
+/* ---------- fim da verificação ---------- */
+
+/* ---------- som ---------- */
+const Som = {
+  ctx: null, mestre: null, ligado: false,
+  iniciar(){
+    if(this.ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return false;
+    try{ this.ctx = new AC(); }catch(e){ return false; }
+    const c = this.ctx;
+    this.mestre = c.createGain(); this.mestre.gain.value = 0;
+    const comp = c.createDynamicsCompressor();
+    this.mestre.connect(comp); comp.connect(c.destination);
+    const filtro = c.createBiquadFilter(); filtro.type = "lowpass"; filtro.frequency.value = 300; filtro.Q.value = 7;
+    const ganho = c.createGain(); ganho.gain.value = 0.045;
+    [[55, "sine", 1], [55.41, "sine", 1], [110.3, "triangle", 1], [164.8, "sine", 0.25]].forEach(([hz, tipo, v]) => {
+      const o = c.createOscillator(); o.type = tipo; o.frequency.value = hz;
+      const g = c.createGain(); g.gain.value = v;
+      o.connect(g); g.connect(filtro); o.start();
+    });
+    const lfo = c.createOscillator(); lfo.frequency.value = 0.06;
+    const lg = c.createGain(); lg.gain.value = 160;
+    lfo.connect(lg); lg.connect(filtro.frequency); lfo.start();
+    filtro.connect(ganho); ganho.connect(this.mestre);
+    return true;
+  },
+  definir(on){
+    if(on && !this.iniciar()) on = false;
+    this.ligado = on;
+    if(!this.ctx) return;
+    if(on && this.ctx.state === "suspended") this.ctx.resume();
+    const t = this.ctx.currentTime;
+    this.mestre.gain.cancelScheduledValues(t);
+    this.mestre.gain.setValueAtTime(this.mestre.gain.value, t);
+    this.mestre.gain.setTargetAtTime(on ? 0.85 : 0, t, 0.3);
+  },
+  tom(freq, dur, o = {}){
+    if(!this.ligado || !this.ctx) return;
+    const c = this.ctx, t = c.currentTime + (o.atraso || 0);
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.tipo || "sine";
+    osc.frequency.setValueAtTime(freq, t);
+    if(o.glide) osc.frequency.exponentialRampToValueAtTime(o.glide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol || 0.06, t + (o.ataque || 0.006));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(this.mestre);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  },
+  tecla(){ const e = [523.25, 587.33, 659.25, 783.99, 880, 1046.5]; this.tom(e[Math.floor(Math.random() * e.length)], 0.16, { vol: 0.045 }); },
+  apaga(){ this.tom(392, 0.12, { vol: 0.035, glide: 262 }); },
+  pulso(){ this.tom(196, 1.1, { vol: 0.07, glide: 82 }); this.tom(1568, 0.6, { vol: 0.018, atraso: 0.03, glide: 2093 }); },
+  revela(){ this.tom(1318.5, 0.4, { vol: 0.022, glide: 1975.5 }); },
+  carga(){ this.tom(110, 0.95, { tipo: "sawtooth", vol: 0.028, ataque: 0.4, glide: 880 }); this.tom(220, 0.95, { vol: 0.03, ataque: 0.4, glide: 1760 }); },
+  sucesso(){ [440, 554.37, 659.25, 880, 1108.73, 1318.51].forEach((f, i) => this.tom(f, 1.8, { vol: 0.05, ataque: 0.02, atraso: i * 0.09 })); },
+  erro(){ this.tom(98, 0.55, { tipo: "sawtooth", vol: 0.06, glide: 49 }); this.tom(103.8, 0.55, { tipo: "square", vol: 0.025, glide: 52 }); },
+  trava(){ this.tom(65.4, 2.2, { tipo: "triangle", vol: 0.09, glide: 41.2 }); }
+};
+
+/* ---------- campo de interferência ---------- */
+const Campo = (() => {
+  const nada = { redimensiona(){}, ondula(){}, quadro(){} };
+  const cv = $("campo");
+  let gl = null;
+  try{ gl = cv.getContext("webgl", { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: "low-power" }); }catch(e){}
+  if(!gl){ cv.remove(); return nada; }
+  const VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
+  const FS = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform vec2 uRes;
+uniform float uT;
+uniform vec3 uObs;
+uniform vec4 uRip[8];
+uniform float uOuro;
+uniform float uErro;
+void main(){
+  vec2 p = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
+  float t = uT;
+  float psi = 0.0;
+  for(int i = 0; i < 4; i++){
+    float f = float(i);
+    vec2 s = vec2(0.8 * sin(t * (0.045 + 0.011 * f) + f * 1.9), 0.42 * cos(t * (0.038 + 0.009 * f) + f * 2.6));
+    float d = length(p - s);
+    psi += sin(d * 34.0 - t * (1.0 + 0.17 * f)) / (1.0 + 4.0 * d);
+  }
+  vec2 o = (uObs.xy - 0.5 * uRes) / uRes.y;
+  float dob = length(p - o);
+  psi += uObs.z * 1.5 * sin(dob * 52.0 - t * 3.4) * exp(-dob * 3.2);
+  for(int i = 0; i < 8; i++){
+    vec4 r = uRip[i];
+    float idade = t - r.z;
+    if(idade > 0.0 && idade < 2.6){
+      vec2 rp = (r.xy - 0.5 * uRes) / uRes.y;
+      float d = length(p - rp);
+      float frente = idade * 0.7;
+      psi += r.w * 2.4 * sin((d - frente) * 64.0) * exp(-abs(d - frente) * 15.0) * (1.0 - idade / 2.6);
+    }
+  }
+  float dc = length(p);
+  psi += uOuro * 1.8 * sin(dc * 58.0 - t * 4.2) * exp(-dc * 1.4);
+  float I = psi * psi;
+  vec3 ca = vec3(0.09, 0.80, 0.52);
+  vec3 cb = vec3(0.40, 0.20, 0.92);
+  vec3 cor = mix(ca, cb, 0.5 + 0.5 * sin(psi * 0.9 + t * 0.12)) * I * 0.05;
+  cor = mix(cor, vec3(1.0, 0.76, 0.32) * I * 0.06, uOuro);
+  cor = mix(cor, vec3(1.0, 0.14, 0.24) * I * 0.06, uErro);
+  float v = smoothstep(1.35, 0.1, length(p * vec2(0.75, 1.0)));
+  gl_FragColor = vec4(cor * v, 1.0);
+}`;
+  const compila = (tipo, src) => {
+    const s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  let prog;
+  try{
+    prog = gl.createProgram();
+    gl.attachShader(prog, compila(gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, compila(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  }catch(e){ console.warn(e); cv.remove(); return nada; }
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const ap = gl.getAttribLocation(prog, "p");
+  gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
+  const u = n => gl.getUniformLocation(prog, n);
+  const uRes = u("uRes"), uT = u("uT"), uObs = u("uObs"), uRip = u("uRip[0]"), uOuro = u("uOuro"), uErro = u("uErro");
+  const rip = new Float32Array(32);
+  let ri = 0, w = 1, h = 1, k = 0.5;
+  function redimensiona(){
+    k = innerWidth * innerHeight > 1.6e6 ? 0.4 : 0.5;
+    w = Math.max(1, Math.round(innerWidth * k)); h = Math.max(1, Math.round(innerHeight * k));
+    cv.width = w; cv.height = h; gl.viewport(0, 0, w, h);
+  }
+  function ondula(x, y, forca, t){
+    if(reduz) return;
+    const o = (ri++ % 8) * 4;
+    rip[o] = x * k; rip[o + 1] = (innerHeight - y) * k; rip[o + 2] = t; rip[o + 3] = forca;
+  }
+  function quadro(t, ob, ou, er){
+    gl.uniform2f(uRes, w, h); gl.uniform1f(uT, t);
+    gl.uniform3f(uObs, ob.x * k, (innerHeight - ob.y) * k, ob.forca);
+    gl.uniform4fv(uRip, rip); gl.uniform1f(uOuro, ou); gl.uniform1f(uErro, er);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+  cv.addEventListener("webglcontextlost", e => e.preventDefault());
+  return { redimensiona, ondula, quadro };
+})();
+
+/* ---------- observação ---------- */
+const obs = { x: innerWidth / 2, y: innerHeight / 2, alvo: 0, forca: 0, ultimo: -1e9 };
+const pulsos = [];
+const lente = $("lente");
+let sobreUI = false;
+addEventListener("pointermove", e => {
+  obs.x = e.clientX; obs.y = e.clientY; obs.ultimo = performance.now();
+  if(e.pointerType !== "touch" || e.buttons) obs.alvo = 1;
+  sobreUI = !!(e.target && e.target.closest && e.target.closest(".camara, .som-wrap"));
+}, { passive: true });
+addEventListener("pointerdown", e => {
+  obs.x = e.clientX; obs.y = e.clientY; obs.ultimo = performance.now(); obs.alvo = 1;
+  if(e.target && e.target.closest && e.target.closest(".camara, .limiar, .som-wrap")) return;
+  pulsos.push({ x: e.clientX, y: e.clientY, t: relogio() });
+  if(pulsos.length > 6) pulsos.shift();
+  Campo.ondula(e.clientX, e.clientY, 1.3, relogio());
+  Som.pulso();
+}, { passive: true });
+addEventListener("pointerup", e => { if(e.pointerType === "touch") obs.ultimo = performance.now() - 2600; }, { passive: true });
+document.documentElement.addEventListener("mouseleave", () => { obs.alvo = 0; });
+addEventListener("blur", () => { obs.alvo = 0; });
+function atualizaObservacao(dt, agora, T){
+  if(agora - obs.ultimo > 3500) obs.alvo = 0;
+  obs.forca += (obs.alvo - obs.forca) * (1 - Math.exp(-dt * 5));
+  if(obs.forca < 0.001) obs.forca = 0;
+  if(ponteiroFino){
+    lente.style.transform = `translate3d(${obs.x}px, ${obs.y}px, 0) scale(${Math.max(0.001, obs.forca).toFixed(3)})`;
+    lente.style.opacity = (obs.forca * (sobreUI ? 0.3 : 1)).toFixed(3);
+  }
+  while(pulsos.length && (T - pulsos[0].t > 1.9 || T < pulsos[0].t)) pulsos.shift();
+}
+
+/* ---------- chuva em superposição ---------- */
+const Chuva = (() => {
+  const cv = $("chuva"), cx = cv.getContext("2d");
+  const GL = [..."ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝψΨφΦΩħ∂∇⊗∴≡∞01Z"];
+  const FONTE = '"Share Tech Mono", "MS Gothic", "Noto Sans Mono CJK JP", "Hiragino Kaku Gothic Pro", monospace';
+  const CORES = { a: "#33e6ff", b: "#b26bff", f: "#4bff9f", luz: "#e9fff4", ouro: "#ffd66b", erro: "#ff3d5a" };
+  const POR = 16, N = GL.length * 2;
+  let W = 0, H = 0, dpr = 1, dprAtlas = 0, fs = 18, cel = 29, L = 18, atlas = {}, colunas = [], modo = "normal";
+  const rg = () => Math.floor(Math.random() * N);
+  function fazAtlas(cor, brilho){
+    const c = document.createElement("canvas");
+    c.width = Math.ceil(POR * cel * dpr); c.height = Math.ceil(Math.ceil(N / POR) * cel * dpr);
+    const x = c.getContext("2d");
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.font = `${fs}px ${FONTE}`; x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillStyle = cor; x.shadowColor = cor; x.shadowBlur = brilho;
+    for(let j = 0; j < N; j++){
+      x.save();
+      x.translate((j % POR) * cel + cel / 2, Math.floor(j / POR) * cel + cel / 2);
+      if(j >= GL.length) x.scale(-1, 1);
+      x.fillText(GL[j % GL.length], 0, 0);
+      x.restore();
+    }
+    return c;
+  }
+  function atlasTodo(){
+    for(const [nome, cor] of Object.entries(CORES)) atlas[nome] = fazAtlas(cor, nome === "luz" || nome === "ouro" ? fs * 0.75 : fs * 0.32);
+    dprAtlas = dpr;
+  }
+  function coluna(i, inicio){
+    return { i, linha: inicio ? -Math.floor(Math.random() * (H / fs)) : -Math.floor(Math.random() * 10), acc: Math.random(), v: alea(5, 16), prof: alea(0.4, 1), espera: inicio ? 0 : alea(0, 2.2), cel: [] };
+  }
+  function redimensiona(){
+    const larguraMudou = innerWidth !== W;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const fsNovo = W < 560 ? 15 : W > 1680 ? 20 : 18;
+    if(fsNovo !== fs || dpr !== dprAtlas || !atlas.a){ fs = fsNovo; cel = Math.ceil(fs * 1.6); atlasTodo(); }
+    L = Math.max(10, Math.min(22, Math.round(H / fs * 0.42)));
+    if(larguraMudou || !colunas.length) colunas = Array.from({ length: Math.ceil(W / fs) }, (_, i) => coluna(i, true));
+  }
+  function glifo(id, cor, x, y, a){
+    const img = atlas[cor], s = cel * dpr;
+    cx.globalAlpha = a;
+    cx.drawImage(img, (id % POR) * s, Math.floor(id / POR) * s, s, s, x - cel / 2, y - cel / 2, cel, cel);
+  }
+  function quadro(dt, T, ob, pul){
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.globalCompositeOperation = "source-over";
+    cx.globalAlpha = 1;
+    cx.clearRect(0, 0, W, H);
+    cx.globalCompositeOperation = "lighter";
+    const vel = (modo === "bloqueio" ? 0.3 : modo === "observado" ? 0.45 : 1) * (reduz ? 0.2 : 1);
+    const R = 150 * ob.forca, R2 = R * R;
+    const tudo = modo === "observado";
+    const ruim = modo === "erro" || modo === "bloqueio";
+    const corA = ruim ? "erro" : "a", corF = tudo ? "ouro" : ruim ? "erro" : "f", corC = tudo ? "ouro" : "luz";
+    const brilho = modo === "bloqueio" ? 0.4 : 0.6;
+    for(const c of colunas){
+      if(c.espera > 0){ c.espera -= dt; continue; }
+      c.acc += c.v * vel * dt;
+      while(c.acc >= 1){
+        c.acc -= 1; c.linha++;
+        c.cel.push({ r: c.linha, a: rg(), b: rg(), c: rg() });
+        if(c.cel.length > L) c.cel.shift();
+      }
+      if(c.cel.length && (c.cel[0].r - 1) * fs > H){ Object.assign(c, coluna(c.i, false)); continue; }
+      const x = c.i * fs + fs / 2, n = c.cel.length;
+      for(let k = n - 1; k >= 0; k--){
+        const q = c.cel[k], y = q.r * fs - fs / 2;
+        if(y < -fs || y > H + fs) continue;
+        const alfa = Math.pow(1 - (n - 1 - k) / L, 1.6) * c.prof;
+        if(!reduz && Math.random() < 0.012){ q.a = rg(); q.b = rg(); }
+        let visto = tudo;
+        if(!visto && R > 2){ const dx = x - ob.x, dy = y - ob.y; visto = dx * dx + dy * dy < R2; }
+        if(!visto){
+          for(const p of pul){
+            const raio = (T - p.t) * 640;
+            if(raio < 0) continue;
+            if(Math.abs(Math.hypot(x - p.x, y - p.y) - raio) < 64){ visto = true; break; }
+          }
+        }
+        if(visto) glifo(q.c, k === n - 1 ? corC : corF, x, y, Math.min(1, alfa * 1.2));
+        else{ glifo(q.a, corA, x - 1.3, y, alfa * brilho); glifo(q.b, "b", x + 1.3, y, alfa * brilho); }
+      }
+    }
+    cx.globalAlpha = 1;
+    cx.globalCompositeOperation = "source-over";
+  }
+  return { redimensiona, quadro, atlas: atlasTodo, modo(m){ modo = m; } };
+})();
+
+function defineModo(m){
+  modoAtual = m; Chuva.modo(m);
+  ouroAlvo = m === "observado" ? 1 : 0;
+  erroAlvo = m === "erro" ? 1 : m === "bloqueio" ? 0.4 : 0;
+}
+function flashErro(){
+  defineModo("erro"); clearTimeout(tFlash);
+  tFlash = setTimeout(() => { if(modoAtual === "erro") defineModo(Trava.ativa() ? "bloqueio" : "normal"); }, 800);
+}
+function ondulaEm(el, dx){
+  const r = el.getBoundingClientRect();
+  Campo.ondula(r.left + Math.min(r.width - 48, 16 + dx), r.top + r.height / 2, 0.5, relogio());
+}
+function prendeCursor(inp){
+  const fim = () => { const n = inp.value.length; try{ inp.setSelectionRange(n, n); }catch(e){} };
+  ["focus", "click", "keyup", "input"].forEach(ev => inp.addEventListener(ev, fim));
+  inp.addEventListener("keydown", e => { if(["ArrowLeft", "ArrowRight", "Home", "End", "ArrowUp", "ArrowDown"].includes(e.key)) e.preventDefault(); });
+}
+
+/* ---------- título ---------- */
+const Titulo = (() => {
+  const el = $("titulo"), texto = el.dataset.texto;
+  const F = "abcdefghijklmnopqrstuvwxyz";
+  const letras = [];
+  let ativo = false, fixo = false;
+  el.textContent = "";
+  for(const ch of texto){
+    const s = document.createElement("span"); s.className = "letra sup"; s.setAttribute("aria-hidden", "true");
+    const real = document.createElement("span"); real.className = "real"; real.textContent = ch;
+    const fa = document.createElement("span"); fa.className = "fan a";
+    const fb = document.createElement("span"); fb.className = "fan b";
+    s.append(real, fa, fb); el.appendChild(s);
+    letras.push({ s, fa, fb, col: false, volta: Infinity, recol: Infinity, prox: 0, x: -1e4, y: -1e4 });
+  }
+  function mede(){ for(const l of letras){ const r = l.s.getBoundingClientRect(); l.x = r.left + r.width / 2; l.y = r.top + r.height / 2; } }
+  function colapsa(l, agora){ l.col = true; l.s.classList.remove("sup"); l.recol = Infinity; l.volta = fixo ? Infinity : agora + alea(5000, 16000); }
+  function decoere(l, agora){ l.col = false; l.s.classList.add("sup"); l.volta = Infinity; l.recol = agora + alea(380, 1000); }
+  function revela(){
+    const t0 = performance.now(); ativo = true;
+    letras.forEach((l, i) => { l.recol = t0 + 420 + i * 150; setTimeout(() => Som.tecla(), 420 + i * 150); });
+  }
+  function fixa(sim){
+    fixo = sim; const agora = performance.now();
+    for(const l of letras){ if(sim) colapsa(l, agora); else if(l.col) l.volta = agora + alea(4000, 12000); }
+  }
+  function quadro(agora){
+    for(const l of letras){
+      if(ativo && obs.forca > 0.3 && Math.hypot(obs.x - l.x, obs.y - l.y) < 120){
+        if(!l.col) colapsa(l, agora);
+        else if(!fixo) l.volta = Math.max(l.volta, agora + 2600);
+      }
+      if(!l.col && agora >= l.recol) colapsa(l, agora);
+      else if(l.col && agora >= l.volta) decoere(l, agora);
+      if(!l.col && agora >= l.prox){
+        l.fa.textContent = F[Math.floor(Math.random() * F.length)];
+        l.fb.textContent = F[Math.floor(Math.random() * F.length)];
+        l.prox = agora + alea(55, 125);
+      }
+    }
+  }
+  return { mede, revela, fixa, quadro };
+})();
+
+/* ---------- dica ---------- */
+const Dica = (() => {
+  const btn = $("dica"), alvo = btn.querySelector(".dica-texto");
+  const FRASE = "a senha está em superposição quântica.";
+  const F = "ｱｲｳｴｵｶｷｸψΨφ∂∇⊗≡01";
+  const cs = [];
+  FRASE.split(" ").forEach((p, i, arr) => {
+    const w = document.createElement("span"); w.className = "pal";
+    for(const c of p){
+      const s = document.createElement("span"); s.className = "dc sup"; w.appendChild(s);
+      cs.push({ s, c, ok: false, em: Infinity, sai: Infinity, prox: 0 });
+    }
+    alvo.appendChild(w);
+    if(i < arr.length - 1) alvo.appendChild(document.createTextNode(" "));
+  });
+  let somEm = -1e9;
+  function observar(){
+    const agora = performance.now();
+    cs.forEach((x, i) => { if(!x.ok) x.em = Math.min(x.em, agora + i * 22); x.sai = Infinity; });
+    if(agora - somEm > 1500){ Som.revela(); somEm = agora; }
+  }
+  function soltar(atraso){ const agora = performance.now(); cs.forEach(x => { x.sai = agora + atraso + Math.random() * 650; }); }
+  btn.addEventListener("pointerenter", observar);
+  btn.addEventListener("pointerleave", () => soltar(1600));
+  btn.addEventListener("focus", observar);
+  btn.addEventListener("blur", () => soltar(900));
+  btn.addEventListener("click", () => { observar(); soltar(6000); });
+  function quadro(agora){
+    for(const x of cs){
+      if(!x.ok && agora >= x.em){ x.ok = true; x.em = Infinity; x.s.className = "dc ok"; x.s.textContent = x.c; }
+      else if(x.ok && agora >= x.sai){ x.ok = false; x.sai = Infinity; x.s.className = "dc sup"; x.prox = 0; }
+      if(!x.ok && agora >= x.prox){ x.s.textContent = F[Math.floor(Math.random() * F.length)]; x.prox = agora + alea(60, 140); }
+    }
+  }
+  return { quadro, demonstra(){ observar(); soltar(3400); } };
+})();
+
+/* ---------- mensagens e estado do sistema ---------- */
+const Mensagem = (() => {
+  const el = $("msg"), anuncio = $("anuncio");
+  const F = "ｱｲｳｴｵψΨφ∂∇01";
+  let iv = null;
+  function anuncia(texto){ anuncio.textContent = ""; setTimeout(() => { anuncio.textContent = texto; }, 40); }
+  function mostra(texto, tipo = ""){
+    clearInterval(iv);
+    el.className = "msg " + tipo;
+    anuncia(texto);
+    if(reduz){ el.textContent = texto; return; }
+    const chars = [...texto]; let i = 0;
+    iv = setInterval(() => {
+      el.textContent = chars.map((c, k) => k < i || c === " " ? c : F[Math.floor(Math.random() * F.length)]).join("");
+      i += 2;
+      if(i > chars.length){ clearInterval(iv); iv = null; el.textContent = texto; }
+    }, 24);
+  }
+  function limpa(){ clearInterval(iv); iv = null; el.textContent = ""; el.className = "msg"; }
+  return { mostra, limpa, anuncia, suave(){ if(el.textContent && !Trava.ativa()) limpa(); } };
+})();
+
+const Sistema = (() => {
+  const el = $("sistema"); let base = "coerente", t = null;
+  const escreve = n => { el.textContent = "sistema " + n; el.dataset.estado = n; };
+  return {
+    estado(n){ base = n; clearTimeout(t); escreve(n); },
+    digitando(){ if(base !== "coerente") return; escreve("observando"); clearTimeout(t); t = setTimeout(() => escreve(base), 1400); }
+  };
+})();
+
+const Estado = (() => {
+  const CHAVE = "limiar:estado";
+  const vazio = () => ({ falhas: 0, nivel: 0, ate: 0, dur: 0, ultima: 0 });
+  let d = vazio();
+  try{ const s = JSON.parse(guarda.ler(CHAVE)); if(s && typeof s === "object") d = Object.assign(vazio(), s); }catch(e){}
+  if(!(d.ate > Date.now()) && d.ultima && Date.now() - d.ultima > 36e5) d = vazio();
+  const salva = () => guarda.gravar(CHAVE, JSON.stringify(d));
+  return {
+    get d(){ return d; },
+    falhou(){ d.falhas++; d.ultima = Date.now(); salva(); },
+    trava(){ const s = CONFIG.bloqueios[Math.min(d.nivel, CONFIG.bloqueios.length - 1)]; d.dur = s; d.ate = Date.now() + s * 1000; d.nivel++; d.falhas = 0; salva(); },
+    destrava(){ d.ate = 0; salva(); },
+    zera(){ d = vazio(); salva(); }
+  };
+})();
+
+const form = $("form"), inpObs = $("observador"), inpSen = $("senha"), btnC = $("colapsar");
+const painelTrava = $("trava"), painelAcesso = $("acesso");
+
+const Tentativas = (() => {
+  const box = $("qubits"), pontos = [];
+  for(let i = 0; i < CONFIG.maxTentativas; i++){ const s = document.createElement("span"); s.className = "q"; box.appendChild(s); pontos.push(s); }
+  const t = document.createElement("span"); t.className = "t"; t.textContent = "observações"; box.appendChild(t);
+  function atualiza(){
+    const gastas = Trava.ativa() ? CONFIG.maxTentativas : Math.min(CONFIG.maxTentativas, Estado.d.falhas);
+    const restam = CONFIG.maxTentativas - gastas;
+    pontos.forEach((p, i) => p.classList.toggle("gasto", i >= restam));
+    box.setAttribute("aria-label", restam === 1 ? "1 observação restante" : `${restam} observações restantes`);
+  }
+  return { atualiza };
+})();
+
+const Trava = (() => {
+  const seg = $("travaSeg"), arco = $("travaArco"), C = 2 * Math.PI * 52;
+  let iv = null;
+  arco.style.strokeDasharray = C.toFixed(2);
+  const ativa = () => Estado.d.ate > Date.now();
+  function trancar(sim){
+    inpObs.disabled = inpSen.disabled = btnC.disabled = sim;
+    $("olhoObs").disabled = $("olhoSen").disabled = $("dica").disabled = sim;
+    form.classList.toggle("travado", sim);
+    painelTrava.hidden = !sim;
+  }
+  function mostra(){
+    trancar(true); defineModo("bloqueio"); Sistema.estado("decoerente"); Tentativas.atualiza();
+    Mensagem.mostra("Decoerência total. Aguarde o anel se fechar.", "erro");
+    clearInterval(iv);
+    const total = Math.max(1000, Estado.d.dur * 1000);
+    const passo = () => {
+      const resta = Estado.d.ate - Date.now();
+      if(resta <= 0){ fim(); return; }
+      seg.textContent = Math.ceil(resta / 1000);
+      arco.style.strokeDashoffset = (C * Math.min(1, resta / total)).toFixed(2);
+    };
+    passo(); iv = setInterval(passo, 200);
+  }
+  function inicia(){ Estado.trava(); Som.trava(); mostra(); }
+  function fim(){
+    clearInterval(iv); iv = null; Estado.destrava(); trancar(false);
+    defineModo("normal"); Sistema.estado("coerente"); Tentativas.atualiza();
+    Mensagem.mostra("Coerência restaurada. Você pode observar de novo.", "info");
+  }
+  return { ativa, inicia, mostra };
+})();
+
+/* ---------- campo: observador ---------- */
+const Observador = (() => {
+  const vista = $("vistaObs"), cursor = vista.querySelector(".cursor"), caixa = $("caixaObs");
+  const F = "ｱｲｳｴｵｶｷｸｹｺｻｼψΨφ∂∇⊗≡";
+  let itens = [], revelando = false, medida = null;
+  function sincroniza(){
+    const v = inpObs.value, agora = performance.now();
+    let i = 0;
+    while(i < itens.length && i < v.length && itens[i].c === v[i]) i++;
+    for(let k = i; k < itens.length; k++) itens[k].el.remove();
+    itens.length = i;
+    for(let k = i; k < v.length; k++){
+      const el = document.createElement("span");
+      vista.insertBefore(el, cursor);
+      itens.push({ c: v[k], el, t: k === v.length - 1 ? agora : -1e9, prox: 0, classe: "" });
+    }
+  }
+  function quadro(agora){
+    for(const x of itens){
+      const real = x.c === " " ? "\u00a0" : x.c;
+      let classe, txt = null;
+      if(medida === "ouro"){ classe = "ch ouro"; txt = real; }
+      else if(revelando){ classe = "ch visto"; txt = real; }
+      else if(agora - x.t < 850){ classe = "ch novo"; txt = real; }
+      else{
+        classe = medida === "erro" ? "ch sup erro" : "ch sup";
+        if(agora >= x.prox || x.classe.indexOf("sup") < 0){ txt = F[Math.floor(Math.random() * F.length)]; x.prox = agora + alea(70, 170); }
+      }
+      if(classe !== x.classe){ x.el.className = classe; x.classe = classe; }
+      if(txt !== null && x.el.textContent !== txt) x.el.textContent = txt;
+    }
+  }
+  inpObs.addEventListener("input", () => {
+    const antes = itens.length; sincroniza();
+    if(itens.length > antes){ Som.tecla(); ondulaEm(caixa, itens.length * 12); }
+    else if(itens.length < antes) Som.apaga();
+    caixa.classList.remove("vazio"); Sistema.digitando(); Mensagem.suave();
+  });
+  prendeCursor(inpObs);
+  return {
+    quadro, sincroniza,
+    revela(v){ revelando = v; },
+    medir(ok){ medida = ok ? "ouro" : "erro"; },
+    solta(){ medida = null; },
+    limpa(){ inpObs.value = ""; medida = null; sincroniza(); }
+  };
+})();
+
+/* ---------- campo: senha ---------- */
+const Senha = (() => {
+  const cv = $("vistaSenha"), cx = cv.getContext("2d"), caixa = $("caixaSen");
+  const X0 = 16;
+  let qs = [], revelando = false, W = 0, H = 0, dpr = 1, passo = 26, raio = 9;
+  function redimensiona(){
+    const r = cv.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    cv.width = Math.max(1, Math.round(W * dpr)); cv.height = Math.max(1, Math.round(H * dpr));
+    passo = Math.max(17, Math.min(30, (W - X0 - 54) / 12));
+    raio = passo * 0.34;
+  }
+  const sinal = () => Math.random() < 0.5 ? -1 : 1;
+  const novo = c => ({ c, th: alea(0.4, 2.7), ph: alea(0, 6.28), wt: alea(0.5, 1.5) * sinal(), wp: alea(1.4, 3.4) * sinal(), nasc: performance.now(), med: null, est: null });
+  function sincroniza(){
+    const v = inpSen.value; let i = 0;
+    while(i < qs.length && i < v.length && qs[i].c === v[i]) i++;
+    qs.length = i;
+    for(let k = i; k < v.length; k++) qs.push(novo(v[k]));
+  }
+  const back = k => { const a = 1.70158, b = a + 1; return 1 + b * Math.pow(k - 1, 3) + a * Math.pow(k - 1, 2); };
+  const sai = k => 1 - Math.pow(1 - k, 3);
+  const A = [51, 230, 255], B = [178, 107, 255];
+  const mistura = m => `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * m)).join(",")})`;
+  function quadro(dt, agora, ocup){
+    if(!W) return;
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.clearRect(0, 0, W, H);
+    const cy = H / 2;
+    cx.lineWidth = 1;
+    for(let i = 0; i < qs.length; i++){
+      const q = qs[i];
+      let x = X0 + raio + i * passo, y = cy, alfa = 1;
+      if(q.est && agora >= q.est.t){
+        const e = (agora - q.est.t) / 1000;
+        x += q.est.vx * e; y += q.est.vy * e + 260 * e * e; alfa = 1 - e * 1.7;
+        if(alfa <= 0) continue;
+      }
+      const s = back(Math.min(1, (agora - q.nasc) / 360));
+      const r = Math.max(0.1, raio * s);
+      let cor = null;
+      if(q.med && agora >= q.med.t){
+        if(q.med.th0 === null) q.med.th0 = q.th;
+        const k = Math.min(1, (agora - q.med.t) / 280);
+        q.th = q.med.th0 + (q.med.alvo - q.med.th0) * sai(k);
+        cor = q.med.cor;
+      } else if(!reduz){ q.th += q.wt * dt; q.ph += q.wp * dt; }
+      cx.globalAlpha = alfa;
+      cx.strokeStyle = cor || "rgba(75,255,159,.6)";
+      cx.beginPath(); cx.arc(x, y, r, 0, Math.PI * 2); cx.stroke();
+      cx.globalAlpha = alfa * 0.35;
+      cx.beginPath(); cx.ellipse(x, y, r, r * 0.3, 0, 0, Math.PI * 2); cx.stroke();
+      cx.globalAlpha = alfa;
+      if(revelando && !q.est){
+        cx.fillStyle = "#e9fff4";
+        cx.font = `${Math.round(raio * 1.5)}px "Share Tech Mono", monospace`;
+        cx.textAlign = "center"; cx.textBaseline = "middle";
+        cx.fillText(q.c === " " ? "·" : q.c, x, y + 1);
+      } else {
+        const sx = Math.sin(q.th) * Math.cos(q.ph), sy = -Math.cos(q.th), sz = Math.sin(q.th) * Math.sin(q.ph);
+        const px = x + r * sx, py = y + r * (sy * 0.94 + sz * 0.26);
+        const c = cor || mistura((1 - Math.cos(q.th)) / 2);
+        cx.strokeStyle = c; cx.beginPath(); cx.moveTo(x, y); cx.lineTo(px, py); cx.stroke();
+        cx.fillStyle = c; cx.shadowColor = c; cx.shadowBlur = 8;
+        cx.beginPath(); cx.arc(px, py, Math.max(0.4, 2.1 * s), 0, Math.PI * 2); cx.fill();
+        cx.shadowBlur = 0;
+      }
+    }
+    cx.globalAlpha = 1;
+    if(document.activeElement === inpSen && !ocup && Math.floor(agora / 530) % 2 === 0){
+      cx.fillStyle = "#4bff9f";
+      cx.fillRect(X0 + qs.length * passo + (qs.length ? 3 : 0), cy - raio * 1.15, 2, raio * 2.3);
+    }
+  }
+  inpSen.addEventListener("input", () => {
+    const antes = qs.length; sincroniza();
+    if(qs.length > antes){ Som.tecla(); ondulaEm(caixa, qs.length * passo); }
+    else if(qs.length < antes) Som.apaga();
+    caixa.classList.remove("vazio"); Sistema.digitando(); Mensagem.suave();
+  });
+  prendeCursor(inpSen);
+  return {
+    redimensiona, quadro, sincroniza,
+    revela(v){ revelando = v; },
+    quantos: () => qs.length,
+    medir(ok){ const agora = performance.now(); qs.forEach((q, i) => { q.med = { t: agora + i * 90, th0: null, alvo: ok ? 0 : Math.PI, cor: ok ? "#ffd66b" : "#ff3d5a" }; }); },
+    estilhaca(){ const agora = performance.now(); qs.forEach((q, i) => { q.est = { t: agora + 160 + i * 40, vx: alea(-90, 90), vy: alea(-150, -50) }; }); },
+    limpa(){ inpSen.value = ""; qs = []; }
+  };
+})();
+
+/* ---------- olhos: segurar para observar ---------- */
+function olho(botao, alvo){
+  let ativo = false;
+  const liga = () => { if(ativo || botao.disabled) return; ativo = true; alvo.revela(true); botao.setAttribute("aria-pressed", "true"); Som.revela(); };
+  const desliga = () => { if(!ativo) return; ativo = false; alvo.revela(false); botao.setAttribute("aria-pressed", "false"); };
+  botao.addEventListener("pointerdown", e => { e.preventDefault(); try{ botao.setPointerCapture(e.pointerId); }catch(_){} liga(); });
+  botao.addEventListener("pointerup", desliga);
+  botao.addEventListener("pointercancel", desliga);
+  botao.addEventListener("lostpointercapture", desliga);
+  botao.addEventListener("mousedown", e => e.preventDefault());
+  botao.addEventListener("keydown", e => { if((e.key === " " || e.key === "Enter") && !e.repeat){ e.preventDefault(); liga(); } });
+  botao.addEventListener("keyup", e => { if(e.key === " " || e.key === "Enter"){ e.preventDefault(); desliga(); } });
+  botao.addEventListener("blur", desliga);
+  botao.addEventListener("contextmenu", e => e.preventDefault());
+  botao.addEventListener("click", e => e.preventDefault());
+}
+olho($("olhoObs"), Observador);
+olho($("olhoSen"), Senha);
+
+/* ---------- som: botão ---------- */
+const SomUI = (() => {
+  const b = $("som");
+  function atualiza(){ b.setAttribute("aria-pressed", String(Som.ligado)); b.setAttribute("aria-label", Som.ligado ? "Desativar som" : "Ativar som"); }
+  b.addEventListener("click", () => {
+    Som.definir(!Som.ligado); atualiza();
+    guarda.gravar("limiar:som", Som.ligado ? "1" : "0");
+    if(Som.ligado) Som.revela();
+  });
+  return { atualiza };
+})();
+
+/* ---------- colapso ---------- */
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  if(ocupado || Trava.ativa() || !painelAcesso.hidden) return;
+  const faltaObs = !inpObs.value.trim(), faltaSen = !inpSen.value.trim();
+  if(faltaObs || faltaSen){
+    [[faltaObs, $("caixaObs")], [faltaSen, $("caixaSen")]].forEach(([falta, c]) => {
+      if(falta){ c.classList.remove("vazio"); void c.offsetWidth; c.classList.add("vazio"); }
+    });
+    Mensagem.mostra(faltaObs && faltaSen ? "Preencha o observador e a senha para colapsar." : faltaObs ? "Preencha o observador para colapsar." : "Preencha a senha para colapsar.", "aviso");
+    (faltaObs ? inpObs : inpSen).focus({ preventScroll: true });
+    return;
+  }
+  ocupado = true;
+  Mensagem.limpa(); Sistema.estado("colapsando");
+  $("rotuloBtn").textContent = "Colapsando…";
+  form.classList.add("colapsando");
+  Som.carga();
+  const r = btnC.getBoundingClientRect();
+  Campo.ondula(r.left + r.width / 2, r.top + r.height / 2, 1.2, relogio());
+  await espera(reduz ? 250 : 950);
+  const ok = verifica(inpObs.value, inpSen.value);
+  Senha.medir(ok); Observador.medir(ok);
+  await espera(reduz ? 120 : 280 + Senha.quantos() * 90);
+  form.classList.remove("colapsando");
+  $("rotuloBtn").textContent = "Colapsar";
+  if(ok) await sucesso(); else await falha();
+  ocupado = false;
+});
+
+async function sucesso(){
+  Estado.zera(); Tentativas.atualiza();
+  defineModo("observado"); Titulo.fixa(true);
+  document.body.classList.add("observado");
+  Sistema.estado("observado"); Som.sucesso();
+  const x = innerWidth / 2, y = innerHeight / 2;
+  pulsos.push({ x, y, t: relogio() }); Campo.ondula(x, y, 2.4, relogio());
+  Mensagem.anuncia("Acesso concedido.");
+  await espera(reduz ? 100 : 1300);
+  form.hidden = true; painelAcesso.hidden = false;
+  $("continuar").hidden = !CONFIG.destino;
+  (CONFIG.destino ? $("continuar") : $("encerrar")).focus({ preventScroll: true });
+}
+
+async function falha(){
+  Estado.falhou();
+  flashErro(); Som.erro();
+  const b = document.body;
+  b.classList.remove("decoerencia"); void b.offsetWidth; b.classList.add("decoerencia");
+  setTimeout(() => b.classList.remove("decoerencia"), 720);
+  Senha.estilhaca();
+  const acabou = Estado.d.falhas >= CONFIG.maxTentativas;
+  if(!acabou) Mensagem.mostra("O estado não colapsou. Confira o observador e a senha.", "erro");
+  Tentativas.atualiza();
+  await espera(reduz ? 120 : 820);
+  Senha.limpa(); Observador.solta();
+  if(acabou) Trava.inicia();
+  else{ Sistema.estado("coerente"); inpSen.focus({ preventScroll: true }); }
+}
+
+function encerrar(){
+  painelAcesso.hidden = true; form.hidden = false;
+  Observador.limpa(); Senha.limpa();
+  document.body.classList.remove("observado");
+  Titulo.fixa(false); defineModo("normal"); Sistema.estado("coerente"); Mensagem.limpa();
+  inpObs.focus({ preventScroll: true });
+}
+$("encerrar").addEventListener("click", encerrar);
+$("continuar").addEventListener("click", () => { if(CONFIG.destino) location.href = CONFIG.destino; });
+
+/* ---------- limiar de entrada ---------- */
+(() => {
+  const el = $("limiar");
+  let aberto = false;
+  const pref = guarda.ler("limiar:som");
+  const preferido = el.querySelector(`[data-som="${pref === "0" ? "0" : "1"}"]`);
+  if(preferido) preferido.classList.add("preferido");
+  function abrir(comSom){
+    if(aberto) return; aberto = true;
+    Som.definir(comSom); SomUI.atualiza(); guarda.gravar("limiar:som", comSom ? "1" : "0");
+    el.classList.add("aberto");
+    const x = innerWidth / 2, y = innerHeight / 2;
+    setTimeout(() => { Som.pulso(); pulsos.push({ x, y, t: relogio() }); Campo.ondula(x, y, 2.2, relogio()); }, reduz ? 0 : 380);
+    setTimeout(() => { document.body.classList.add("vivo"); Titulo.revela(); }, reduz ? 0 : 520);
+    setTimeout(() => {
+      el.hidden = true; Titulo.mede(); Senha.redimensiona(); Dica.demonstra();
+      if(ponteiroFino && !Trava.ativa()) inpObs.focus({ preventScroll: true });
+    }, reduz ? 60 : 1700);
+  }
+  el.querySelectorAll("[data-som]").forEach(b => b.addEventListener("click", () => abrir(b.dataset.som === "1")));
+})();
+
+/* ---------- inclinação holográfica ---------- */
+const camara = $("camara");
+let rx = 0, ry = 0;
+function inclina(dt){
+  if(!ponteiroFino || reduz) return;
+  const ativo = obs.forca > 0.05;
+  const ax = ativo ? -(obs.y / innerHeight - 0.5) * 5 : 0;
+  const ay = ativo ? (obs.x / innerWidth - 0.5) * 7 : 0;
+  const f = 1 - Math.exp(-dt * 4);
+  rx += (ax - rx) * f; ry += (ay - ry) * f;
+  camara.style.setProperty("--rx", rx.toFixed(2) + "deg");
+  camara.style.setProperty("--ry", ry.toFixed(2) + "deg");
+}
+
+/* ---------- laço principal ---------- */
+let ultimo = performance.now();
+function laco(agora){
+  const dt = Math.min(0.05, Math.max(0, (agora - ultimo) / 1000)); ultimo = agora;
+  const T = relogio();
+  atualizaObservacao(dt, agora, T);
+  ouro += (ouroAlvo - ouro) * (1 - Math.exp(-dt * 1.5));
+  erro += (erroAlvo - erro) * (1 - Math.exp(-dt * 7));
+  Campo.quadro(reduz ? 42 : T, obs, ouro, erro);
+  Chuva.quadro(dt, T, obs, pulsos);
+  Titulo.quadro(agora); Dica.quadro(agora); Observador.quadro(agora); Senha.quadro(dt, agora, ocupado);
+  inclina(dt);
+  requestAnimationFrame(laco);
+}
+
+Campo.redimensiona(); Chuva.redimensiona(); Senha.redimensiona(); Titulo.mede();
+Tentativas.atualiza(); SomUI.atualiza();
+if(Trava.ativa()) Trava.mostra();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => { Chuva.atlas(); Titulo.mede(); Senha.redimensiona(); });
+let rz = null;
+addEventListener("resize", () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => { Campo.redimensiona(); Chuva.redimensiona(); Senha.redimensiona(); Titulo.mede(); }, 120);
+});
+addEventListener("scroll", () => Titulo.mede(), { passive: true });
+document.addEventListener("visibilitychange", () => { document.title = document.hidden ? "Limiar (não observado)" : "Limiar"; });
+requestAnimationFrame(t => { ultimo = t; laco(t); });
+})();
+</script>
+</body>
+</html>
