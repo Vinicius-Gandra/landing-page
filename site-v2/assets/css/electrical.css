@@ -351,6 +351,7 @@ html[data-theme="light"] .e-theme-moon { display: inline; }
   .kpi dd { font-size: 1rem; }
   .budget { padding: 14px; }
 }
+@media (max-width: 640px) { .e-area-detail { display: none; } } /* três laboratórios na barra */
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
 /* ---- Impressão ---------------------------------------------------------- */
