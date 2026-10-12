@@ -3,7 +3,7 @@
    Depende de base.css (tokens e componentes compartilhados)
    ========================================================================== */
 
-:root { --appbar-h: 58px; --side-w: 384px; --gap: 16px; }
+:root { --appbar-h: 58px; --lab-areas-h: 42px; --side-w: 384px; --gap: 16px; }
 
 body.app { font-size: 14px; line-height: 1.55; min-height: 100dvh; }
 
@@ -34,10 +34,24 @@ html[data-theme="light"] .theme-btn .i-moon { display: block; }
   html:not([data-theme]) .theme-btn .i-moon { display: block; }
 }
 
+/* ---- Navegação entre laboratórios --------------------------------------- */
+.lab-areas {
+  position: sticky; top: var(--appbar-h); z-index: 50; min-height: var(--lab-areas-h);
+  display: flex; align-items: stretch; gap: 4px; padding: 0 16px;
+  background: var(--bg-alt); border-bottom: 1px solid var(--line);
+}
+.lab-areas-label { display: inline-flex; align-items: center; margin-right: 16px; color: var(--text-3); font-size: .62rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.lab-area { display: inline-flex; align-items: center; gap: 6px; min-height: var(--lab-areas-h); padding: 0 15px;
+  border-bottom: 2px solid transparent; color: var(--text-2); font-size: .78rem; font-weight: 650; white-space: nowrap; }
+.lab-area:hover { color: var(--text); background: var(--surface); }
+.lab-area[aria-current="page"] { border-bottom-color: var(--accent); color: var(--text); background: var(--accent-wash); }
+.lab-area-number { color: var(--accent); font: 700 .63rem var(--font-mono); }
+.lab-area-detail { color: var(--text-3); font-weight: 500; }
+
 /* ---- Estrutura de duas colunas ------------------------------------------ */
 .lab { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); align-items: start; }
 .dados {
-  position: sticky; top: var(--appbar-h); height: calc(100dvh - var(--appbar-h)); overflow-y: auto; overscroll-behavior: contain;
+  position: sticky; top: calc(var(--appbar-h) + var(--lab-areas-h)); height: calc(100dvh - var(--appbar-h) - var(--lab-areas-h)); overflow-y: auto; overscroll-behavior: contain;
   border-right: 1px solid var(--line); background: var(--bg-alt); scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
 }
 .resultados { min-width: 0; padding: 0 26px 64px; }
@@ -125,7 +139,7 @@ html[data-theme="light"] .inp.auto input::placeholder { color: var(--teal); }
 .sub-sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
 /* ---- Topo dos resultados (situação + abas) ------------------------------- */
-.res-top { position: sticky; top: var(--appbar-h); z-index: 30; margin: 0 -26px; padding: 14px 26px 0;
+.res-top { position: sticky; top: calc(var(--appbar-h) + var(--lab-areas-h)); z-index: 30; margin: 0 -26px; padding: 14px 26px 0;
   background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
 .case { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .case-id { min-width: 0; }
@@ -350,7 +364,7 @@ button.kpi:hover { border-color: var(--line-strong); background: var(--surface-2
 
 /* ---- Memória de cálculo ---------------------------------------------------- */
 .mem-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; align-items: start; }
-.mem-index { position: sticky; top: calc(var(--appbar-h) + 132px); max-height: calc(100dvh - var(--appbar-h) - 150px); overflow-y: auto; display: grid; gap: 1px; padding-right: 4px; scrollbar-width: thin; }
+.mem-index { position: sticky; top: calc(var(--appbar-h) + var(--lab-areas-h) + 132px); max-height: calc(100dvh - var(--appbar-h) - var(--lab-areas-h) - 150px); overflow-y: auto; display: grid; gap: 1px; padding-right: 4px; scrollbar-width: thin; }
 .mem-index h4 { margin: 12px 0 4px; color: var(--text-3); font-size: .64rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .mem-index h4:first-child { margin-top: 0; }
 .mem-index a { display: grid; grid-template-columns: 34px minmax(0, 1fr) 10px; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; color: var(--text-2); font-size: .76rem; }
@@ -366,7 +380,7 @@ button.kpi:hover { border-color: var(--line-strong); background: var(--surface-2
 .mem-group-title:first-child { margin-top: 0; }
 .mem-group-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .mem-list { display: grid; gap: 10px; }
-.mem-item { scroll-margin-top: calc(var(--appbar-h) + 140px); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 20px; padding: 16px 18px 15px; border-radius: var(--r-l); border: 1px solid var(--line); background: var(--surface); transition: border-color .4s, box-shadow .4s; }
+.mem-item { scroll-margin-top: calc(var(--appbar-h) + var(--lab-areas-h) + 140px); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 20px; padding: 16px 18px 15px; border-radius: var(--r-l); border: 1px solid var(--line); background: var(--surface); transition: border-color .4s, box-shadow .4s; }
 .mem-item.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
 .mem-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .mem-id { display: inline-grid; place-items: center; min-width: 34px; height: 22px; padding: 0 6px; border-radius: 6px; background: var(--accent-wash); color: var(--accent); border: 1px solid var(--accent-line); font-size: .7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -485,7 +499,7 @@ table.heat { border-collapse: separate; border-spacing: 0; font-size: .78rem; fo
   .lab[data-vista="dados"] .resultados { display: none; }
   .resultados { padding: 0 16px 40px; }
   .res-top { margin: 0 -16px; padding: 12px 16px 0; }
-  .dados-head { top: var(--appbar-h); }
+  .dados-head { top: calc(var(--appbar-h) + var(--lab-areas-h)); }
   .mob-switch { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 70; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px;
     border-radius: 14px; background: var(--surface-3); box-shadow: var(--shadow-pop); }
   .mob-switch button { min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); font-weight: 700; font-size: .86rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
@@ -494,10 +508,14 @@ table.heat { border-collapse: separate; border-spacing: 0; font-size: .78rem; fo
   .appbar-title { display: none; }
   .appbar-sep { display: none; }
   .brand-back .lbl { display: none; }
+  .lab-areas-label { display: none; }
+  .lab-areas { justify-content: stretch; padding: 0 10px; }
+  .lab-area { flex: 1; justify-content: center; padding-inline: 10px; }
   .case-chips { width: 100%; }
   .st-chip { flex: 1; justify-content: flex-start; }
 }
 @media (max-width: 620px) {
+  .lab-area-detail { display: none; }
   .g3 { grid-template-columns: minmax(0, 1fr); }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .minis { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px; }
@@ -519,7 +537,7 @@ table.heat { border-collapse: separate; border-spacing: 0; font-size: .78rem; fo
 
 /* ---- Impressão (o relatório tem página própria) ----------------------------- */
 @media print {
-  .appbar, .dados, .mob-switch, .tabs, .ccard-tools { display: none !important; }
+  .appbar, .lab-areas, .dados, .mob-switch, .tabs, .ccard-tools { display: none !important; }
   .lab { display: block; }
   .res-top { position: static; background: none; backdrop-filter: none; }
 }

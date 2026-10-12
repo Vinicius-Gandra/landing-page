@@ -170,7 +170,7 @@
   function alternarTema() {
     const novo = temaAtual() === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', novo);
-    try { localStorage.setItem('vg-tema', novo); } catch (_) { /* ok */ }
+    try { localStorage.setItem('vg-theme', novo); } catch (_) { /* ok */ }
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = novo === 'dark' ? '#09131f' : '#f5f5ef';
     window.dispatchEvent(new Event('vg-tema'));

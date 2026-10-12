@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Laboratório elétrico para máquinas síncronas: entrada pela FTD, conferência dos dados, enrolamento, ranhura e bobina, circuito magnético, perdas, rotor e materiais, com memória de cálculo.">
+  <meta name="description" content="Laboratório elétrico: a partir dos dados da FTD, calcula a bobina pré-formada do estator conforme o Design de Bobinas (condutor, ranhura, violino, resistências, cobre) e gera o desenho da bobina.">
   <meta name="theme-color" content="#09131f">
   <meta name="color-scheme" content="dark light">
-  <title>Laboratório elétrico · FTD, estator e campo | Vinicius Gandra</title>
+  <title>Laboratório elétrico · Bobina do estator | Vinicius Gandra</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2309131f'/%3E%3Cpath d='M8 36c7-25 13 25 20 0s13-25 20 0 9 4 12-8' fill='none' stroke='%23f5ad69' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
   <script>try { var t = localStorage.getItem('vg-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,65 +15,65 @@
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/electrical.css">
   <script defer src="assets/js/electrical-engine.js"></script>
+  <script defer src="assets/js/electrical-drawing.js"></script>
+  <script defer src="assets/js/electrical-hmi.js"></script>
   <script defer src="assets/js/electrical-app.js"></script>
 </head>
 <body class="electrical-app">
-  <a class="e-skip" href="#e-output">Pular para os resultados</a>
+  <a class="e-skip" href="#e-output">Pular para o resultado</a>
 
   <header class="e-appbar">
     <a class="e-brand" href="../index.html" aria-label="Vinicius Gandra — voltar ao portfólio">VG<b>.</b></a>
     <a class="e-back" href="../index.html" title="Voltar ao portfólio"><span aria-hidden="true">←</span><span class="e-back-label">Portfólio</span></a>
     <span class="e-header-divider" aria-hidden="true"></span>
-    <div class="e-appbar-title"><span class="overline">Laboratório de engenharia</span><strong>Máquina síncrona · FTD</strong></div>
-    <div class="e-actions" aria-label="Ações do caso">
-      <button class="btn btn-ghost btn-s" id="e-reset" type="button" title="Restaurar a FTD de exemplo (10.000 kVA)" aria-label="Restaurar a FTD de exemplo"><span class="e-action-icon" aria-hidden="true">↺</span><span class="e-action-label">Exemplo</span></button>
-      <button class="btn btn-ghost btn-s" id="e-export" type="button" title="Exportar o caso em JSON" aria-label="Exportar o caso em JSON"><span class="e-action-icon" aria-hidden="true">↓</span><span class="e-action-label">Exportar</span></button>
-      <button class="btn btn-primary btn-s" id="e-print" type="button" title="Imprimir ou salvar em PDF" aria-label="Imprimir ou salvar em PDF"><span class="e-action-icon" aria-hidden="true">▣</span><span class="e-action-label">Imprimir / PDF</span></button>
-      <button class="btn btn-ghost btn-s e-theme-button" id="e-theme" type="button" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro"><span class="e-theme-sun" aria-hidden="true">☼</span><span class="e-theme-moon" aria-hidden="true">☾</span></button>
+    <div class="e-appbar-title"><span class="overline">Laboratório elétrico</span><strong>Bobina do estator · FTD → máquina</strong></div>
+    <div class="e-actions" aria-label="Ações">
+      <button class="e-act" id="e-reset" type="button" title="Preencher com a FTD de exemplo (10.000 kVA, 13,8 kV)"><span aria-hidden="true">↺</span><span class="e-act-label">Exemplo</span></button>
+      <button class="e-act" id="e-clear" type="button" title="Apagar os dados da FTD para digitar outra"><span aria-hidden="true">⌫</span><span class="e-act-label">Limpar</span></button>
+      <button class="e-act" id="e-copy" type="button" title="Copiar o resumo da bobina"><span aria-hidden="true">⧉</span><span class="e-act-label">Copiar</span></button>
+      <button class="e-act e-act-primary" id="e-print" type="button" title="Imprimir ou salvar em PDF"><span aria-hidden="true">▣</span><span class="e-act-label">PDF</span></button>
+      <button class="e-act e-act-icon" id="e-theme" type="button" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro"><span class="e-theme-sun" aria-hidden="true">☼</span><span class="e-theme-moon" aria-hidden="true">☾</span></button>
     </div>
   </header>
 
-  <nav class="e-areas" aria-label="Áreas do laboratório">
-    <span class="e-areas-label">Laboratórios</span>
+  <nav class="e-areas" aria-label="Laboratórios">
     <a class="e-area" href="laboratorio.html"><span class="e-area-number">01</span> Mecânica <span class="e-area-detail">· eixo e mancal</span></a>
-    <a class="e-area" href="laboratorio-eletrico.html" aria-current="page"><span class="e-area-number">02</span> Elétrica <span class="e-area-detail">· FTD, estator e campo</span></a>
+    <a class="e-area" href="laboratorio-eletrico.html" aria-current="page"><span class="e-area-number">02</span> Elétrica <span class="e-area-detail">· bobina do estator</span></a>
+    <a class="e-area" href="laboratorio-termico.html"><span class="e-area-number">03</span> Térmica <span class="e-area-detail">· trocador ar–água</span></a>
   </nav>
 
-  <div class="e-workspace">
-    <aside class="e-sidebar" aria-labelledby="e-form-title">
-      <div class="e-sidebar-heading">
-        <div><span class="overline">Entrada pela FTD</span><h2 id="e-form-title">Dados de entrada</h2></div>
-        <span class="e-live"><span class="dot-live" aria-hidden="true"></span> Recálculo automático</span>
-      </div>
-      <div class="e-import">
-        <button class="e-import-button" id="e-import" type="button">
-          <span class="e-import-icon" aria-hidden="true">⤒</span>
-          <span><strong>Importar FTD</strong><small>PDF, planilha Excel ou caso salvo em JSON</small></span>
-        </button>
-        <input id="e-file" type="file" accept=".pdf,.xlsx,.xls,.json,application/pdf,application/json" hidden>
-        <div id="e-import-report" class="e-import-report" role="status" aria-live="polite" hidden></div>
-        <label class="e-search"><span class="sr-only">Procurar campo</span><span aria-hidden="true">⌕</span><input id="e-search" type="search" placeholder="Procurar campo ou código da FTD (ex.: W12, PB%)" autocomplete="off"></label>
-        <p class="e-legend"><span class="e-code">W12</span> rótulo da FTD <span class="e-legend-edited">editado</span> difere da FTD carregada <span class="e-legend-empty">vazio</span> não informado</p>
+  <div class="e-workspace" id="e-workspace" data-view="resultado">
+    <aside class="e-inputs" id="e-inputs" aria-labelledby="e-form-title">
+      <div class="e-inputs-head">
+        <div>
+          <p class="e-eyebrow">Digite os dados da FTD</p>
+          <h2 id="e-form-title">Dados de entrada</h2>
+        </div>
+        <div class="e-progress" id="e-progress" aria-live="polite"></div>
       </div>
       <form id="e-form" novalidate></form>
-      <p class="e-sidebar-foot">Os grupos 01–06 seguem a FTD. O grupo 07 reúne premissas que a FTD não traz (isolação do fio elementar, aço, folgas); elas ficam visíveis na memória de cálculo. Use ponto ou vírgula decimal. Campos vazios deixam os cálculos dependentes como pendentes.</p>
+      <p class="e-inputs-foot">A etiqueta de cada campo é o rótulo na FTD. Os grupos 05 e 06 trazem medidas da máquina (POP-MTR-03005) e premissas de fabricação que a FTD não traz; já vêm com valores típicos. Vírgula ou ponto decimal.</p>
     </aside>
 
-    <main class="e-main" id="e-main">
+    <main class="e-results" id="e-main">
       <div class="e-intro">
-        <div>
-          <p class="e-kicker">MÁQUINAS ELÉTRICAS / PROJETO A PARTIR DA FTD</p>
-          <h1>Laboratório <em>elétrico.</em></h1>
-          <p id="e-machine-line" class="e-machine-line">Carregando a FTD…</p>
-        </div>
-        <div class="e-intro-mark" aria-hidden="true"><span>Φ</span><small>FTD<br>ESTATOR<br>CAMPO</small></div>
+        <p class="e-eyebrow">Máquinas elétricas · bobina pré-formada</p>
+        <h1>Laboratório <em>elétrico.</em></h1>
+        <p>Digite a FTD e a bobina aparece como na tela da máquina que a fabrica: o laço, a bobina aberta e conformada, o caimento e a abertura dos braços, com as medidas calculadas pelo <b>Design de Bobinas rev. 00</b>. Abaixo, cada passo do cálculo com fórmula e números.</p>
       </div>
-      <div class="e-method-note"><span class="e-method-icon" aria-hidden="true">i</span><p>A FTD é a entrada. O laboratório confere a coerência interna da folha, recalcula o que pode ser deduzido dela (enrolamento, fio elementar, induções, perdas, campo) e identifica a origem de cada equação: <strong>Guia de Consulta – Design do Estator</strong>, <strong>Design de Bobinas rev. 00</strong>, normas IEC e Pyrhönen et al. Estimativas dependem das premissas do grupo 07.</p></div>
-      <div id="e-error" class="e-error" role="alert" hidden></div>
-      <div id="e-output"></div>
-      <noscript><div class="e-error"><strong>JavaScript desativado.</strong> O laboratório calcula no próprio navegador e precisa de JavaScript.</div></noscript>
+      <div id="e-error" class="e-alert e-alert-fail" role="alert" hidden></div>
+      <div id="e-output" aria-live="off"></div>
+      <noscript><div class="e-alert e-alert-fail"><strong>JavaScript desativado.</strong> O laboratório calcula no próprio navegador e precisa de JavaScript.</div></noscript>
     </main>
   </div>
-  <div id="e-tooltip" class="e-tooltip" role="tooltip" hidden></div>
+
+  <div class="e-peek" id="e-peek" hidden>
+    <button type="button" id="e-peek-btn"><span class="e-peek-label">Condutor</span><strong id="e-peek-value">—</strong><span class="e-peek-go" aria-hidden="true">→</span></button>
+  </div>
+  <nav class="e-mobilebar" aria-label="Alternar entre dados e resultado">
+    <button type="button" data-view="dados" aria-pressed="false"><span class="e-mb-icon" aria-hidden="true">✎</span>Dados da FTD<span class="e-mb-badge" id="e-mb-badge" hidden></span></button>
+    <button type="button" data-view="resultado" aria-pressed="true"><span class="e-mb-icon" aria-hidden="true">◫</span>Bobina</button>
+  </nav>
+  <div class="e-toast" id="e-toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

@@ -124,7 +124,7 @@
       mem.mancal.length ? [h('h4', null, 'Mancal'), mem.mancal.map(it => h('a', { href: '#mem-' + it.id, class: 'm', 'data-ref': it.id }, h('span', { class: 'i' }, it.id), h('span', null, it.titulo), h('span', { class: 'd ' + (it.estado || '') })))] : null);
     const bCopiar = h('button', { type: 'button', class: 'btn btn-s' }, svgIco('i-copiar'), 'Copiar como texto');
     bCopiar.addEventListener('click', async () => { const ok = await U.copiar(raiz.VGMemoria.comoTexto(mem, R)); U.toast(ok ? 'Memória de cálculo copiada' : 'Não foi possível copiar'); });
-    const bRel = h('a', { class: 'btn btn-s', href: ctx.linkRelatorio(), target: '_blank', rel: 'noopener' }, svgIco('i-pdf'), 'Relatório PDF');
+    const bRel = h('a', { class: 'btn btn-s', href: ctx.linkRelatorio(), target: '_blank', rel: 'noopener' }, svgIco('i-pdf'), 'Relatório para PDF');
     const corpo = h('div', null,
       h('div', { class: 'mem-toolbar' }, h('p', null, 'Cada grandeza tem identificação (E = ponta de eixo, M = mancal), forma simbólica, substituição com os valores do caso, resultado com unidade, fonte e verificação.'), h('div', { style: 'display:flex;gap:6px' }, bCopiar, bRel)),
       h('h2', { class: 'mem-group-title' }, `Ponta de eixo · ${mem.eixo.length} etapas`),
