@@ -35,6 +35,7 @@
 
   /* ---- Formulário ------------------------------------------------------------ */
   const GROUPS = [
+    { id: 'ident', title: 'Identificação', sub: 'Carimbo do desenho e folha de dados · opcional', closed: true },
     { id: 'calor', title: 'Calor que vai para o ar', sub: 'Perdas do projeto · mancais ficam de fora' },
     { id: 'ar', title: 'Ventilação LA / LOA', sub: 'Vazão por ramo × ramos · ar frio requerido' },
     { id: 'agua', title: 'Circuito de água', sub: 'Entrada e vazão definidas · saída calculada' },
@@ -45,7 +46,12 @@
   ];
   const opt = (...pairs) => pairs;
   const FIELDS = [
-    // 01 · calor no ar
+    // 01 · identificação (opcional)
+    { key: 'cliente', group: 'ident', label: 'Cliente', type: 'text', def: '', placeholder: 'Opcional' },
+    { key: 'os', group: 'ident', label: 'O.S.', type: 'text', def: '', placeholder: 'Opcional' },
+    { key: 'equipamento', group: 'ident', label: 'Equipamento', type: 'text', def: 'Gerador síncrono 10.000 kVA · 13,8 kV', span: true, placeholder: 'Ex.: gerador 10.000 kVA, 13,8 kV' },
+    { key: 'elaborado', group: 'ident', label: 'Elaborado por', type: 'text', def: '', span: true, placeholder: 'Opcional' },
+    // 02 · calor no ar
     { key: 'elecLoss', group: 'calor', label: 'Perdas elétricas', sym: 'Pel', unit: 'kW', type: 'num', def: 108.51, req: true, min: 0, help: 'Valor já calculado no projeto.' },
     { key: 'ventLoss', group: 'calor', label: 'Ventilação no ar', sym: 'Pvent', unit: 'kW', type: 'num', def: 0, min: 0, help: 'Ventiladores e atrito do rotor com o ar.' },
     { key: 'extraLoss', group: 'calor', label: 'Outras perdas no ar', sym: 'Poutras', unit: 'kW', type: 'num', def: 0, min: 0, help: 'Resistências, barramentos internos etc.' },
@@ -108,7 +114,7 @@
   const FIELD = Object.fromEntries(FIELDS.map(f => [f.key, f]));
   const INPUTS = FIELDS.filter(f => f.type !== 'calc');
   const EXAMPLE = Object.fromEntries(INPUTS.map(f => [f.key, f.def]));
-  const EMPTY = Object.fromEntries(INPUTS.map(f => [f.key, f.type === 'select' ? f.def : null]));
+  const EMPTY = Object.fromEntries(INPUTS.map(f => [f.key, f.type === 'select' ? f.def : f.type === 'text' ? '' : null]));
 
   class InputError extends Error {
     constructor(errors, fields) { super(errors.join(' ')); this.name = 'InputError'; this.errors = errors; this.fields = fields; }
@@ -229,6 +235,7 @@
     for (const f of INPUTS) {
       let v = v0[f.key];
       if (f.type === 'select') { d[f.key] = f.options.some(o => o[0] === v) ? v : f.def; continue; }
+      if (f.type === 'text') { d[f.key] = String(v ?? '').trim().slice(0, 80); continue; }
       if (v === null || v === undefined || v === '') {
         if (f.req) { fields[f.key] = 'informe o valor'; continue; }
         v = f.def;
@@ -628,9 +635,10 @@
   }
 
   /* ---- Entrada pública -------------------------------------------------------------- */
-  function calculate(values) {
+  function calculate(values, opts = {}) {
     const d = validate(values);
     const r = compute(d);
+    r.info = { cliente: d.cliente, os: d.os, equipamento: d.equipamento, elaborado: d.elaborado };
     if (!(r.eps > 0 && r.eps < 1)) {
       throw new InputError([`Trocador inviável: a efetividade requerida passa de 1. Com ${fx(r.qvWh, 1)} m³/h, a água sairia a ${fx(r.waterOut, 1)} °C, acima do ar quente (${fx(r.Th, 1)} °C).`], {
         waterFlow: 'aumente a vazão de água',
@@ -642,6 +650,7 @@
       throw new InputError([`O arranjo escolhido não atinge ε = ${fx(r.eps, 3)} com Cr = ${fx(r.Cr, 3)}.`], { hxType: 'use mais passes ou contracorrente' });
     }
     if (!(r.U > 0) || !isNum(r.areaMin)) throw new InputError(['Não foi possível calcular o coeficiente U com essa superfície.'], { finOD: 'confira a geometria da aleta' });
+    if (opts.lite) return r;
     r.steps = buildSteps(r);
     r.rfq = rfqData(r);
     r.checks = buildChecks(r);

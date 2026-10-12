@@ -184,12 +184,13 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
 .pf { display: block; width: 100%; height: auto; overflow: visible; }
 .pf-grid { stroke: var(--c-grid); stroke-width: 1; }
 .pf-axis { fill: var(--c-ink-3); font: 500 10px var(--font-mono); }
-.pf-lab { font: 700 11px var(--font-sans); }
-.pf-lab-air { fill: var(--air-hot); }
-.pf-lab-water { fill: var(--water); }
-.pf-air { fill: none; stroke: var(--air-hot); stroke-width: 2.4; stroke-linejoin: round; }
-.pf-water { fill: none; stroke: var(--water); stroke-width: 2.4; stroke-linejoin: round; }
-.pf-band { fill: var(--c-em-wash); }
+.pf-lab { font: 700 11px var(--font-sans); fill: var(--c-ink-2); paint-order: stroke; stroke: var(--c-surface); stroke-width: 3px; stroke-linejoin: round; }
+.pf-air { fill: none; stroke: var(--air-hot); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.pf-water { fill: none; stroke: var(--water); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.pf-band { fill: var(--air-hot); fill-opacity: .1; }
+.pf-end-air { fill: var(--air-hot); stroke: var(--c-surface); stroke-width: 2; }
+.pf-end-water { fill: var(--water); stroke: var(--c-surface); stroke-width: 2; }
+.pf-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
 .pf-cross { stroke: var(--c-ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
 .pf-dot-air { fill: var(--air-hot); stroke: var(--surface); stroke-width: 2; }
 .pf-dot-water { fill: var(--water); stroke: var(--surface); stroke-width: 2; }
@@ -248,47 +249,192 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
 .seg-water { background: var(--water); }
 .seg-water-2 { background: color-mix(in srgb, var(--water) 48%, var(--c-surface)); }
 
-/* Circuito de ventilação */
-.fig { margin: 14px 0 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
-.fig-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 14px; margin-bottom: 8px; }
-.fig-head h3 { font-size: .92rem; }
-.fig-head span { color: var(--text-3); font-size: .72rem; }
-.fig-scroll { overflow-x: auto; scrollbar-width: thin; }
-.fig figcaption, .legend-row { color: var(--text-3); font-size: .7rem; line-height: 1.5; }
-.fig figcaption { margin-top: 8px; }
-.legend-row { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
-.legend-row span { display: inline-flex; align-items: center; gap: 6px; }
-.legend-row i { width: 16px; height: 3px; border-radius: 2px; }
-.dg { display: block; width: 100%; height: auto; max-height: 420px; }
-.d-t { fill: var(--text); font: 500 12px var(--font-sans); }
-.d-small { font-size: 10.5px; }
-.d-strong { font-weight: 750; }
-.d-muted { fill: var(--text-3); }
-.d-mono { font-family: var(--font-mono); }
-.d-calc { fill: var(--accent); }
-.d-hot-t { fill: var(--air-hot); }
-.d-cold-t { fill: var(--air-cold); }
-.d-water-t { fill: var(--water); font-weight: 700; }
-.d-cooler { fill: color-mix(in srgb, var(--water) 13%, var(--c-surface)); stroke: color-mix(in srgb, var(--water) 55%, var(--line)); stroke-width: 1.5; }
-.d-tube { stroke: color-mix(in srgb, var(--water) 45%, var(--line)); stroke-width: 1.2; stroke-dasharray: 3 4; }
-.d-frame { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1.5; }
-.d-stator { fill: var(--surface-3); stroke: var(--line-strong); stroke-width: 1; }
-.d-gap { fill: var(--surface-2); }
-.d-rotor { fill: color-mix(in srgb, var(--text-3) 22%, var(--surface)); stroke: var(--line-strong); stroke-width: 1; }
-.d-shaft { fill: var(--c-deemph); }
-.d-bearing { fill: color-mix(in srgb, var(--text-3) 55%, var(--surface)); stroke: var(--line-strong); }
-.d-fan { fill: var(--text-2); }
-.d-cold { fill: none; stroke: var(--air-cold); stroke-width: 2.6; stroke-linejoin: round; }
-.d-hot { fill: none; stroke: var(--air-hot); stroke-width: 2.6; }
-.d-hot.d-thin { stroke-width: 1.5; stroke-dasharray: 4 3; }
-.d-water { fill: none; stroke: var(--water); stroke-width: 2; }
-.d-ink { fill: none; stroke: var(--text-3); stroke-width: 1.5; }
-.d-ink.d-dash { stroke-dasharray: 3 3; }
-.d-mk-cold { fill: var(--air-cold); }
-.d-mk-hot { fill: var(--air-hot); }
-.d-mk-water { fill: var(--water); }
-.d-mk-ink { fill: var(--text-3); }
-.d-off { opacity: .18; }
+/* O trocador por dentro: vistas, balões e lista de itens */
+.hxbox { margin: 14px 0; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); overflow: hidden; }
+.hxbox-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 18px; padding: 16px 18px 14px; border-bottom: 1px solid var(--line); }
+.hxbox-head h3 { font-size: 1.05rem; letter-spacing: -.02em; }
+.hxbox-head p { max-width: 66ch; margin-top: 4px; color: var(--text-2); font-size: .76rem; line-height: 1.55; }
+.hxbox-head p b { color: var(--text); font-weight: 650; font-variant-numeric: tabular-nums; }
+.hx-tabs { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: var(--bg); }
+.hx-tab { min-height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text-3); font-size: .74rem; font-weight: 700; white-space: nowrap; transition: background var(--t-fast), color var(--t-fast); }
+.hx-tab:hover { color: var(--text); }
+.hx-tab-s { display: none; }
+.hx-tab[aria-selected="true"] { background: var(--surface-2); color: var(--text); box-shadow: var(--shadow-s), inset 0 -2px 0 var(--accent); }
+.hx-stage { position: relative; padding: 10px 14px 0;
+  background-color: var(--c-surface);
+  background-image: linear-gradient(color-mix(in srgb, var(--c-grid) 55%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--c-grid) 55%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px; background-position: -1px -1px; }
+.hx-pane { margin: 0; }
+.hx-pane-title { display: none; }
+.hx-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.hx-caption { max-width: 92ch; padding: 6px 4px 12px; color: var(--text-3); font-size: .72rem; line-height: 1.55; }
+.hx-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 18px; border-top: 1px solid var(--line); color: var(--text-3); font-size: .7rem; }
+.hx-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.hx-legend .ln { width: 18px; height: 3px; border-radius: 2px; }
+.hx-legend .sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line-strong); }
+.hx-legend .tg { width: 18px; height: 11px; border-radius: 6px; border: 1.6px dashed var(--accent); }
+.hx-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 2px 12px; margin: 0; padding: 10px 12px 14px; border-top: 1px solid var(--line); list-style: none; }
+.hx-item { display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: start; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--text); text-align: left; transition: background var(--t-fast), border-color var(--t-fast); }
+.hx-item:hover, .hx-parts li.is-hot .hx-item { border-color: var(--accent-line); background: var(--accent-wash); }
+.hx-item-n { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1.2px solid var(--text-2); border-radius: 50%; background: var(--c-surface); font: 700 .66rem var(--font-mono); }
+.hx-parts li.is-hot .hx-item-n { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.hx-item-t { display: grid; gap: 1px; min-width: 0; }
+.hx-item-t strong { font-size: .8rem; line-height: 1.3; }
+.hx-item-t small { color: var(--text-3); font-size: .7rem; line-height: 1.4; font-variant-numeric: tabular-nums; }
+
+/* Desenhos (tela): materiais e correntes com os tokens do site */
+.hxv { display: block; width: 100%; height: auto; max-height: 540px; overflow: visible;
+  --hx-steel: color-mix(in srgb, var(--text-3) 18%, var(--c-surface));
+  --hx-steel-2: color-mix(in srgb, var(--text-3) 34%, var(--c-surface));
+  --hx-copper: color-mix(in srgb, var(--accent) 72%, var(--c-surface));
+  --hx-copper-line: color-mix(in srgb, var(--accent) 88%, var(--text));
+  --hx-alu: color-mix(in srgb, var(--text-2) 20%, var(--c-surface));
+  --hx-alu-line: color-mix(in srgb, var(--text-2) 46%, var(--c-surface));
+  --hx-water-wash: color-mix(in srgb, var(--water) 17%, var(--c-surface)); }
+.hxv text { font-family: var(--font-sans); fill: var(--text); }
+.hxv .hx-t { font-size: 11px; font-weight: 560; }
+.hxv .hx-t2 { font-size: 10px; fill: var(--text-3); }
+.hxv .hx-strong { font-weight: 760; }
+.hxv .hx-ttl { font-size: 11.5px; font-weight: 760; fill: var(--text-2); }
+.hxv .hx-on, .hxv .hx-on-band { paint-order: stroke; stroke: var(--c-surface); stroke-width: 3.2px; stroke-linejoin: round; }
+.hxv .hx-on-band { font-size: 10.5px; }
+.hxv .hx-dim-t { font: 600 10.5px var(--font-mono); fill: var(--text); paint-order: stroke; stroke: var(--c-surface); stroke-width: 3.2px; stroke-linejoin: round; }
+.hxv .hx-bal-t { font: 700 10px var(--font-mono); fill: var(--text); }
+.hxv .hx-tag-t { font: 700 10.5px var(--font-mono); fill: var(--text); }
+.hxv .hx-cut-t { font: 800 12px var(--font-mono); fill: var(--text); }
+.hxv .hx-gap { fill: var(--surface-2); }
+.hxv .hx-zone-hot { fill: var(--air-hot); fill-opacity: .13; }
+.hxv .hx-zone-cold { fill: var(--air-cold); fill-opacity: .1; }
+.hxv .hx-wall { fill: none; stroke: var(--line-strong); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.hxv .hx-ground { stroke: var(--line-strong); stroke-width: 1.5; }
+.hxv .hx-steel { fill: var(--hx-steel); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-steel-2 { fill: var(--hx-steel-2); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-steel-cut { fill: var(--hx-steel); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-hatch { stroke: var(--line-strong); stroke-width: .8; }
+.hxv .hx-hatch-cu { stroke: var(--hx-copper); stroke-width: 1; }
+.hxv .hx-sheet { stroke: var(--line-strong); stroke-width: 2; }
+.hxv .hx-face-bg, .hxv .hx-fin-bg { fill: var(--hx-alu); }
+.hxv .hx-fin-l { stroke: var(--hx-alu-line); stroke-width: .7; }
+.hxv .hx-tube-l { stroke: var(--hx-copper); stroke-width: 1.3; }
+.hxv .hx-outline { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+.hxv .hx-airband { stroke: none; }
+.hxv .hx-fin { fill: var(--hx-alu); stroke: var(--hx-alu-line); stroke-width: .8; }
+.hxv .hx-fin-root { fill: none; stroke: var(--hx-alu-line); stroke-width: .8; stroke-dasharray: 2 2; }
+.hxv .hx-tube { fill: var(--hx-copper); stroke: var(--hx-copper-line); stroke-width: .8; }
+.hxv .hx-bore { fill: var(--hx-water-wash); stroke: none; }
+.hxv .hx-cu-sec { fill: color-mix(in srgb, var(--accent) 22%, var(--c-surface)); stroke: var(--hx-copper); stroke-width: 1; }
+.hxv .hx-fin-sec { fill: var(--hx-alu-line); stroke: none; }
+.hxv .hx-cu { fill: var(--hx-copper); stroke: var(--hx-copper-line); stroke-width: .8; }
+.hxv .hx-core { fill: var(--hx-steel-2); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-rotor { fill: var(--hx-steel); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-shaft { fill: var(--c-deemph); }
+.hxv .hx-bearing { fill: var(--hx-steel-2); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-fan { fill: var(--text-2); }
+.hxv .hx-pipe { fill: var(--hx-steel); stroke: var(--water); stroke-width: 1.2; }
+.hxv .hx-flange { fill: var(--hx-steel-2); stroke: var(--line-strong); stroke-width: 1; }
+.hxv .hx-flange-l { stroke: var(--line-strong); stroke-width: .8; }
+.hxv .hx-tray { fill: color-mix(in srgb, var(--water) 12%, transparent); stroke: var(--line-strong); stroke-width: 1.4; stroke-linejoin: round; }
+.hxv .hx-drain { stroke: var(--water); stroke-width: 1.4; }
+.hxv .hx-hidden { stroke: var(--text-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.hxv .hx-center { stroke: var(--text-3); stroke-width: .7; stroke-dasharray: 10 3 2 3; }
+.hxv .hx-cut { stroke: var(--text-2); stroke-width: 1; stroke-dasharray: 12 3 2 3; }
+.hxv .hx-cut-a { stroke: var(--text-2); stroke-width: 2.4; }
+.hxv .hx-dim, .hxv .hx-ext { stroke: var(--text-3); stroke-width: .8; }
+.hxv .hx-ah { fill: var(--text-3); }
+.hxv .hx-air, .hxv .hx-airflow { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.hxv .hx-hot { stroke: var(--air-hot); }
+.hxv .hx-cold { stroke: var(--air-cold); }
+.hxv .hx-water { stroke: var(--water); }
+.hxv .hx-oil { stroke: var(--text-3); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.hxv .hx-thin { stroke-width: 1.4; }
+.hxv .hx-ah-hot { fill: var(--air-hot); }
+.hxv .hx-ah-cold { fill: var(--air-cold); }
+.hxv .hx-ah-water { fill: var(--water); }
+.hxv .hx-ah-oil { fill: var(--text-3); }
+.hxv .hx-ox { fill: none; stroke-width: 1.4; }
+.hxv .hx-ox-hot { stroke: var(--air-hot); }
+.hxv .hx-tag { fill: var(--c-surface); stroke-width: 1.6; }
+.hxv .hx-tag-hot { stroke: var(--air-hot); }
+.hxv .hx-tag-cold { stroke: var(--air-cold); }
+.hxv .hx-tag-water { stroke: var(--water); }
+.hxv .hx-tag-calc { stroke: var(--accent); stroke-dasharray: 3 2; }
+.hxv .hx-bal-c { fill: var(--c-surface); stroke: var(--text-2); stroke-width: 1.2; }
+.hxv .hx-leader { stroke: var(--text-3); stroke-width: .9; }
+.hxv .hx-bal-dot { fill: var(--text-3); }
+.hxv .hx-band { fill: var(--water); }
+.hxv .hx-pass-l { stroke: var(--c-surface); stroke-width: 1.5; }
+.hxv .hx-divider { stroke: var(--text-2); stroke-width: 3; stroke-linecap: round; }
+.hxv .hx-turn { fill: none; stroke: var(--water); stroke-width: 1.6; stroke-dasharray: 3 3; }
+.hxv .hx-hole { fill: var(--c-surface); stroke: var(--hx-copper); stroke-width: .8; }
+.hxv .hx-break { fill: none; stroke: var(--text-3); stroke-width: 1; }
+.hxv .hx-free { stroke: var(--accent); stroke-width: 2.4; stroke-linecap: round; }
+.hxv .hx-off { opacity: .18; }
+.hxv .hx-stop-hot { stop-color: var(--air-hot); stop-opacity: .2; }
+.hxv .hx-stop-cold { stop-color: var(--air-cold); stop-opacity: .2; }
+.hxv .hx-stop-hot-s { stop-color: var(--air-hot); }
+.hxv .hx-stop-cold-s { stop-color: var(--air-cold); }
+.hxv .hx-flow { stroke-dasharray: 10 6; animation: hx-dash 1.4s linear infinite; }
+.hxv .hx-thin.hx-flow { stroke-dasharray: 4 4; }
+@keyframes hx-dash { to { stroke-dashoffset: -16; } }
+/* destaque de um item: o resto do desenho recua */
+.hxv .hx-part, .hxv .hx-bal { transition: opacity var(--t-fast); }
+.hxv .hx-bal { cursor: pointer; }
+.hxv.has-hot .hx-part:not(.is-hot), .hxv.has-hot .hx-bal:not(.is-hot) { opacity: .2; }
+.hxv .hx-part.is-hot :is(rect, path, circle, line) { stroke: var(--accent); }
+.hxv .hx-bal.is-hot .hx-bal-c { fill: var(--accent); stroke: var(--accent); }
+.hxv .hx-bal.is-hot .hx-bal-t { fill: var(--accent-ink); }
+.hxv .hx-bal.is-hot .hx-leader { stroke: var(--accent); stroke-width: 1.4; }
+
+.hx-legend .sw.is-copper { background: color-mix(in srgb, var(--accent) 72%, var(--c-surface)); }
+.hx-legend .sw.is-alu { background: color-mix(in srgb, var(--text-2) 20%, var(--c-surface)); }
+.hx-legend .sw.is-steel { background: color-mix(in srgb, var(--text-3) 34%, var(--c-surface)); }
+
+/* Figura do tubo aletado no formulário: a cota do campo em foco acende */
+.f-figure { grid-column: 1 / -1; padding: 8px 8px 2px; border: 1px dashed var(--line-strong); border-radius: 12px; background: var(--c-surface); }
+.f-figure .hxv { max-height: 168px; }
+.f-figure p { padding: 0 4px 4px; color: var(--text-3); font-size: .64rem; }
+.hxv.ff [data-key] { transition: opacity var(--t-fast); }
+.hxv.ff.has-focus [data-key]:not(.is-focus) { opacity: .22; }
+.hxv.ff .is-focus :is(.hx-dim, .hx-ext, .hx-leader) { stroke: var(--accent); stroke-width: 1.6; }
+.hxv.ff .is-focus .hx-ah { fill: var(--accent); }
+.hxv.ff .is-focus .hx-dim-t { fill: var(--accent); }
+.hxv.ff .is-focus :is(.hx-fin, .hx-tube, .hx-bore, .hx-fin-sec, .hx-cu-sec) { stroke: var(--accent); stroke-width: 1.8; }
+.hxv.ff .ff-contact-l { stroke: transparent; stroke-width: 3; }
+.hxv.ff .is-focus .ff-contact-l { stroke: var(--accent); }
+
+/* Gráfico vazão de água × área */
+.chart { margin: 0; padding: 14px 16px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.chart .pf { max-height: 300px; }
+.chart figcaption { margin-top: 6px; color: var(--text-3); font-size: .72rem; line-height: 1.55; }
+.fc-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.fc-base { stroke: var(--c-axis); stroke-width: 1; }
+.fc-void { fill: var(--c-deemph-2); fill-opacity: .28; }
+.fc-limit { stroke: var(--c-ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.fc-guide { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 3; }
+.fc-cur, .fc-hover { fill: var(--accent); stroke: var(--c-surface); stroke-width: 2; }
+.chart-table { margin-top: 8px; }
+.chart-table summary { width: max-content; color: var(--accent); font-size: .74rem; font-weight: 650; cursor: pointer; }
+.chart-table .tbl-wrap { margin-top: 8px; }
+
+/* Folha de desenho A3 (mesmo comportamento do laboratório elétrico) */
+.sheet { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
+.sheet-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.sheet-btn { display: inline-grid; place-items: center; min-width: 36px; height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--bg); color: var(--text); font-size: .95rem; font-weight: 700; }
+.sheet-btn:hover { border-color: var(--accent-line); background: var(--accent-wash); }
+.sheet-btn-text { font-size: .76rem; }
+.sheet-btn-primary { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.sheet-btn-primary:hover { background: var(--accent-strong); color: var(--accent-ink); }
+.sheet-zoom { min-width: 48px; color: var(--text-3); font: 600 .74rem var(--font-mono); text-align: center; }
+.sheet-spacer { flex: 1; }
+.sheet-view { max-height: 78vh; overflow: auto; padding: 14px; background: repeating-linear-gradient(45deg, var(--surface-2) 0 10px, var(--surface) 10px 20px); overscroll-behavior: contain; touch-action: pan-x pan-y pinch-zoom; }
+.sheet-paper { width: 100%; margin: 0 auto; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+.sheet-paper svg { display: block; width: 100%; height: auto; background: #fff; }
+.sheet-note { margin-top: 10px; }
+
+/* Dica de gráfico com chave de linha */
+.tip .tip-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.tip-key { flex: none; width: 12px; height: 3px; border-radius: 2px; }
+.tip strong { font-variant-numeric: tabular-nums; }
 
 /* Navegação dos passos */
 .stepnav { position: sticky; top: calc(var(--hh) + var(--ah)); z-index: 40; display: flex; gap: 4px; overflow-x: auto; margin: 22px calc(-1 * var(--gut)) 4px; padding: 9px var(--gut); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); scrollbar-width: none; }
@@ -317,6 +463,10 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
 .step:first-child { border-top: 0; }
 .step-what strong { display: block; font-size: .83rem; line-height: 1.35; }
 .step-what small { display: block; margin-top: 3px; color: var(--text-3); font-size: .65rem; line-height: 1.35; }
+.step-see { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; padding: 2px 8px 2px 3px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-3); font-size: .64rem; font-weight: 650; transition: border-color var(--t-fast), color var(--t-fast), background var(--t-fast); }
+.step-see:hover { border-color: var(--accent-line); background: var(--accent-wash); color: var(--text); }
+.step-see-n { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 3px; border: 1px solid var(--text-3); border-radius: 999px; font: 700 .58rem var(--font-mono); }
+.hxbox { scroll-margin-top: calc(var(--hh) + var(--ah) + 12px); }
 .step-math { display: grid; gap: 4px; min-width: 0; }
 .step-math code { display: block; overflow-wrap: anywhere; font: .78rem/1.55 var(--font-mono); }
 .step-formula { color: var(--teal); }
@@ -400,6 +550,16 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
 }
 @media (max-width: 720px) {
   .hero { padding: 20px 18px 18px; border-radius: 18px; }
+  .hxbox-head { padding: 14px; }
+  .hx-tabs { display: flex; width: 100%; }
+  .hx-tab { flex: 1 1 0; padding: 0 6px; }
+  .hx-tab-l { display: none; }
+  .hx-tab-s { display: inline; }
+  .hx-stage { padding: 8px 8px 0; }
+  .hx-scroll .hxv { min-width: 680px; max-height: none; }
+  .hx-parts { grid-template-columns: minmax(0, 1fr); padding: 8px; }
+  .sheet-paper { min-width: 900px; }
+  .sheet-view { padding: 8px; }
   .seqflow { padding: 14px; }
   .seq { grid-template-columns: minmax(0, 1fr); }
   .seq-stage::before { display: none; }
@@ -467,4 +627,16 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
   .t-alert { break-inside: avoid; }
   .pf-axis { font-size: 10px; }
   .pf-lab { font-size: 11px; }
+  .hx-tabs, .sheet-bar, .chart-table { display: none !important; }
+  .hxbox .hx-pane[hidden] { display: block !important; }
+  .hxbox .hx-parts li[hidden] { display: block !important; }
+  .hx-pane { break-inside: avoid; }
+  .hx-pane-title { display: block; padding: 3mm 0 1mm; font-size: 9pt; font-weight: 700; }
+  .hx-stage { background-image: none; }
+  .hxv .hx-flow { animation: none; }
+  .chart { break-inside: avoid; }
+  .step-see { display: none; }
+  .sheet-view { max-height: none; overflow: visible; padding: 0; background: none; }
+  .sheet-paper { min-width: 0; box-shadow: none; }
+  .sec-sheet { break-before: page; }
 }

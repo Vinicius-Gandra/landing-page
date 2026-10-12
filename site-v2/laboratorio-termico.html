@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="assets/css/thermal.css">
   <script defer src="assets/js/thermal-engine.js"></script>
   <script defer src="assets/js/thermal-figures.js"></script>
+  <script defer src="assets/js/thermal-drawing.js"></script>
   <script defer src="assets/js/thermal-app.js"></script>
 </head>
 <body class="thermal-app">
@@ -52,14 +53,14 @@
       </div>
       <div class="t-legend" aria-hidden="true"><span><i></i>definido por você</span><span><i class="is-calc"></i>calculado (consequência)</span></div>
       <form id="t-form" novalidate></form>
-      <p class="t-inputs-foot">Os grupos 01 a 03 seguem a ordem física: o calor e a vazão de ar dão o ar quente; a vazão de água dá a água de saída. Os grupos 05 a 07 trazem premissas com valores típicos (CNTP onde faz sentido). Vírgula ou ponto decimal.</p>
+      <p class="t-inputs-foot">Os grupos 02 a 04 seguem a ordem física: o calor e a vazão de ar dão o ar quente; a vazão de água dá a água de saída. Os grupos 06 a 08 trazem premissas com valores típicos (CNTP onde faz sentido). A identificação vai para o carimbo do desenho e para a folha de dados. Vírgula ou ponto decimal.</p>
     </aside>
 
     <main class="t-results" id="t-main">
       <div class="t-intro">
         <p class="t-eyebrow">Máquinas elétricas · circuito fechado IC81</p>
         <h1>Laboratório <em>térmico.</em></h1>
-        <p>Do calor que fica no ar até a <b>área mínima</b> do trocador ar–água que vai para o fornecedor. Você define as perdas, a vazão dos ventiladores LA/LOA, o ar frio exigido e a água (entrada e vazão); o ar quente, a água de saída, o UA e a área saem do balanço. Abaixo, cada passo com fórmula e números.</p>
+        <p>Do calor que fica no ar até a <b>área mínima</b> do trocador ar–água que vai para o fornecedor. Você define as perdas, a vazão dos ventiladores LA/LOA, o ar frio exigido e a água (entrada e vazão); o ar quente, a água de saída, o UA e a área saem do balanço. Abaixo, o trocador desenhado peça por peça e cada passo com fórmula e números.</p>
       </div>
       <div id="t-error" class="t-alert t-alert-fail" role="alert" hidden></div>
       <div id="t-output" aria-live="off"></div>
