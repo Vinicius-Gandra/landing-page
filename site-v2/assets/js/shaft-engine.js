@@ -30,15 +30,12 @@
     { id: 'perfil', title: 'Perfil do eixo', sub: 'Trechos, chavetas e ajustes · tabela editável', custom: 'profile' },
     { id: 'cargas', title: 'Mancais e cargas', sub: 'Apoios, massa do rotor, forças e caminho do torque' },
     { id: 'material', title: 'Material e critérios', sub: 'Resistência, fadiga e coeficientes mínimos' },
+    { id: 'mef', title: 'Método e malha', sub: 'Elementos finitos: teoria, nº de elementos e convergência' },
     { id: 'dinamica', title: 'Rotodinâmica e limites', sub: 'Rigidez, entreferro, margens e balanceamento', premise: true },
     { id: 'interfaces', title: 'Chavetas e ajustes', sub: 'Atrito, interferência e materiais', premise: true }
   ];
   const NOTES_EXAMPLE = [
     'Furos sem resistência local: 24×M14×2×45; 2×Ø38 a 50°; 4×M12×1,75×45; 4×M10×1,5×30; 6×M24×3×40.',
-    'Raios e ombros, furo axial, fixadores e pressão gerada nos ajustes ainda pendentes.',
-    'Ø51 na face A não prova furo passante e pode conflitar com M10 no PCD Ø38.',
-    'Comprimentos úteis das chavetas G-G e ponta X são estimados (150 e 400 mm).',
-    'Geometria de outra máquina (MOTOR 11000/CAESB): só referência; massa do desenho ≈ 2.700 kg.'
   ].join('\n');
   const FIELDS = [
     { key: 'cliente', group: 'ident', label: 'Cliente', type: 'text', def: '' },
@@ -71,8 +68,8 @@
     { key: 'axialF', group: 'cargas', label: 'Força axial', sym: 'Fax', unit: 'kN', type: 'num', def: 0, min: -10000, max: 10000 },
     { key: 'coupleEnd', group: 'cargas', label: 'Acoplamento', type: 'select', def: 'right', span: true,
       options: [['right', 'Ponta direita (fim do último trecho)'], ['left', 'Ponta esquerda (x = 0)']] },
-    { key: 'torqueMode', group: 'cargas', label: 'Torque ao longo do eixo', type: 'select', def: 'integral', span: true,
-      options: [['integral', 'Integral em todos os trechos (conservador, como o script)'], ['linear', 'Do acoplamento ao pacote, caindo ao longo do rotor']] },
+    { key: 'torqueMode', group: 'cargas', label: 'Torque ao longo do eixo', type: 'select', def: 'linear', span: true,
+      options: [['integral', 'Integral em todos os trechos'], ['linear', 'Do acoplamento ao pacote, caindo ao longo do rotor']] },
     { key: 'auxTorque', group: 'cargas', label: 'Torque além do pacote', sym: 'Taux', unit: '%', type: 'num', def: 1, min: 0, max: 100, span: true, help: 'Excitatriz, ventilador. Só no caminho pelo pacote.' },
     { key: 'rdR', group: 'cargas', type: 'calc', label: 'Reações nos mancais', sym: 'RA · RB' },
 
@@ -81,7 +78,7 @@
     { key: 'su', group: 'material', label: 'Limite de ruptura', sym: 'Su', unit: 'MPa', type: 'num', def: 630, req: true, gt: 0, max: 3000 },
     { key: 'sy', group: 'material', label: 'Limite de escoamento', sym: 'Sy', unit: 'MPa', type: 'num', def: 370, req: true, gt: 0, max: 3000 },
     { key: 'seMode', group: 'material', label: 'Limite de fadiga', type: 'select', def: 'fixo', span: true,
-      options: [['fixo', 'Se informado, já corrigido (como o script)'], ['marin', 'Se por trecho · fatores de Marin']] },
+      options: [['fixo', 'Se informado, já corrigido'], ['marin', 'Se por trecho · fatores de Marin']] },
     { key: 'se', group: 'material', label: 'Limite de fadiga corrigido', sym: 'Se', unit: 'MPa', type: 'num', def: 150, gt: 0, max: 2000 },
     { key: 'finish', group: 'material', label: 'Acabamento', type: 'select', def: 'usinado', options: Object.entries(FINISH).map(([k, v]) => [k, v[2]]) },
     { key: 'reliab', group: 'material', label: 'Confiabilidade', type: 'select', def: '90', options: Object.keys(RELIAB).map(k => [k, k.replace('.', ',') + ' %']) },
@@ -90,6 +87,15 @@
     { key: 'sfF', group: 'material', label: 'SF mínimo · fadiga', sym: 'SFfad', unit: '', type: 'num', def: 2.0, min: 1, max: 10 },
     { key: 'E', group: 'material', label: 'Módulo de elasticidade', sym: 'E', unit: 'MPa', type: 'num', def: 210000, gt: 1000, max: 1e6 },
     { key: 'rho', group: 'material', label: 'Densidade', sym: 'ρ', unit: 'kg/m³', type: 'num', def: 7850, gt: 100, max: 30000 },
+
+    { key: 'method', group: 'mef', label: 'Método da estática', type: 'select', def: 'mef', span: true,
+      options: [['mef', 'Elementos finitos de viga (MEF)'], ['analitico', 'Analítico: superposição e dupla integração']] },
+    { key: 'beam', group: 'mef', label: 'Teoria de viga', type: 'select', def: 'timoshenko', options: [['timoshenko', 'Timoshenko'], ['euler', 'Euler–Bernoulli']], help: 'Timoshenko soma o cisalhamento.' },
+    { key: 'mesh', group: 'mef', label: 'Malha', type: 'select', def: 'conforme', options: [['conforme', 'Conforme'], ['uniforme', 'Uniforme']], help: 'Conforme: nó em toda mudança.' },
+    { key: 'nElem', group: 'mef', label: 'Número de elementos', sym: 'Ne', unit: 'el.', type: 'int', def: 100, min: 4, max: 2000, help: 'Alvo de 4 a 2.000; a malha ajusta aos nós obrigatórios.' },
+    { key: 'convTol', group: 'mef', label: 'Tolerância de convergência', sym: 'tol', unit: '%', type: 'num', def: 0.1, gt: 0, max: 10, help: 'Variação aceita ao dobrar a malha.' },
+    { key: 'meshEdit', group: 'mef', type: 'button', label: 'Refinos locais e nós da malha' },
+    { key: 'rdMesh', group: 'mef', type: 'calc', label: 'Malha gerada', sym: 'MEF' },
 
     { key: 'kBearing', group: 'dinamica', label: 'Rigidez radial dos mancais', sym: 'k', unit: 'kN/mm', type: 'num', def: null, opt: true, gt: 0, max: 1e7, help: 'Vazio = apoios rígidos.' },
     { key: 'gap', group: 'dinamica', label: 'Entreferro radial', sym: 'g', unit: 'mm', type: 'num', def: null, opt: true, gt: 0, max: 200, help: 'Opcional: flecha no pacote e rigidez magnética.' },
@@ -108,7 +114,7 @@
     { key: 'hubSy', group: 'interfaces', label: 'Escoamento do cubo', sym: 'Sy,cubo', unit: 'MPa', type: 'num', def: 370, gt: 0, max: 3000 }
   ];
   const FIELD = Object.fromEntries(FIELDS.map(f => [f.key, f]));
-  const INPUTS = FIELDS.filter(f => f.type !== 'calc');
+  const INPUTS = FIELDS.filter(f => f.type !== 'calc' && f.type !== 'button');
 
   /* ---- Tabelas editáveis -------------------------------------------------------------------------- */
   const SECTION_COLS = [
@@ -137,6 +143,18 @@
     { key: 'hub', label: 'Ø ext. cubo', unit: 'mm', opt: true, help: 'Para a pressão gerada (Lamé)' },
     { key: 'share', label: 'Torque', unit: '%', req: true }
   ];
+  const REFINE_COLS = [
+    { key: 'name', label: 'Região', type: 'text', w: 'name' },
+    { key: 'a', label: 'De x', unit: 'mm', req: true },
+    { key: 'b', label: 'Até x', unit: 'mm', req: true },
+    { key: 'h', label: 'h máx.', unit: 'mm', req: true, help: 'Comprimento máximo dos elementos na região (mínimo 1 mm)' }
+  ];
+  const NODE_COLS = [
+    { key: 'name', label: 'Nó', type: 'text', w: 'name' },
+    { key: 'x', label: 'Posição x', unit: 'mm', req: true, help: 'Nó obrigatório nesta posição; resultados aparecem na tabela de nós' }
+  ];
+  const MESH_SNAP = 1;            // mm: nó pedido a menos disso de um nó obrigatório junta-se a ele
+  const MAX_ELEMS = 3000;
   const S = (name, end, d, kt, kf, o = {}) => ({ name, end, d, di: o.di ?? null, flats: o.flats ?? null, kt, kf, tpct: o.tpct ?? null });
   const EXAMPLE_SECTIONS = [
     S('S01 ponta A', 102.00, 179.98, 2.8, 2.0), S('S02 ponta reduzida', 218.00, 178.000, 2.0, 1.5),
@@ -153,18 +171,18 @@
     S('S23 pós-mancal B', 3584.00, 279.860, 1.8, 1.4), S('S24 ponta X / rasgo', 4054.00, 280.772, 4.0, 3.0)
   ];
   const EXAMPLE_KEYS = [
-    { name: 'B-B', d: 179.960, b: 19.97, t: 7.61, h: null, L: 92, share: 100 },
-    { name: 'C-C (cada)', d: 377.876, b: 25.32, t: 13.676, h: null, L: 73, share: 100 },
-    { name: 'G-G', d: 394.000, b: 25.32, t: 13.00, h: null, L: 150, share: 100 },
-    { name: 'ponta X', d: 280.772, b: 62.94, t: 20.87, h: null, L: 400, share: 100 }
+    { name: 'EXCITATRIZ', d: 179.960, b: 19.97, t: 7.61, h: null, L: 92, share: 10 },
+    { name: 'VENTILADOR (cada)', d: 377.876, b: 25.32, t: 13.676, h: null, L: 73, share: 20 },
+    { name: 'G-G', d: 394.000, b: 25.32, t: 13.00, h: null, L: 150, share: 20 },
+    { name: 'ACOPLAMENTO', d: 280.772, b: 62.94, t: 20.87, h: null, L: 400, share: 20 }
   ];
   const EXAMPLE_FITS = [
-    { name: 'W1', d: 394.0, L: 498.5, hub: null, share: 100 },
-    { name: 'W2', d: 395.0, L: 273.1, hub: null, share: 100 },
-    { name: 'W3', d: 397.0, L: 276.2, hub: null, share: 100 }
+    { name: 'W1', d: 394.0, L: 498.5, hub: null, share: 20 },
+    { name: 'W2', d: 395.0, L: 273.1, hub: null, share: 20 },
+    { name: 'W3', d: 397.0, L: 276.2, hub: null, share: 20 }
   ];
   const clone = x => JSON.parse(JSON.stringify(x));
-  const EXAMPLE = Object.assign(Object.fromEntries(INPUTS.map(f => [f.key, f.def])), { sections: clone(EXAMPLE_SECTIONS), keys: clone(EXAMPLE_KEYS), fits: clone(EXAMPLE_FITS) });
+  const EXAMPLE = Object.assign(Object.fromEntries(INPUTS.map(f => [f.key, f.def])), { sections: clone(EXAMPLE_SECTIONS), keys: clone(EXAMPLE_KEYS), fits: clone(EXAMPLE_FITS), meshRefine: [], meshNodes: [] });
 
   class InputError extends Error {
     constructor(errors, fields) { super(errors.join(' ')); this.name = 'InputError'; this.errors = errors; this.fields = fields; }
@@ -178,6 +196,7 @@
   const f0 = v => fx(v, 0);
   const fsf = v => v === Infinity || v > 999 ? '> 999' : fx(v, 2);
   const code = name => String(name || '').trim().split(/\s+/)[0] || '—';
+  const sig = v => fx(v, Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : Math.abs(v) >= 1 ? 2 : 3);     // ~3 algarismos
 
   /* ---- Propriedades da seção (idênticas ao script) ---------------------------------------------- */
   function props(d, di = 0, flats = null) {
@@ -206,6 +225,7 @@
         v = f.def;
       }
       if (typeof v !== 'number' || !isNum(v)) { fields[f.key] = 'número inválido'; continue; }
+      if (f.type === 'int' && !Number.isInteger(v)) { fields[f.key] = 'use um número inteiro'; continue; }
       if (f.gt !== undefined && !(v > f.gt)) { fields[f.key] = `precisa ser maior que ${fx(f.gt, f.gt % 1 ? 1 : 0)}`; continue; }
       if (f.min !== undefined && v < f.min) { fields[f.key] = `mínimo ${fx(f.min, f.min % 1 ? 1 : 0)} ${f.unit || ''}`.trim(); continue; }
       if (f.max !== undefined && v > f.max) { fields[f.key] = `máximo ${fx(f.max, f.max % 1 ? 1 : 0)} ${f.unit || ''}`.trim(); continue; }
@@ -258,6 +278,25 @@
       if (f.share !== null && f.share > 100) bad('share', 'até 100 %');
       if (!Object.keys(fields).some(x => x.startsWith(`fit:${i}:`))) fits.push(f);
     });
+    // malha: regiões de refino e nós pedidos
+    const refine = [], meshNodes = [];
+    (Array.isArray(v0.meshRefine) ? v0.meshRefine : []).slice(0, 40).forEach((row, i) => {
+      const bad = (k, m) => { fields[`ref:${i}:${k}`] = m; };
+      const g = k => { const x = optNum(row[k]); if (x === null) { bad(k, 'informe'); return null; } if (!isNum(x)) { bad(k, 'número inválido'); return null; } return x; };
+      const z = { i, name: String(row.name ?? '').trim().slice(0, 40) || `Refino ${i + 1}`, a: g('a'), b: g('b'), h: g('h') };
+      if (z.a !== null && z.a < 0) bad('a', 'não pode ser negativo');
+      else if (z.a !== null && L > 0 && z.a >= L) bad('a', `fora do eixo (L = ${fx(L, 1)} mm)`);
+      if (z.a !== null && z.b !== null && !(z.b > z.a + 0.5)) bad('b', 'precisa passar do início');
+      if (z.h !== null && z.h < 1) bad('h', 'mínimo 1 mm');
+      if (!Object.keys(fields).some(x => x.startsWith(`ref:${i}:`))) refine.push(Object.assign(z, { b: L > 0 ? Math.min(z.b, L) : z.b }));
+    });
+    (Array.isArray(v0.meshNodes) ? v0.meshNodes : []).slice(0, 100).forEach((row, i) => {
+      const x = optNum(row.x), bad = m => { fields[`nod:${i}:x`] = m; };
+      if (x === null) bad('informe a posição');
+      else if (!isNum(x)) bad('número inválido');
+      else if (x < 0 || (L > 0 && x > L)) bad(`entre 0 e ${fx(L, 1)} mm`);
+      else meshNodes.push({ i, name: String(row.name ?? '').trim().slice(0, 40) || `N${i + 1}`, x });
+    });
     const ok = k => !(k in fields) && d[k] !== undefined;
     if (L > 0) {
       for (const k of ['xA', 'xB', 'rotorFrom', 'rotorTo', 'xUmp']) if (ok(k) && d[k] > L + 1e-9) fields[k] = `fora do eixo (L = ${fx(L, 1)} mm)`;
@@ -266,7 +305,7 @@
     }
     if (ok('su') && ok('sy') && d.sy > d.su) fields.sy = 'não pode passar do limite de ruptura';
     if (Object.keys(fields).length || errors.length) throw new InputError(errors, fields);
-    d.secs = secs; d.L = L; d.keys = keys; d.fits = fits;
+    d.secs = secs; d.L = L; d.keys = keys; d.fits = fits; d.meshRefine = refine; d.meshNodes = meshNodes;
     return d;
   }
 
@@ -374,15 +413,31 @@
     for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2; if (target(mid)) hi = mid; else lo = mid; }
     return hi;
   }
-  function checkSections(d, secs, loads, M, Tfn, T) {
-    return secs.map(s => {
+  // M máximo de cada trecho: amostras a cada ≤ 10 mm, nas cargas e nos mancais (como o script)
+  function mAtAnalytic(d, loads, M) {
+    return s => {
       const n = Math.max(1, Math.ceil((s.b - s.a) / 10));
       const xs = [];
       for (let k = 0; k <= n; k++) xs.push(s.a + (s.b - s.a) * k / n);
       for (const p of loads.point) if (p.x >= s.a && p.x <= s.b) xs.push(p.x);
       for (const x of [d.xA, d.xB]) if (x >= s.a && x <= s.b) xs.push(x);
-      let m = 0, xm = s.a, tl = 0;
+      let m = 0, xm = s.a;
       for (const x of xs) { const v = Math.abs(M(x)); if (v > m) { m = v; xm = x; } }
+      return { m, xm };
+    };
+  }
+  // pelo MEF: maior |M| entre as amostras recuperadas nos elementos que caem no trecho
+  function mAtSamples(xs, Ms) {
+    return s => {
+      let m = 0, xm = s.a;
+      for (let i = 0; i < xs.length; i++) if (xs[i] >= s.a - 1e-7 && xs[i] <= s.b + 1e-7 && Math.abs(Ms[i]) > m) { m = Math.abs(Ms[i]); xm = xs[i]; }
+      return { m, xm };
+    };
+  }
+  function checkSections(d, secs, mAt, Tfn, T) {
+    return secs.map(s => {
+      const { m, xm } = mAt(s);
+      let tl = 0;
       if (s.tpct !== null && s.tpct !== undefined) tl = T * s.tpct / 100;
       else for (const x of [s.a, s.b, (s.a + s.b) / 2]) tl = Math.max(tl, Math.abs(Tfn(x)));
       const rel = s.flats ? s.flats / s.d : null;
@@ -399,40 +454,74 @@
     });
   }
 
-  /* ---- Rotodinâmica (MEF) ------------------------------------------------------------------------- */
+  /* ---- Elementos finitos: modelo, estática e dinâmica ------------------------------------------------ */
+  const qEl = (xm, el) => -(el.rhoA + el.mAdd) * G0;                          // peso por metro (N/m) = massa do elemento × g
+  // o.scale: fator sobre a malha do usuário (refinos com h/escala; o estudo de convergência refina tudo junto);
+  // o.plain: sem refinos nem nós pedidos (mapa de críticas)
+  function feModel(d, secs, loads, n, mesh, o = {}) {
+    const kMag = d.gap && d.ump > 0 && d.rotorTo > d.rotorFrom ? d.ump * G0 / (d.gap * d.umpEcc / 100) : 0;   // N/mm
+    const scale = o.scale ?? (n ? n / d.nElem : 1);
+    const geo = {
+      L: d.L, E: d.E, nu: NU, rho: d.rho, bearings: [d.xA, d.xB], mesh: mesh || d.mesh, n: n || d.nElem, snap: MESH_SNAP,
+      nodes: o.plain ? [] : (d.meshNodes || []).map(p => p.x),
+      refine: o.plain ? [] : (d.meshRefine || []).map(z => ({ a: z.a, b: z.b, h: scale > 0 ? z.h / scale : Infinity })),
+      secs: secs.map(s => ({ a: s.a, b: s.b, A: s.A, I: s.I, di: s.di, d: s.d })),
+      addMass: d.rotorMass > 0 ? [{ a: d.rotorFrom, b: d.rotorTo, kgPerMm: d.rotorMass / (d.rotorTo - d.rotorFrom) }] : [],
+      points: loads.point.map(p => p.x), breaks: [d.xUmp, loads.xc],
+      foundation: kMag ? [{ a: d.rotorFrom, b: d.rotorTo, kPerMm: -kMag / (d.rotorTo - d.rotorFrom) }] : []
+    };
+    const model = FEM.buildModel(geo);
+    model.kMag = kMag;
+    return model;
+  }
+  const springsOf = d => d.kBearing ? [d.kBearing * 1e6, d.kBearing * 1e6] : null;   // kN/mm → N/m
+  // estatística da deformada: máximos no total, no vão, no pacote e inclinação nos mancais (x em mm, y em mm, θ em rad)
+  function deflStats(d, xs, ys, ths) {
+    const near = x => { let b = 0; xs.forEach((v, i) => { if (Math.abs(v - x) < Math.abs(xs[b] - x)) b = i; }); return b; };
+    const ia = near(d.xA), ib = near(d.xB);
+    let im = 0, isp = ia, ic = -1, it = -1;
+    ys.forEach((v, i) => {
+      if (Math.abs(v) > Math.abs(ys[im])) im = i;
+      if (xs[i] >= d.xA && xs[i] <= d.xB && Math.abs(v) > Math.abs(ys[isp])) isp = i;
+      if (d.rotorMass > 0 && xs[i] >= d.rotorFrom && xs[i] <= d.rotorTo && (ic < 0 || Math.abs(v) > Math.abs(ys[ic]))) ic = i;
+      if ((xs[i] < d.xA || xs[i] > d.xB) && (it < 0 || Math.abs(v) > Math.abs(ys[it]))) it = i;
+    });
+    return { max: Math.abs(ys[im]), xmax: xs[im], ymax: ys[im], span: Math.abs(ys[isp]), xspan: xs[isp], yspan: ys[isp],
+      core: ic >= 0 ? Math.abs(ys[ic]) : NaN, xcore: ic >= 0 ? xs[ic] : NaN, tip: it >= 0 ? Math.abs(ys[it]) : 0, xtip: it >= 0 ? xs[it] : NaN,
+      left: ys[0], right: ys[ys.length - 1], thA: ths[ia], thB: ths[ib], thMax: Math.max(...ths.map(Math.abs)) };
+  }
+  // estática por MEF com o modelo dado: reações, M e V recuperados, deformada interpolada (nós + extremos internos)
+  function feStatic(d, secs, loads, model, shear = d.beam !== 'euler') {
+    const st = FEM.staticSolve(model, { q: qEl, points: loads.point.filter(p => p.F).map(p => ({ x: p.x, F: p.F })), springs: springsOf(d), shear });
+    if (!st) return { ok: false };
+    const dx = st.diag.x, dM = st.diag.M.map(m => m * 1000), dV = st.diag.V;                  // N·mm, N
+    const px = st.plot.x, yv = st.plot.v.map(v => v * 1000);                                   // mm
+    const series = {
+      v: dx.map((x, i) => [x, dV[i] / 1000]), m: dx.map((x, i) => [x, dM[i] / 1e6]),
+      y: px.map((x, i) => [x, yv[i]]), th: px.map((x, i) => [x, st.plot.th[i] * 1000])
+    };
+    const mAtX = x => { let b = 0; for (let i = 0; i < dx.length; i++) if (Math.abs(dx[i] - x) < Math.abs(dx[b] - x)) b = i; return dM[b]; };
+    const Mmax = series.m.reduce((a, p) => Math.abs(p[1]) > Math.abs(a[1]) ? p : a, [0, 0]);
+    // resultados em cada nó (mm, mrad, kN·m, kN) e onde ficou cada nó pedido
+    const nodes = { x: model.xs, v: st.v.map(v => v * 1000), th: st.th.map(t => t * 1000), M: Array.from(st.nodal.M, m => m / 1000), Vl: Array.from(st.nodal.Vl, v => v / 1000), Vr: Array.from(st.nodal.Vr, v => v / 1000),
+      user: (d.meshNodes || []).map((p, k) => ({ name: p.name, x: p.x, idx: model.userNodes[k], at: model.xs[model.userNodes[k]] })) };
+    return { ok: true, model, st, info: model.info, shear, RA: st.R[0], RB: st.R[1], residual: st.residual, series, dx, dM, dV, Mmax, nodes,
+      defl: deflStats(d, px, yv, st.plot.th), mAt: mAtSamples(dx, dM), mAtX };
+  }
   function dynamics(d, r, opts) {
     if (!FEM) return null;
-    const geo = {
-      L: d.L, E: d.E, nu: NU, rho: d.rho, bearings: [d.xA, d.xB], hmax: 50,
-      secs: r.res.map(s => ({ a: s.a, b: s.b, A: s.A, I: s.I, di: s.di, d: s.d })),
-      addMass: d.rotorMass > 0 ? [{ a: d.rotorFrom, b: d.rotorTo, kgPerMm: d.rotorMass / (d.rotorTo - d.rotorFrom) }] : [],
-      breaks: [d.xUmp, r.loads.xc],
-      foundation: []
-    };
-    const kMag = d.gap && d.ump > 0 && d.rotorTo > d.rotorFrom ? d.ump * G0 / (d.gap * d.umpEcc / 100) : 0;   // N/mm
-    if (kMag) geo.foundation.push({ a: d.rotorFrom, b: d.rotorTo, kPerMm: -kMag / (d.rotorTo - d.rotorFrom) });
-    const model = FEM.buildModel(geo);
-    const out = { model, elems: model.elems.length, nodes: model.nNodes, kMag };
-    out.rigid = FEM.criticals(model, { q: 3, foundation: false });
-    const springs = d.kBearing ? [d.kBearing * 1e6, d.kBearing * 1e6] : null;   // kN/mm → N/m
-    if (springs) out.flex = FEM.criticals(model, { q: 3, springs, foundation: false });
-    if (kMag) out.mag = FEM.criticals(model, { q: 3, springs, foundation: true });
+    const model = r.fe && r.fe.model ? r.fe.model : feModel(d, d.secs, r.loads);
+    const kMag = model.kMag, shear = d.beam !== 'euler';
+    const out = { model, elems: model.elems.length, nodes: model.nNodes, kMag, info: model.info };
+    out.rigid = FEM.criticals(model, { q: 3, foundation: false, shear });
+    const springs = springsOf(d);
+    if (springs) out.flex = FEM.criticals(model, { q: 3, springs, foundation: false, shear });
+    if (kMag) out.mag = FEM.criticals(model, { q: 3, springs, foundation: true, shear });
     out.design = out.mag || out.flex || out.rigid;
     out.designLabel = [springs ? `mancais de ${fx(d.kBearing, 0)} kN/mm` : 'mancais rígidos', kMag ? 'com rigidez magnética negativa' : ''].filter(Boolean).join(', ');
     // Rayleigh com a deflexão estática pelo peso (mancais rígidos)
-    const qOf = x => {
-      const s = r.res.find(z => x >= z.a && x <= z.b) || r.res[r.res.length - 1];
-      let q = -s.A * 1e-6 * d.rho * G0;                                          // N/m
-      if (d.rotorMass > 0 && x > d.rotorFrom && x < d.rotorTo) q -= d.rotorMass * G0 / ((d.rotorTo - d.rotorFrom) / 1000);
-      return q;
-    };
-    const grav = FEM.staticSolve(model, { q: qOf });
+    const grav = FEM.staticSolve(model, { q: qEl, shear });
     out.rayleigh = grav ? FEM.rpmOf(grav.rayleighW2) : NaN;
-    // flecha com as cargas reais por MEF (Timoshenko) para comparar com a dupla integração
-    const all = FEM.staticSolve(model, { q: qOf, points: r.loads.point.filter(p => p.F).map(p => ({ x: p.x, F: p.F })) });
-    const eb = FEM.staticSolve(model, { q: qOf, points: r.loads.point.filter(p => p.F).map(p => ({ x: p.x, F: p.F })), shear: false });
-    const spanMax = v => Math.max(...v.map((y, i) => model.xs[i] >= d.xA && model.xs[i] <= d.xB ? Math.abs(y) : 0)) * 1000;
-    if (all && eb) { out.femDefl = Math.max(...all.v.map(Math.abs)) * 1000; out.femDeflEB = Math.max(...eb.v.map(Math.abs)) * 1000; out.femSpan = spanMax(all.v); out.femSpanEB = spanMax(eb.v); }
     if (opts.map) out.map = FEM.criticalMap(model, { q: 3, foundation: false });
     return out;
   }
@@ -452,42 +541,65 @@
     // seções e cargas
     const secs = d.secs.map(s => Object.assign(s, props(s.d, s.di, s.flats)));
     r.loads = loadsOf(d, secs);
-    const R = reactions(d, r.loads);
-    Object.assign(r, { RA: R.ra, RB: R.rb, Fy: R.fy });
-    const { M, V } = makeM(d, r.loads, R.ra, R.rb);
-    r.M = M; r.V = V;
     r.Tfn = torqueFn(d, r.T, d.torqueMode);
     // massas
     const mShaft = secs.reduce((a, s) => a + s.len * s.A * 1e-9 * d.rho, 0);
     const mxShaft = secs.reduce((a, s) => a + s.len * s.A * 1e-9 * d.rho * (s.a + s.b) / 2, 0);
     const mRot = d.rotorMass, xRot = (d.rotorFrom + d.rotorTo) / 2;
     r.mass = { shaft: mShaft, rotor: mRot, total: mShaft + mRot, cg: (mxShaft + mRot * xRot) / (mShaft + mRot), shaftCg: mxShaft / mShaft };
+    // método analítico do script: estática, superposição e dupla integração (sempre: é a referência)
+    const R = reactions(d, r.loads);
+    const { M, V } = makeM(d, r.loads, R.ra, R.rb);
+    const df = deflection(d, secs, r.loads, M);
+    const jumpsV = new Set([d.xA, d.xB, ...r.loads.point.filter(p => p.F).map(p => p.x)]);
+    const vA = [];
+    for (const x of df.mesh) { if (jumpsV.has(x)) { vA.push([x, V(x, false) / 1000]); vA.push([x, V(x, true) / 1000]); } else vA.push([x, V(x) / 1000]); }
+    const an = {
+      RA: R.ra, RB: R.rb, mAt: mAtAnalytic(d, r.loads, M), mAtX: M, mesh: df.mesh,
+      series: { v: vA, m: df.mesh.map(x => [x, M(x) / 1e6]), y: df.mesh.map((x, i) => [x, df.y[i]]), th: df.mesh.map((x, i) => [x, df.th[i] * 1000]) },
+      defl: deflStats(d, df.mesh, df.y, df.th)
+    };
+    an.Mmax = an.series.m.reduce((a, p) => Math.abs(p[1]) > Math.abs(a[1]) ? p : a, [0, 0]);
+    r.an = an;
+    // elementos finitos com a malha escolhida
+    if (FEM) {
+      const model = feModel(d, secs, r.loads);
+      if (model.info.ne > MAX_ELEMS) throw new InputError([`A malha passaria de ${fx(MAX_ELEMS, 0)} elementos (${fx(model.info.ne, 0)}): aumente o h dos refinos ou reduza o número de elementos.`], { nElem: 'malha grande demais com os refinos' });
+      r.fe = feStatic(d, secs, r.loads, model);
+      if (!r.fe.ok) r.fe.model = model;
+      // a outra teoria de viga na mesma malha: separa o efeito do cisalhamento na comparação com o script
+      else { const o = feStatic(d, secs, r.loads, model, !r.fe.shear); if (o.ok) r.fe.other = { shear: o.shear, RA: o.RA, RB: o.RB, Mmax: o.Mmax, defl: o.defl, MA: o.mAtX(d.xA), MB: o.mAtX(d.xB) }; }
+    }
+    const useFE = d.method === 'mef' && r.fe && r.fe.ok;
+    r.method = useFE ? 'mef' : 'analitico';
+    const use = useFE ? r.fe : an;
+    Object.assign(r, { RA: use.RA, RB: use.RB, Fy: R.fy });
     // por trecho
-    r.res = checkSections(d, secs, r.loads, M, r.Tfn, r.T);
+    r.res = checkSections(d, secs, use.mAt, r.Tfn, r.T);
     r.fails = r.res.filter(s => !s.ok);
     r.crit = r.res.reduce((a, s) => s.util > a.util ? s : a, r.res[0]);
     r.fpkAdm = r.res.reduce((a, s) => s.fpkAdm < a.v ? { v: s.fpkAdm, s } : a, { v: Infinity, s: null });
     // modo de torque alternativo (comparação)
     const altMode = d.torqueMode === 'linear' ? 'integral' : 'linear';
-    const alt = checkSections(Object.assign({}, d), secs, r.loads, M, torqueFn(d, r.T, altMode), r.T);
+    const alt = checkSections(Object.assign({}, d), secs, use.mAt, torqueFn(d, r.T, altMode), r.T);
     r.alt = { mode: altMode, fails: alt.filter(s => !s.ok).map(s => s.code), worst: alt.reduce((a, s) => s.util > a.util ? s : a, alt[0]) };
-    // diagramas e flecha (malha do script)
-    const df = deflection(d, secs, r.loads, M);
-    r.mesh = df.mesh; r.y = df.y; r.th = df.th;
-    r.Mx = df.mesh.map(x => M(x)); r.Tx = df.mesh.map(x => r.Tfn(x));
-    let im = 0; df.y.forEach((v, i) => { if (Math.abs(v) > Math.abs(df.y[im])) im = i; });
-    const inSpan = i => df.mesh[i] >= d.xA && df.mesh[i] <= d.xB;
-    let isp = df.ia; df.y.forEach((v, i) => { if (inSpan(i) && Math.abs(v) > Math.abs(df.y[isp])) isp = i; });
-    let ic = -1; df.y.forEach((v, i) => { const x = df.mesh[i]; if (d.rotorMass > 0 && x >= d.rotorFrom && x <= d.rotorTo && (ic < 0 || Math.abs(v) > Math.abs(df.y[ic]))) ic = i; });
-    r.defl = { max: Math.abs(df.y[im]), xmax: df.mesh[im], ymax: df.y[im], span: Math.abs(df.y[isp]), xspan: df.mesh[isp], yspan: df.y[isp],
-      core: ic >= 0 ? Math.abs(df.y[ic]) : NaN, xcore: ic >= 0 ? df.mesh[ic] : NaN, left: df.y[0], right: df.y[df.y.length - 1],
-      thA: df.th[df.ia], thB: df.th[df.ib], thMax: Math.max(...df.th.map(Math.abs)) };
+    // diagramas e deformada do método escolhido; torque é o mesmo nos dois
+    const tAt = (x, s) => (s.tpct !== null && s.tpct !== undefined ? r.T * s.tpct / 100 : r.Tfn(x)) / 1000;
+    const tS = [];
+    let ti = 0;
+    for (const x of df.mesh) {
+      while (ti < secs.length - 1 && x > secs[ti].b) ti++;
+      tS.push([x, tAt(x, secs[ti])]);
+      if (x === secs[ti].b && secs[ti + 1]) { const nx = tAt(x, secs[ti + 1]); if (Math.abs(nx - tS[tS.length - 1][1]) > 1e-9) tS.push([x, nx]); }
+    }
+    r.series = Object.assign({}, use.series, { t: tS });
+    r.defl = use.defl;
     // esforços máximos
-    let iM = 0; r.Mx.forEach((v, i) => { if (Math.abs(v) > Math.abs(r.Mx[iM])) iM = i; });
-    r.Mmax = { v: r.Mx[iM], x: df.mesh[iM], sec: r.res.find(s => df.mesh[iM] >= s.a && df.mesh[iM] <= s.b) };
-    r.MA = M(d.xA); r.MB = M(d.xB);
-    let vmax = 0, xv = 0; for (const x of df.mesh) for (const side of [false, true]) { const v = V(x, side); if (Math.abs(v) > Math.abs(vmax)) { vmax = v; xv = x; } }
-    r.Vmax = { v: vmax, x: xv };
+    const mm = useFE ? r.fe.Mmax : an.Mmax;
+    r.Mmax = { v: mm[1] * 1e6, x: mm[0], sec: r.res.find(s => mm[0] >= s.a && mm[0] <= s.b) };
+    r.MA = use.mAtX(d.xA); r.MB = use.mAtX(d.xB);
+    const vm = r.series.v.reduce((a, p) => Math.abs(p[1]) > Math.abs(a[1]) ? p : a, [0, 0]);
+    r.Vmax = { v: vm[1] * 1000, x: vm[0] };
     // torção (ângulo) com G = E/2(1+ν)
     const Gm = d.E / (2 * (1 + NU));
     let phi = 0, si = 0;
@@ -500,7 +612,7 @@
     r.twist = phi;   // rad
     // mancais
     const secAt = x => r.res.find(s => x > s.a && x < s.b) || r.res.find(s => x >= s.a && x <= s.b);
-    r.bearings = [['A', d.xA, R.ra, r.defl.thA], ['B', d.xB, R.rb, r.defl.thB]].map(([name, x, F, th]) => {
+    r.bearings = [['A', d.xA, r.RA, r.defl.thA], ['B', d.xB, r.RB, r.defl.thB]].map(([name, x, F, th]) => {
       const s = secAt(x);
       const D = s.d, B = s.len, p = Math.abs(F) / (D * B), v = PI * D * d.speed / 60000;
       return { name, x, F, s, D, B, p, v, th, edge: Math.abs(th) * B / 2, ok: Math.abs(th) * 1000 <= d.slopeMax };
@@ -541,6 +653,17 @@
     // rotodinâmica
     if (!opts.lite) {
       r.dyn = dynamics(d, r, opts);
+      // conferência automática da malha: a mesma análise com o dobro de elementos
+      if (r.fe && r.fe.ok && r.fe.info.ne * 2 > MAX_ELEMS) r.fe.refineSkipped = true;
+      else if (r.fe && r.fe.ok && r.dyn) {
+        const m2 = feModel(d, secs, r.loads, 2 * d.nElem);
+        const f2 = feStatic(d, secs, r.loads, m2);
+        const base = r.dyn.flex || r.dyn.rigid;
+        const c2 = FEM.criticals(m2, { q: 2, springs: springsOf(d), foundation: false, shear: d.beam !== 'euler' });
+        const rel = (a, b) => Math.abs(a - b) / Math.max(1e-30, Math.abs(b));
+        if (f2.ok) r.fe.refine = { ne2: m2.info.ne, dSpan: rel(r.fe.defl.span, f2.defl.span), dTip: rel(r.fe.defl.tip, f2.defl.tip), dTh: rel(Math.abs(r.fe.defl.thA), Math.abs(f2.defl.thA)),
+          dNc1: base.ok && c2.ok ? rel(base.rpm[0], c2.rpm[0]) : NaN, dM: rel(Math.abs(r.fe.Mmax[1]), Math.abs(f2.Mmax[1])) };
+      }
       // balanceamento ISO 1940-1 / 21940-11 (mancais = planos de tolerância)
       const G = Number(d.grade), m = r.mass.total, eper = G / r.w * 1000;        // µm
       const U = 1000 * G * m / r.w;                                              // g·mm
@@ -570,7 +693,7 @@
     // caminho do torque
     const altN = r.alt.fails.length;
     if (d.torqueMode === 'integral') add('info', 'Torque integral em todos os trechos', altN === nF ? `Com o torque entrando pelo acoplamento e saindo no pacote, o resultado seria o mesmo (${altN} abaixo).` : `Com o torque entrando pelo acoplamento e saindo no pacote, ${altN ? `${altN} ${altN === 1 ? 'trecho ficaria' : 'trechos ficariam'} abaixo (${r.alt.fails.join(', ')})` : 'nenhum trecho ficaria abaixo'}. Os trechos do lado oposto ao acoplamento quase não recebem torque.`, 'torque');
-    else add('info', 'Torque pelo caminho real', `No modo integral (conservador, como o script), ${altN ? `${altN} ${altN === 1 ? 'trecho ficaria' : 'trechos ficariam'} abaixo: ${r.alt.fails.join(', ')}` : 'nenhum trecho ficaria abaixo'}.`, 'torque');
+    else add('info', 'Torque pelo caminho real', `No modo integral, ${altN ? `${altN} ${altN === 1 ? 'trecho ficaria' : 'trechos ficariam'} abaixo: ${r.alt.fails.join(', ')}` : 'nenhum trecho ficaria abaixo'}.`, 'torque');
     if (isNum(r.fpkAdm.v) && r.fpkAdm.s) add(r.fpkAdm.v >= d.peak && r.fpkAdm.v < 5 && d.machine !== 'motor' ? 'warn' : 'info', 'Torque de pico admissível',
       `O trecho ${r.fpkAdm.s.code} limita o pico a ${fx(r.fpkAdm.v, 2)} × T (${fx(r.fpkAdm.v * r.T / 1000, 1)} kN·m) com SF ${fx(d.sfY, 1)} no escoamento.${d.machine !== 'motor' ? ' Num gerador, o curto súbito nos terminais costuma dar 5 a 8 pu; confirme com o projeto elétrico.' : ''}`, 'torque');
     // potência
@@ -580,7 +703,7 @@
     if (d.gap) {
       const lim = 0.1 * d.gap, y = isNum(r.defl.core) ? r.defl.core : r.defl.span;
       add(y > lim ? 'fail' : y > 0.5 * lim ? 'warn' : 'ok', 'Flecha no pacote × entreferro', `${fx(y, 3)} mm no pacote = ${fx(y / d.gap * 100, 1)} % do entreferro (${fx(d.gap, 2)} mm). Regra usual: até 10 %.`, 'flecha');
-    } else add('info', 'Flecha sem referência de entreferro', `Flecha no vão ${fx(r.defl.span, 3)} mm. Informe o entreferro (grupo 06) para conferir a regra de 10 %.`, 'flecha');
+    } else add('info', 'Flecha sem referência de entreferro', `Flecha no vão ${fx(r.defl.span, 3)} mm. Informe o entreferro (grupo 07) para conferir a regra de 10 %.`, 'flecha');
     for (const b of r.bearings) add(b.ok ? 'ok' : 'fail', `Inclinação no mancal ${b.name}`, `${fx(Math.abs(b.th) * 1000, 3)} mrad (admissível ${fx(d.slopeMax, 2)}); desalinhamento na borda do colo ≈ ${fx(b.edge * 1000, 1)} µm em ${fx(b.B, 0)} mm.`, 'mancais');
     // críticas
     if (r.dyn && r.dyn.design && r.dyn.design.ok) {
@@ -598,6 +721,20 @@
         if (red > 0.05) add('warn', 'Rigidez magnética derruba a crítica', `A força magnética como mola negativa reduz a 1ª crítica em ${fx(red * 100, 1)} %.`, 'criticas');
       }
     } else if (r.dyn && r.dyn.design && !r.dyn.design.ok) add('fail', 'Rotor instável no modelo', 'A rigidez magnética negativa supera a do eixo nos mancais: reveja o entreferro e a excentricidade.', 'criticas');
+    // método e malha
+    if (r.fe && r.fe.ok) {
+      const th = d.beam === 'euler' ? 'Euler–Bernoulli' : 'Timoshenko', I = r.fe.info, an = r.an;
+      const dR = Math.abs(r.fe.RA - an.RA) / Math.abs(an.RA), dS = r.fe.defl.span / an.defl.span - 1;
+      add('info', r.method === 'mef' ? `Estática por elementos finitos · ${th}` : 'Estática',
+        `${I.ne} elementos (malha ${I.type}). ${dR < 1e-6 ? 'Reações e momentos iguais aos da estática: com dois mancais o eixo é isostático.' : `Reações diferem ${fx(dR * 100, 3)} % da estática: na malha uniforme o peso fica espalhado por igual dentro de cada elemento.`} Flecha no vão: MEF ${fx(r.fe.defl.span, 4)} mm, ${fx(an.defl.span, 4)} mm (${dS >= 0 ? '+' : '−'}${fx(Math.abs(dS) * 100, 1)} %${d.beam !== 'euler' && r.fe.other && Math.abs(r.fe.other.defl.span / an.defl.span - 1) < 0.1 * Math.abs(dS) ? ', quase tudo cisalhamento' : ''}).`, 'mef');
+      const R = r.fe.refine;
+      if (R) {
+        const pct = v => isNum(v) ? fx(v * 100, v < 0.0001 ? 4 : 3) + ' %' : '—';
+        const worst = Math.max(R.dSpan, R.dTh, R.dM, isNum(R.dNc1) ? R.dNc1 : 0);
+        add(worst * 100 <= d.convTol ? 'ok' : 'warn', worst * 100 <= d.convTol ? 'Malha convergida' : 'Malha grossa para a tolerância',
+          `Com ${R.ne2} elementos (o dobro), a flecha no vão muda ${pct(R.dSpan)}, a inclinação em A ${pct(R.dTh)}, o momento máximo ${pct(R.dM)} e a 1ª crítica ${pct(R.dNc1)}. Tolerância: ${fx(d.convTol, 2)} %.`, 'mef');
+      }
+    }
     // massa
     if (d.drawingMass) { const e = r.mass.shaft / d.drawingMass - 1; add(Math.abs(e) > 0.1 ? 'warn' : 'info', 'Massa do eixo × desenho', `Geometria: ${f0(r.mass.shaft)} kg; desenho: ${f0(d.drawingMass)} kg (${e > 0 ? '+' : '−'}${fx(Math.abs(e) * 100, 1)} %). Rasgos, furos e planos não detalhados explicam parte da diferença.`, 'cargas'); }
     // chavetas
@@ -609,7 +746,7 @@
     // mancais
     for (const b of r.bearings) if (b.p > 2.5) add('warn', `Pressão específica no mancal ${b.name}`, `${fx(b.p, 2)} MPa com o colo Ø${fx(b.D, 1)} × ${fx(b.B, 1)} mm, acima de 2,5 MPa.`, 'mancais');
     for (const s of r.res) if (s.kf > s.kt) add('warn', `Kf maior que Kt em ${s.code}`, 'A sensibilidade ao entalhe não passa de 1: confira os fatores.', 'secs');
-    if (r.res.some(s => s.flat)) add('info', 'Seção com quatro planos', 'Área e inércia exatas; a torção usa o círculo inscrito (aproximação do script).', 'secs');
+    if (r.res.some(s => s.flat)) add('info', 'Seção com quatro planos', 'Área e inércia exatas; a torção usa o círculo inscrito .', 'secs');
     if (r.bal && !r.bal.inboard) add('warn', 'Centro de massa fora dos mancais', 'A divisão do desbalanceamento admissível segue a regra de rotor em balanço (ISO 1940-1, 7.2.3).', 'balanceamento');
     return c;
   }
@@ -634,19 +771,45 @@
     st('reacoes', 'Soma das forças verticais', 'ΣFy = Σ q·(b − a) + Σ F', 'peso do eixo + rotor + força magnética + acoplamento', r.Fy / 1000, 'kN', 2);
     st('reacoes', 'Reação no mancal B', 'RB = −Σ M(A) / (xB − xA)', `momentos em torno de A / (${fx(d.xB, 2)} − ${fx(d.xA, 3)})`, r.RB / 1000, 'kN', 2);
     st('reacoes', 'Reação no mancal A', 'RA = −ΣFy − RB', `${fx(-r.Fy / 1000, 2)} − ${fx(r.RB / 1000, 2)}`, r.RA / 1000, 'kN', 2, `${f0(r.RA / G0)} kgf e ${f0(r.RB / G0)} kgf.`);
+    if (r.fe && r.fe.ok) st('reacoes', `Reações por elementos finitos${r.method === 'mef' ? ' (usadas)' : ''}`, 'R = Σ esforços dos elementos no nó − força aplicada', `RA ${fx(r.fe.RA / 1000, 4)} · RB ${fx(r.fe.RB / 1000, 4)} kN · resíduo de equilíbrio ${Math.abs(r.fe.residual).toExponential(1)}`, null, '', 0, `Estática: ${fx(r.an.RA / 1000, 4)} e ${fx(r.an.RB / 1000, 4)} kN.`);
     // esforços
-    st('esforcos', 'Momento fletor máximo', 'M(x) = RA⟨x−xA⟩ + RB⟨x−xB⟩ + Σ F⟨x−xF⟩ + Σ q·t·(x − a − t/2)', `máximo em x = ${fx(r.Mmax.x, 1)} mm (${r.Mmax.sec ? r.Mmax.sec.code : '—'})`, Math.abs(r.Mmax.v) / 1e6, 'kN·m', 2, 'Superposição; t = trecho da carga distribuída à esquerda de x.');
+    if (r.method === 'mef') st('esforcos', 'Momento fletor máximo (MEF)', 'fe = Ke·ue − fe,eq · M(ξ) = −M1 + V1·ξ + q·ξ²/2', `máximo em x = ${fx(r.Mmax.x, 1)} mm (${r.Mmax.sec ? r.Mmax.sec.code : '—'}) · ${r.fe.info.ne} elementos`, Math.abs(r.Mmax.v) / 1e6, 'kN·m', 2, `Recuperado por equilíbrio dentro de cada elemento. Superposição: ${fx(Math.abs(r.an.Mmax[1]), 2)} kN·m.`);
+    else st('esforcos', 'Momento fletor máximo', 'M(x) = RA⟨x−xA⟩ + RB⟨x−xB⟩ + Σ F⟨x−xF⟩ + Σ q·t·(x − a − t/2)', `máximo em x = ${fx(r.Mmax.x, 1)} mm (${r.Mmax.sec ? r.Mmax.sec.code : '—'})`, Math.abs(r.Mmax.v) / 1e6, 'kN·m', 2, 'Superposição; t = trecho da carga distribuída à esquerda de x.');
     st('esforcos', 'Momento nos mancais', 'M(xA), M(xB)', `balanços de ${fx(d.xA, 1)} e ${fx(d.L - d.xB, 1)} mm`, Math.max(Math.abs(r.MA), Math.abs(r.MB)) / 1e6, 'kN·m', 2, `A: ${fx(r.MA / 1e6, 2)} · B: ${fx(r.MB / 1e6, 2)} kN·m.`);
     st('esforcos', 'Cortante máximo', 'V(x) = Σ forças à esquerda', `em x = ${fx(r.Vmax.x, 1)} mm`, Math.abs(r.Vmax.v) / 1000, 'kN', 2);
     // flecha
-    st('flecha', 'Flecha máxima', 'y″ = M / (E·I) · y(xA) = y(xB) = 0', `malha de ${r.mesh.length} pontos · máximo em x = ${fx(r.defl.xmax, 1)} mm`, r.defl.max, 'mm', 3, r.defl.xmax < d.xA || r.defl.xmax > d.xB ? 'O máximo está na ponta em balanço, não no vão.' : null, 'Dupla integração com mancais rígidos (como o script)');
-    st('flecha', 'Flecha no vão entre mancais', 'máx |y| em xA ≤ x ≤ xB', `em x = ${fx(r.defl.xspan, 1)} mm`, r.defl.span, 'mm', 3, isNum(r.defl.core) ? `No pacote do rotor: ${fx(r.defl.core, 3)} mm.` : null);
-    st('flecha', 'Inclinação nos mancais', 'θ = y′(x)', `A: ${fx(r.defl.thA * 1000, 3)} · B: ${fx(r.defl.thB * 1000, 3)} mrad`, Math.max(Math.abs(r.defl.thA), Math.abs(r.defl.thB)) * 1000, 'mrad', 3, `Admissível ${fx(d.slopeMax, 2)} mrad.`);
-    if (r.dyn && isNum(r.dyn.femSpan)) st('flecha', 'Conferência por elementos finitos (vão)', 'K·u = f · viga de Timoshenko', `${r.dyn.elems} elementos · Euler–Bernoulli ${fx(r.dyn.femSpanEB, 4)} mm (dupla integração ${fx(r.defl.span, 4)})`, r.dyn.femSpan, 'mm', 4, `A deformação por cisalhamento acrescenta ${fx((r.dyn.femSpan / r.dyn.femSpanEB - 1) * 100, 1)} % no vão; na ponta em balanço, MEF ${fx(r.dyn.femDefl, 4)} mm.`);
+    const thName = d.beam === 'euler' ? 'Euler–Bernoulli' : 'Timoshenko';
+    if (r.method === 'mef') st('flecha', 'Flecha máxima (MEF)', 'K·u = f · v(ξ) = N(ξ)·ue dentro de cada elemento', `${r.fe.info.ne} elementos de ${thName} · máximo em x = ${fx(r.defl.xmax, 1)} mm`, r.defl.max, 'mm', 4, `${r.defl.xmax < d.xA || r.defl.xmax > d.xB ? 'O máximo está na ponta em balanço, não no vão. ' : ''}Deslocamentos dos nós interpolados pelas funções de forma; o máximo dentro do elemento sai de dv/dξ = 0.`, `Elementos finitos · ${d.kBearing ? `mancais de ${fx(d.kBearing, 0)} kN/mm` : 'mancais rígidos'}`);
+    else st('flecha', 'Flecha máxima', 'y″ = M / (E·I) · y(xA) = y(xB) = 0', `malha de ${r.an.mesh.length} pontos · máximo em x = ${fx(r.defl.xmax, 1)} mm`, r.defl.max, 'mm', 3, r.defl.xmax < d.xA || r.defl.xmax > d.xB ? 'O máximo está na ponta em balanço, não no vão.' : null, 'Dupla integração com mancais rígidos');
+    st('flecha', 'Flecha no vão entre mancais', 'máx |y| em xA ≤ x ≤ xB', `em x = ${fx(r.defl.xspan, 1)} mm`, r.defl.span, 'mm', 4, isNum(r.defl.core) ? `No pacote do rotor: ${fx(r.defl.core, 4)} mm.` : null);
+    st('flecha', 'Inclinação nos mancais', r.method === 'mef' ? 'θ = rotação da seção no nó do mancal' : 'θ = y′(x)', `A: ${fx(r.defl.thA * 1000, 4)} · B: ${fx(r.defl.thB * 1000, 4)} mrad`, Math.max(Math.abs(r.defl.thA), Math.abs(r.defl.thB)) * 1000, 'mrad', 3, `Admissível ${fx(d.slopeMax, 2)} mrad.`);
+    if (r.fe && r.fe.ok) {
+      const other = r.method === 'mef' ? r.an.defl : r.fe.defl;
+      st('flecha', r.method === 'mef' ? 'Conferência pelo método original' : 'Conferência por elementos finitos', r.method === 'mef' ? 'y″ = M/(E·I), dupla integração, apoios rígidos' : `K·u = f · ${r.fe.info.ne} elementos de ${thName}`,
+        `vão ${fx(other.span, 4)} mm · ponta ${fx(other.tip, 4)} mm · θA ${fx(Math.abs(other.thA) * 1000, 4)} mrad`, other.span, 'mm', 4,
+        `Diferença no vão: ${fx((r.fe.defl.span / r.an.defl.span - 1) * 100, 3)} % (MEF sobre o script). ${d.beam === 'euler' ? 'Com Euler–Bernoulli os dois resolvem a mesma equação: o que sobra é a integração numérica do script, numa grade de 10 mm.' : `Vem da deformação por cisalhamento (Timoshenko), relevante num eixo curto e grosso: na mesma malha, Euler–Bernoulli daria ${fx(r.fe.other ? r.fe.other.defl.span : NaN, 4)} mm (${fx(r.fe.other ? (r.fe.other.defl.span / r.an.defl.span - 1) * 100 : NaN, 3)} % do script).`}`);
+    }
+    // elementos finitos: modelo, malha e verificação
+    if (r.fe && r.fe.ok) {
+      const F = r.fe, I = F.info, els = F.model.elems;
+      const phis = Array.from(F.st.phis);
+      const kap = els.reduce((a, e) => Math.min(a, e.kappa), 1);
+      const extra = [I.zones ? `${I.zones} ${I.zones === 1 ? 'região' : 'regiões'} de refino` : '', I.user ? `${I.user} ${I.user === 1 ? 'nó pedido' : 'nós pedidos'}` : ''].filter(Boolean).join(' e ');
+      st('mef', 'Discretização', 'elementos de viga de 2 nós · 2 graus de liberdade por nó (v, θ)', `malha ${I.type} · alvo ${d.nElem}${extra ? ` + ${extra}` : ''} → ${I.ne} elementos, ${I.nn} nós`, I.ndof, 'GDL', 0,
+        `Elementos de ${fx(I.hmin, 1)} a ${fx(I.hmax, 1)} mm. ${I.type === 'uniforme' ? 'Os degraus do eixo caem dentro dos elementos: rigidez pela média harmônica, massa e peso pela média do que o elemento cobre. É esse erro de geometria que a convergência mostra.' : 'Há nó em toda mudança de seção, nos mancais, nas forças e nas pontas do pacote; cada trecho é dividido na proporção do comprimento.'}${I.zones ? ' Nas regiões de refino, nenhum elemento passa do h pedido.' : ''}${I.user ? ` Nós pedidos a menos de ${fx(MESH_SNAP, 0)} mm de um nó obrigatório juntam-se a ele.` : ''}`, 'Elementos finitos de viga');
+      st('mef', `Rigidez do elemento · ${thName}`, 'Ke = EI/((1+Φ)·L³)·[12, 6L, −12, 6L; 6L, (4+Φ)L², −6L, (2−Φ)L²; …] · Φ = 12EI/(κGAL²)', d.beam === 'euler' ? 'Φ = 0 (sem cisalhamento)' : `κ (Cowper) ≥ ${fx(kap, 3)} · Φ de ${sig(Math.min(...phis))} a ${sig(Math.max(...phis))}`, null, '', 0,
+        d.beam === 'euler' ? 'Hermite cúbica: deslocamentos nos nós exatos para cargas uniformes por elemento.' : 'Interpolação interdependente: exata para a viga de Timoshenko sem carga no elemento e sem travamento por cisalhamento. Φ alto só diz que o elemento é mais curto que o Ø; quem é viga é o eixo inteiro.');
+      st('mef', 'Cargas nodais consistentes', 'fe,eq = [qL/2, qL²/12, qL/2, −qL²/12] · forças concentradas nos nós', `peso de ${I.ne} elementos${d.rotorMass > 0 ? ' + rotor' : ''} + força magnética${d.coupleF ? ' + acoplamento' : ''}`, -F.st.Ftot / 1000, 'kN', 3, 'Soma das cargas aplicadas, para baixo.');
+      st('mef', 'Condições de contorno e solução', d.kBearing ? 'molas k nos nós dos mancais · K·u = f' : 'v = 0 nos nós dos mancais · K·u = f', `${F.st.ndof} equações livres · Cholesky em banda (meia-largura 3)`, null, '', 0, d.kBearing ? `k = ${fx(d.kBearing, 0)} kN/mm: a flecha inclui o recuo dos mancais.` : 'Mancais rígidos, como no script.');
+      st('mef', 'Equilíbrio', 'ΣR + ΣF = 0', `RA + RB = ${fx((F.RA + F.RB) / 1000, 4)} kN · cargas ${fx(-F.st.Ftot / 1000, 4)} kN`, Math.abs(F.residual) * 100, '% de resíduo', 2, `Erro relativo ${Math.abs(F.residual).toExponential(1)}: só arredondamento.`);
+      if (F.refineSkipped) st('mef', 'Malha com o dobro de elementos', 'Δ = |Q(N) − Q(2N)| / |Q(2N)|', `${I.ne} elementos: o dobro passaria de ${fx(MAX_ELEMS, 0)}`, null, '', 0, 'Conferência automática desligada nesta malha; o estudo de convergência logo abaixo compara com malhas mais grossas.');
+      if (F.refine) st('mef', 'Malha com o dobro de elementos', 'Δ = |Q(N) − Q(2N)| / |Q(2N)|', `${I.ne} → ${F.refine.ne2} elementos · flecha ${fx(F.refine.dSpan * 100, 4)} % · θA ${fx(F.refine.dTh * 100, 4)} % · 1ª crítica ${fx(F.refine.dNc1 * 100, 4)} %`,
+        Math.max(F.refine.dSpan, F.refine.dTh, F.refine.dM, isNum(F.refine.dNc1) ? F.refine.dNc1 : 0) * 100, '% (maior)', 4, `Tolerância ${fx(d.convTol, 2)} %. O estudo completo de convergência fica logo abaixo.`);
+    }
     // críticas
     if (r.dyn) {
       const D = r.dyn;
-      st('criticas', 'Modelo de viga', 'K·φ = ω²·M·φ', `${D.elems} elementos de Timoshenko, ${D.nodes} nós, massa consistente + inércia de rotação`, null, '', 0, `A massa do rotor (${f0(d.rotorMass)} kg) entra distribuída, sem rigidez. Sem efeito giroscópico nem amortecimento.`);
+      st('criticas', 'Modelo de viga', 'K·φ = ω²·M·φ', `${D.elems} elementos de ${thName} (malha ${D.info.type}), ${D.nodes} nós, massa consistente + inércia de rotação`, null, '', 0, `A massa do rotor (${f0(d.rotorMass)} kg) entra distribuída, sem rigidez. Sem efeito giroscópico nem amortecimento. Mesma malha do grupo Método e malha.`);
       if (isNum(D.rayleigh)) st('criticas', 'Rayleigh (deflexão pelo peso)', 'ω² = uᵀ·f / (uᵀ·M·u)', 'u = deflexão estática sob o peso próprio, mancais rígidos', D.rayleigh, 'rpm', 0, 'Limite superior da 1ª crítica: confere o autovalor.');
       if (D.rigid.ok) st('criticas', '1ª crítica · mancais rígidos', 'n = ω · 60 / 2π', `ω = ${fx(D.rigid.w[0], 1)} rad/s · ${D.rigid.iterations} iterações em subespaço`, D.rigid.rpm[0], 'rpm', 0, `${fx(D.rigid.rpm[0] / d.speed, 2)} × a rotação nominal. 2ª: ${f0(D.rigid.rpm[1])} rpm · 3ª: ${f0(D.rigid.rpm[2])} rpm. Rayleigh fica ${fx((D.rayleigh / D.rigid.rpm[0] - 1) * 100, 2)} % acima, como deve.`);
       if (D.flex && D.flex.ok) st('criticas', '1ª crítica · mancais elásticos', `k = ${fx(d.kBearing, 0)} kN/mm em A e B`, `2ª: ${f0(D.flex.rpm[1])} rpm`, D.flex.rpm[0], 'rpm', 0, `${fx(D.flex.rpm[0] / d.speed, 2)} × n.`);
@@ -672,7 +835,7 @@
     const d = r.d, out = [];
     const st = (title, formula, subst, value, unit, dd, comment, source) => out.push({ section: 'trecho', title, formula, subst, value, unit, d: dd, comment, source });
     st('Área e inércia', s.flat ? 'A, I com quatro planos (segmentos circulares)' : 'A = π(d² − di²)/4 · I = π(d⁴ − di⁴)/64', `d = ${fx(s.d, 3)}${s.di ? ` · di = ${fx(s.di, 2)}` : ''}${s.flat ? ` · planos ${fx(s.flats, 1)}` : ''} mm`, s.I / 1e4, '·10⁴ mm⁴', 1, `A = ${fx(s.A, 0)} mm² · J = ${fx(s.J / 1e4, 1)}·10⁴ mm⁴${s.flat ? ' (círculo inscrito)' : ''}.`);
-    st('Momento máximo no trecho', 'M = máx |M(x)|, x de a até b', `amostras a cada ≤ 10 mm + cargas e mancais · x = ${fx(s.xm, 1)} mm`, s.m / 1e6, 'kN·m', 3);
+    st('Momento máximo no trecho', 'M = máx |M(x)|, x de a até b', r.method === 'mef' ? `MEF: M(ξ) recuperado em cada elemento do trecho (pontas${r.fe.info.ne > 400 ? '' : ', quartos'} e vértice) · x = ${fx(s.xm, 1)} mm` : `amostras a cada ≤ 10 mm + cargas e mancais · x = ${fx(s.xm, 1)} mm`, s.m / 1e6, 'kN·m', 3);
     st('Torque no trecho', s.tpct !== null && s.tpct !== undefined ? 'T = T · fração do trecho' : d.torqueMode === 'linear' ? 'T(x) pelo caminho acoplamento → pacote' : 'T = T nominal (integral)', `${fx(r.T / 1000, 2)} kN·m${s.tpct !== null && s.tpct !== undefined ? ` · ${fx(s.tpct, 0)} %` : ''}`, s.torque / 1000, 'kN·m', 2);
     st('Tensão de flexão', 'σb = M · (d/2) / I', `${fx(s.m / 1e6, 3)}·10⁶ · ${fx(s.d / 2, 2)} / ${fx(s.I / 1e4, 1)}·10⁴`, s.sb, 'MPa', 2);
     st('Tensão de torção', 'τ = T · r / J', `${fx(s.torque, 0)}·10³ · ${fx(s.rt, 2)} / ${fx(s.J / 1e4, 1)}·10⁴`, s.tau, 'MPa', 2);
@@ -689,17 +852,73 @@
     return out;
   }
 
-  // mapa de críticas × rigidez (caro: a interface calcula sob demanda e guarda em cache pela geometria)
+  // mapa de críticas × rigidez (caro: a interface calcula sob demanda e guarda em cache pela geometria).
+  // Com malha muito fina, o mapa usa 200 elementos conformes: o efeito da malha ali é menor que a espessura da linha.
   function criticalMap(r, n = 33) {
     if (!FEM || !r.dyn) return null;
-    const ks = Array.from({ length: n }, (_, i) => Math.pow(10, 7 + 4 * i / (n - 1)));
-    return FEM.criticalMap(r.dyn.model, { ks, q: 3, foundation: false });
+    const d = r.d, ks = Array.from({ length: n }, (_, i) => Math.pow(10, 7 + 4 * i / (n - 1)));
+    const model = r.dyn.model.info.ne > 300 ? feModel(d, d.secs, r.loads, 200, 'conforme', { plain: true }) : r.dyn.model;
+    return FEM.criticalMap(model, { ks, q: 3, foundation: false, shear: d.beam !== 'euler' });
   }
-  // chave do que muda o mapa: geometria, material elástico, massa do rotor e posição dos mancais
-  const mapKey = d => JSON.stringify([d.secs.map(s => [s.b, s.d, s.di, s.flats]), d.E, d.rho, d.rotorMass, d.rotorFrom, d.rotorTo, d.xA, d.xB]);
+  // chave do que muda o mapa: geometria, material elástico, massa do rotor, mancais e malha
+  const mapKey = d => JSON.stringify([d.secs.map(s => [s.b, s.d, s.di, s.flats]), d.E, d.rho, d.rotorMass, d.rotorFrom, d.rotorTo, d.xA, d.xB, d.beam, d.mesh, d.nElem, (d.meshRefine || []).map(z => [z.a, z.b, z.h]), (d.meshNodes || []).map(p => p.x)]);
+  // estudo de convergência: a malha do usuário inteira refinada na mesma proporção (número de elementos e
+  // h de cada refino), de 1/16 a 16 vezes, até ~1.100 elementos. Erro relativo à malha mais fina;
+  // abaixo de CONV_FLOOR a diferença é arredondamento, não discretização.
+  const CONV_KEYS = ['ySpan', 'yTip', 'thA', 'Mmax', 'RA', 'nc1', 'nc2'];
+  const CONV_FLOOR = 1e-6, CONV_CAP = 1100;
+  const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+  function convergence(r) {
+    const d = r.d;
+    if (!FEM) return null;
+    const t0 = now();
+    const secs = d.secs, shear = d.beam !== 'euler', springs = springsOf(d);
+    const rows = [];
+    for (const f of [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16]) {
+      const n = Math.max(1, Math.round(d.nElem * f));
+      if (f !== 1 && n < 4) continue;
+      const model = feModel(d, secs, r.loads, n, null, { scale: f });
+      if (f > 1 && model.info.ne > CONV_CAP) break;
+      const fe = feStatic(d, secs, r.loads, model);
+      if (!fe.ok) continue;
+      const c = FEM.criticals(model, { q: 2, springs, foundation: false, shear });
+      const row = { f, n, ne: model.info.ne, nn: model.info.nn, ndof: model.info.ndof, hmin: model.info.hmin, hmax: model.info.hmax, cur: f === 1,
+        ySpan: fe.defl.span, yTip: fe.defl.tip, thA: Math.abs(fe.defl.thA) * 1000, RA: fe.RA / 1000,
+        Mmax: Math.abs(fe.Mmax[1]), nc1: c.ok ? c.rpm[0] : NaN, nc2: c.ok ? c.rpm[1] : NaN };
+      const prev = rows[rows.length - 1];
+      if (prev && prev.ne === row.ne) { if (row.cur) { prev.cur = true; prev.f = 1; prev.n = n; } continue; }    // a malha conforme mínima se repete
+      rows.push(row);
+    }
+    if (!rows.length) return null;
+    const ref = rows[rows.length - 1], tol = d.convTol / 100, conv = {}, order = {}, exact = {};
+    for (const k of CONV_KEYS) {
+      rows.forEach((row, i) => {
+        row[k + 'Err'] = Math.abs(row[k] - ref[k]) / Math.max(1e-30, Math.abs(ref[k]));
+        row[k + 'Chg'] = i ? Math.abs(row[k] - rows[i - 1][k]) / Math.max(1e-30, Math.abs(row[k])) : NaN;
+      });
+      let at = null;                                    // menor malha a partir da qual refinar muda menos que a tolerância
+      for (let i = rows.length - 2; i >= 0; i--) { if (rows[i + 1][k + 'Chg'] <= tol) at = rows[i]; else break; }
+      conv[k] = at;
+      exact[k] = rows.every(row => !(row[k + 'Err'] > CONV_FLOOR));
+      // ordem observada: inclinação de log(erro) × log(Ne), sem as duas malhas mais finas (a referência e a vizinha)
+      const pts = rows.slice(0, -2).filter(row => row[k + 'Err'] > 2 * CONV_FLOOR).map(row => [Math.log(row.ne), Math.log(row[k + 'Err'])]);
+      order[k] = null;
+      if (pts.length >= 3) {
+        const mx = pts.reduce((a, p) => a + p[0], 0) / pts.length, my = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+        let sxy = 0, sxx = 0, syy = 0;
+        for (const [x, y] of pts) { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }
+        const r2 = sxx > 0 && syy > 0 ? sxy * sxy / (sxx * syy) : 0;
+        if (sxx > 0 && -sxy / sxx > 0) order[k] = { p: -sxy / sxx, r2, n: pts.length };      // r2 baixo = convergência aos solavancos
+      }
+    }
+    return { rows, ref, keys: CONV_KEYS, conv, order, exact, floor: CONV_FLOOR, tol, type: d.mesh, beam: d.beam, zones: (d.meshRefine || []).length, ms: now() - t0 };
+  }
+  const convKey = d => JSON.stringify([mapKey(d), d.ump, d.xUmp, d.coupleF, d.coupleEnd, d.kBearing, d.convTol, d.secs.map(s => s.kt)]);
 
   return {
-    GROUPS, FIELDS, FIELD, INPUTS, EXAMPLE, InputError, calculate, sectionSteps, props, validate, criticalMap, mapKey,
+    GROUPS, FIELDS, FIELD, INPUTS, EXAMPLE, InputError, calculate, sectionSteps, props, validate, criticalMap, mapKey, convergence, convKey, CONV_KEYS,
+    minElems: r => (FEM ? feModel(r.d, r.d.secs, r.loads, 1, 'conforme', { scale: 0 }).info.ne : NaN),
+    REFINE_COLS, NODE_COLS, MESH_SNAP, MAX_ELEMS,
     SECTION_COLS, KEY_COLS, FIT_COLS, EXAMPLE_SECTIONS, EXAMPLE_KEYS, EXAMPLE_FITS, MATERIALS, FINISH, RELIAB, CRITERIA,
     fx, f0, fsf, code, G0
   };

@@ -64,6 +64,18 @@
         out.push(`<path class="sx-flat" d="M${P(x0, cy - yf)} L${P(x0 + w, cy + yf)} M${P(x0, cy + yf)} L${P(x0 + w, cy - yf)}"/>`);
       }
     }
+    // nós da malha de elementos finitos: traços dentro da silhueta (no degrau, até o menor Ø); os pedidos em destaque
+    const ticks = (xs, over = 0) => {
+      let p = '', j = 0;
+      for (const x of [...xs].sort((a, b) => a - b)) {
+        while (j < R.length - 1 && x > R[j].b + 1e-9) j++;
+        const dd = Math.abs(x - R[j].b) < 1e-9 && R[j + 1] ? Math.min(R[j].d, R[j + 1].d) : R[j].d, h = dd / 2 * k - 0.6 + over;
+        p += `M${r2(X(x))} ${r2(cy - h)}V${r2(cy + h)}`;
+      }
+      return p;
+    };
+    if (o.meshXs && o.meshXs.length) out.push(`<path class="sx-mesh" d="${ticks(o.meshXs)}"/>`);
+    if (o.meshUser && o.meshUser.length) out.push(`<path class="sx-mesh-user" d="${ticks(o.meshUser, 3)}"/>`);
     // contorno contínuo e juntas
     let top = `M${P(X(0), cy)} V${r2(cy - R[0].d / 2 * k)}`, bot = `M${P(X(0), cy)} V${r2(cy + R[0].d / 2 * k)}`;
     R.forEach((s, i) => {
@@ -149,31 +161,9 @@
     u: { title: 'Utilização', unit: 'limite = 1', cls: 'is-u' },
     modes: { title: 'Formas modais', unit: 'normalizadas', cls: 'is-modes' }
   };
-  // séries nos pontos da malha, com degraus onde há forças concentradas
-  function series(r) {
-    if (r._series) return r._series;
-    const d = r.d, xs = r.mesh;
-    const jumpsV = new Set([d.xA, d.xB, ...r.loads.point.filter(p => p.F).map(p => p.x)]);
-    const v = [];
-    for (const x of xs) {
-      if (jumpsV.has(x)) { v.push([x, r.V(x, false) / 1000]); v.push([x, r.V(x, true) / 1000]); }
-      else v.push([x, r.V(x) / 1000]);
-    }
-    const tAt = (x, s) => (s.tpct !== null && s.tpct !== undefined ? r.T * s.tpct / 100 : r.Tfn(x)) / 1000;
-    const t = [];
-    xs.forEach(x => {
-      const i = secAt(r, x), s = r.res[i];
-      t.push([x, tAt(x, s)]);
-      if (x === s.b && r.res[i + 1]) { const n = tAt(x, r.res[i + 1]); if (Math.abs(n - t[t.length - 1][1]) > 1e-9) t.push([x, n]); }
-    });
-    r._series = {
-      v, t,
-      m: xs.map((x, i) => [x, r.Mx[i] / 1e6]),
-      y: xs.map((x, i) => [x, r.y[i]]),
-      th: xs.map((x, i) => [x, r.th[i] * 1000])
-    };
-    return r._series;
-  }
+  // séries do método escolhido (MEF ou script), já com os degraus onde há forças concentradas:
+  // v e m em kN e kN·m, y em mm, th em mrad, t em kN·m
+  const series = r => r.series;
   // valor de uma série em x (interpolação; nos degraus, o lado direito)
   function valueAt(arr, x) {
     let lo = 0, hi = arr.length - 1;
@@ -216,7 +206,9 @@
       out.push(`<path class="lx-band-edge" d="M${P(X(s.a), profH)} V${r2(y)} M${P(X(s.a) + bw, profH)} V${r2(y)}"/>`);
     }
     // perfil
-    out.push(`<g class="sxv-prof">${profile(r, { X, cy, k: kx, sel: o.sel, loads: true, dmin: o.dmin, loadLabels: !compact, labels: !compact })}</g>`);
+    const meshXs = o.mesh && r.fe && r.fe.model ? r.fe.model.xs : null, meshUser = meshXs && r.fe.nodes ? r.fe.nodes.user.map(u => u.at) : null;
+    out.push(`<g class="sxv-prof">${profile(r, { X, cy, k: kx, sel: o.sel, loads: true, dmin: o.dmin, loadLabels: !compact, labels: !compact, meshXs, meshUser })}</g>`);
+    if (meshXs) out.push(`<text class="lx-axis lx-meshlab" x="${r2(W - gr)}" y="16" text-anchor="end">malha ${esc(r.fe.info.type)} · ${f0(r.fe.info.ne)} el. · ${f0(r.fe.info.nn)} nós</text>`);
     // eixo x (mm) no rodapé
     const xs = axis(0, d.L, compact ? 4 : 8);
     for (const t of xs.list) if (t <= d.L + 1e-9) {
@@ -435,5 +427,142 @@
     return `<svg class="pf md sxv" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Formas dos ${n} primeiros modos de flexão: ${D.rpm.slice(0, n).map(v => f0(v) + ' rpm').join(', ')}.`)}">${s.join('')}</svg>`;
   }
 
-  window.VGShaftFigures = { profile, explorer, miniProfile, heroFigure, mapSVG, modesSVG, series, valueAt, secAt, LANES, MP, axis, niceStep };
+  /* ---- Malha de elementos finitos: nós sobre o eixo e comprimento de cada elemento ---------------------- */
+  // o.W: largura; o.edit: elementos para a edição interativa (guia, faixa de arraste)
+  function meshSVG(r, o = {}) {
+    const F = r.fe;
+    if (!F || !F.model) return null;
+    const d = r.d, m = F.model, W = o.W || 680, gl = 44, gr = 16;
+    const k = (W - gl - gr) / d.L, X = x => gl + x * k, Xinv = px => (px - gl) / k;
+    const rmax = Math.max(...r.res.map(s => s.d)) / 2, zones = d.meshRefine || [], user = F.nodes ? F.nodes.user : [];
+    const compact = W < 520, top = zones.length ? 30 : 14, cy = top + rmax * k, hTop = cy + rmax * k + 22, hH = 54, H = hTop + hH + (compact ? 44 : 26);
+    const s = [];
+    // regiões de refino: faixa do topo à base do gráfico de h, com o nome e o h pedido
+    zones.forEach((z, i) => {
+      const x0 = X(z.a), x1 = X(Math.min(z.b, d.L)), w = Math.max(1.5, x1 - x0);
+      s.push(`<rect class="ms-zone" data-zone="${i}" x="${r2(x0)}" y="4" width="${r2(w)}" height="${r2(hTop + hH - 4)}"/>`);
+      const hs = fx(z.h, Number.isInteger(z.h) || z.h >= 10 ? 0 : 1), lab = `${z.name} · h ≤ ${hs} mm`;
+      if (w > lab.length * 5.6 + 8) s.push(`<text class="pf-axis ms-zlab" x="${r2(x0 + 4)}" y="16">${esc(lab)}</text>`);
+      else if (w > 22) s.push(`<text class="pf-axis ms-zlab" x="${r2(x0 + w / 2)}" y="16" text-anchor="middle">${esc(hs)}</text>`);
+    });
+    s.push(profile(r, { X, cy, k, mini: true, status: false, meshXs: m.xs, meshUser: user.map(u => u.at) }));
+    // nós pedidos: marcador acima do eixo
+    for (const u of user) {
+      const x = X(u.at), y = cy - (r.res[secAt(r, u.at)].d / 2) * k - 5;
+      s.push(`<path class="ms-user" d="M${P(x, y)} l-4.5 -7 h9 z"><title>${esc(`${u.name} · x = ${fx(u.at, 1)} mm`)}</title></path>`);
+    }
+    // comprimento dos elementos (degraus), escala de 0 ao maior
+    const hx = m.info.hmax, Y = h => hTop + hH - h / hx * hH;
+    let p = `M${P(X(m.elems[0].x0), hTop + hH)}`;
+    for (const e of m.elems) p += ` V${r2(Y(e.x1 - e.x0))} H${r2(X(e.x1))}`;
+    p += ` V${r2(hTop + hH)} Z`;
+    s.push(`<line class="pf-grid" x1="${gl}" x2="${W - gr}" y1="${r2(Y(hx))}" y2="${r2(Y(hx))}"/>`);
+    s.push(`<path class="ms-h" d="${p}"/>`);
+    s.push(`<line class="ms-base" x1="${gl}" x2="${W - gr}" y1="${r2(hTop + hH)}" y2="${r2(hTop + hH)}"/>`);
+    s.push(`<text class="pf-axis" x="${gl - 6}" y="${r2(Y(hx) + 3.5)}" text-anchor="end">${fx(hx, hx >= 10 ? 0 : 1)}</text>`);
+    s.push(`<text class="pf-axis" x="${gl - 6}" y="${r2(hTop + hH + 3.5)}" text-anchor="end">0</text>`);
+    s.push(`<text class="pf-axis" x="${gl}" y="${r2(hTop - 6)}">comprimento do elemento h (mm)</text>`);
+    for (const b of r.bearings) s.push(`<line class="ms-brg" x1="${r2(X(b.x))}" x2="${r2(X(b.x))}" y1="${r2(cy + rmax * k + 4)}" y2="${r2(hTop + hH)}"/>`);
+    const yb = hTop + hH + 18;
+    s.push(`<text class="pf-axis" x="${gl}" y="${r2(yb)}">0</text>`);
+    s.push(`<text class="pf-axis" x="${r2(W - gr)}" y="${r2(yb)}" text-anchor="end">${f0(d.L)} mm</text>`);
+    s.push(`<text class="pf-lab" x="${r2((gl + W - gr) / 2)}" y="${r2(compact ? H - 4 : yb)}" text-anchor="middle">${f0(m.info.ne)} elementos · ${f0(m.info.nn)} nós · ${f0(m.info.ndof)} GDL</text>`);
+    // cursor (nó sob o ponteiro) e, na edição, a faixa que o arraste desenha
+    if (o.edit) s.push(`<rect class="ms-drag" x="0" y="4" width="0" height="${r2(hTop + hH - 4)}" visibility="hidden"/>`);
+    s.push(`<line class="ms-guide" x1="0" x2="0" y1="4" y2="${r2(hTop + hH)}" visibility="hidden"/>`);
+    s.push(`<rect class="ms-hit" x="${gl}" y="0" width="${r2(W - gl - gr)}" height="${r2(hTop + hH)}"/>`);
+    const label = `Malha ${m.info.type} com ${m.info.ne} elementos de ${fx(m.info.hmin, 1)} a ${fx(m.info.hmax, 1)} mm${zones.length ? `, ${zones.length} ${zones.length === 1 ? 'região' : 'regiões'} de refino` : ''}${user.length ? ` e ${user.length} ${user.length === 1 ? 'nó pedido' : 'nós pedidos'}` : ''}.`;
+    return { svg: `<svg class="pf sxv ms" viewBox="0 0 ${W} ${r2(H)}" role="img" aria-label="${esc(label)}">${s.join('')}</svg>`, X, Xinv, W, H, gl, gr, cy, hTop, hH };
+  }
+
+  /* ---- Convergência de malha: valor e erro × número de elementos (escala log) --------------------------- */
+  const CQ = {
+    ySpan: { label: 'Flecha no vão', short: 'Flecha vão', unit: 'mm', d: 6, cls: 'cq-y' },
+    yTip: { label: 'Flecha na ponta', short: 'Flecha ponta', unit: 'mm', d: 6, cls: 'cq-y2' },
+    thA: { label: 'Inclinação em A', short: 'θA', unit: 'mrad', d: 5, cls: 'cq-th' },
+    Mmax: { label: 'Momento máximo', short: 'Mmáx', unit: 'kN·m', d: 4, cls: 'cq-m' },
+    RA: { label: 'Reação em A', short: 'RA', unit: 'kN', d: 4, cls: 'cq-r' },
+    nc1: { label: '1ª crítica', short: '1ª crítica', unit: 'rpm', d: 2, cls: 'cq-n1' },
+    nc2: { label: '2ª crítica', short: '2ª crítica', unit: 'rpm', d: 2, cls: 'cq-n2' }
+  };
+  const CV = { W: 380, H: 236, x0: 64, x1: 366, y0: 26, y1: 196 };
+  const pct = e => { const n = Math.round(Math.log10(e)); return `${fx(Math.pow(10, n + 2), Math.max(0, -(n + 2)))} %`; };
+  function convFrame(conv, s) {
+    const ns = conv.rows.map(r => r.ne), lo = Math.log10(Math.min(...ns) / 1.3), hi = Math.log10(Math.max(...ns) * 1.3);
+    const X = ne => CV.x0 + (Math.log10(ne) - lo) / (hi - lo) * (CV.x1 - CV.x0);
+    for (let e = Math.floor(lo); e <= Math.ceil(hi); e++) for (const m of [1, 2, 5]) {
+      const v = m * Math.pow(10, e), lv = Math.log10(v);
+      if (lv < lo || lv > hi) continue;
+      s.push(`<line class="${m === 1 ? 'pf-grid cv-dec' : 'pf-grid'}" x1="${r2(X(v))}" x2="${r2(X(v))}" y1="${CV.y0}" y2="${CV.y1}"/>`);
+      s.push(`<text class="pf-axis" x="${r2(X(v))}" y="${CV.y1 + 14}" text-anchor="middle">${f0(v)}</text>`);
+    }
+    s.push(`<text class="pf-axis" x="${CV.x1}" y="${CV.y1 + 30}" text-anchor="end">número de elementos (escala log)</text>`);
+    return X;
+  }
+  // malha atual: linha vertical tracejada (o anel no ponto e a legenda dizem o resto)
+  function convCurrent(conv, X, s) {
+    const cur = conv.rows.find(r => r.cur);
+    if (cur) s.push(`<line class="cv-curline" x1="${r2(X(cur.ne))}" x2="${r2(X(cur.ne))}" y1="${CV.y0}" y2="${CV.y1}"/>`);
+  }
+  function convValueSVG(conv, key) {
+    const q = CQ[key], rows = conv.rows.filter(r => isNum(r[key]));
+    if (!q || rows.length < 2) return null;
+    const s = [], ref = conv.ref[key], tol = conv.tol;
+    const X = convFrame(conv, s);
+    let lo = Math.min(...rows.map(r => r[key]), ref * (1 - tol)), hi = Math.max(...rows.map(r => r[key]), ref * (1 + tol));
+    const pad = (hi - lo) * 0.14; lo -= pad; hi += pad;
+    const step = niceStep(hi - lo, 4), dec = Math.max(0, Math.min(8, -Math.floor(Math.log10(step) + 1e-9)));
+    const Y = v => CV.y1 - (v - lo) / (hi - lo) * (CV.y1 - CV.y0);
+    for (let t = Math.ceil(lo / step - 1e-9) * step; t <= hi + step * 1e-6; t += step) {
+      s.push(`<line class="pf-grid" x1="${CV.x0}" x2="${CV.x1}" y1="${r2(Y(t))}" y2="${r2(Y(t))}"/>`);
+      s.push(`<text class="pf-axis" x="${CV.x0 - 6}" y="${r2(Y(t) + 3.5)}" text-anchor="end">${fx(t, dec)}</text>`);
+    }
+    // faixa da tolerância em torno da malha mais fina
+    const bt = Y(ref * (1 + tol)), bb = Y(ref * (1 - tol));
+    s.push(`<rect class="cv-band" x="${CV.x0}" y="${r2(bt)}" width="${CV.x1 - CV.x0}" height="${r2(Math.max(0.8, bb - bt))}"/>`);
+    s.push(`<line class="cv-ref" x1="${CV.x0}" x2="${CV.x1}" y1="${r2(Y(ref))}" y2="${r2(Y(ref))}"/>`);
+    convCurrent(conv, X, s);
+    const c = conv.conv[key];
+    if (c && c !== rows[0]) s.push(`<line class="cv-conv" x1="${r2(X(c.ne))}" x2="${r2(X(c.ne))}" y1="${CV.y0}" y2="${CV.y1}"/>`);
+    s.push(`<polyline class="cv-line ${q.cls}" points="${rows.map(r => P(X(r.ne), Y(r[key]))).join(' ')}"/>`);
+    for (const r of rows) s.push(`<circle class="cv-pt ${q.cls}${r.cur ? ' is-cur' : ''}" cx="${r2(X(r.ne))}" cy="${r2(Y(r[key]))}" r="${r.cur ? 5 : 3.6}"/>`);
+    // rótulos: valor de referência e faixa
+    const ly = bt - 5 > CV.y0 + 10 ? bt - 5 : bb + 13 < CV.y1 - 4 ? bb + 13 : CV.y0 + 13;      // acima da faixa, abaixo ou dentro dela
+    s.push(`<text class="pf-lab" x="${CV.x1 - 4}" y="${r2(ly)}" text-anchor="end">${fx(ref, q.d)} ${esc(q.unit)} ± ${fx(tol * 100, tol * 100 < 0.1 ? 3 : 2)} %</text>`);
+    s.push(`<text class="pf-axis" x="${CV.x0}" y="${CV.y0 - 10}">${esc(q.label)} (${esc(q.unit)})</text>`);
+    s.push(`<line class="pf-cross" x1="0" x2="0" y1="${CV.y0}" y2="${CV.y1}" visibility="hidden"/>`);
+    return { svg: `<svg class="pf cv" viewBox="0 0 ${CV.W} ${CV.H}" role="img" aria-label="${esc(`${q.label} em função do número de elementos: ${rows.map(r => `${r.ne} el. ${fx(r[key], q.d)}`).join('; ')}.`)}">${s.join('')}</svg>`, X, rows: conv.rows };
+  }
+  function convErrorSVG(conv, key) {
+    const s = [], floor = conv.floor, tol = conv.tol, rows = conv.rows.slice(0, -1);
+    if (!rows.length) return null;
+    const X = convFrame(conv, s);
+    let emax = tol * 10;
+    for (const k of conv.keys) for (const r of rows) if (isNum(r[k + 'Err'])) emax = Math.max(emax, r[k + 'Err']);
+    const dTop = Math.ceil(Math.log10(emax) - 1e-9), dBot = Math.log10(floor) - 0.55;
+    const Y = e => CV.y1 - (Math.log10(Math.max(e, floor)) - dBot) / (dTop - dBot) * (CV.y1 - CV.y0);
+    for (let n = Math.round(Math.log10(floor)); n <= dTop; n++) {
+      s.push(`<line class="pf-grid" x1="${CV.x0}" x2="${CV.x1}" y1="${r2(Y(Math.pow(10, n)))}" y2="${r2(Y(Math.pow(10, n)))}"/>`);
+      s.push(`<text class="pf-axis" x="${CV.x0 - 6}" y="${r2(Y(Math.pow(10, n)) + 3.5)}" text-anchor="end">${pct(Math.pow(10, n))}</text>`);
+    }
+    // piso de arredondamento e tolerância
+    s.push(`<rect class="cv-floor" x="${CV.x0}" y="${r2(Y(floor))}" width="${CV.x1 - CV.x0}" height="${r2(CV.y1 - Y(floor))}"/>`);
+    s.push(`<text class="pf-axis cv-floorlab" x="${CV.x1 - 4}" y="${r2(CV.y1 - 4)}" text-anchor="end">arredondamento</text>`);
+    s.push(`<line class="cv-tol" x1="${CV.x0}" x2="${CV.x1}" y1="${r2(Y(tol))}" y2="${r2(Y(tol))}"/>`);
+    s.push(`<text class="pf-lab cv-tollab" x="${CV.x1}" y="${r2(Y(tol) - 5)}" text-anchor="end">tolerância ${fx(tol * 100, tol * 100 < 0.1 ? 3 : 2)} %</text>`);
+    convCurrent(conv, X, s);
+    const keys = conv.keys.filter(k => k !== key).concat(conv.keys.includes(key) ? [key] : []);
+    for (const k of keys) {
+      const pts = rows.filter(r => isNum(r[k + 'Err']));
+      if (!pts.length) continue;
+      const sel = k === key;
+      s.push(`<polyline class="cv-eline ${CQ[k].cls}${sel ? ' is-sel' : ''}" points="${pts.map(r => P(X(r.ne), Y(r[k + 'Err']))).join(' ')}"/>`);
+      if (sel) for (const r of pts) s.push(`<circle class="cv-pt ${CQ[k].cls}${r.cur ? ' is-cur' : ''}${r[k + 'Err'] <= floor ? ' is-floor' : ''}" cx="${r2(X(r.ne))}" cy="${r2(Y(r[k + 'Err']))}" r="${r.cur ? 5 : 3.6}"/>`);
+    }
+    s.push(`<text class="pf-axis" x="${CV.x0}" y="${CV.y0 - 10}">diferença para a mais fina (log)</text>`);
+    s.push(`<line class="pf-cross" x1="0" x2="0" y1="${CV.y0}" y2="${CV.y1}" visibility="hidden"/>`);
+    return { svg: `<svg class="pf cv" viewBox="0 0 ${CV.W} ${CV.H}" role="img" aria-label="${esc(`Diferença relativa de cada grandeza para a malha de ${conv.ref.ne} elementos, em escala logarítmica.`)}">${s.join('')}</svg>`, X, rows: conv.rows };
+  }
+
+  window.VGShaftFigures = { profile, explorer, miniProfile, heroFigure, mapSVG, modesSVG, meshSVG, convValueSVG, convErrorSVG, CQ, CV, series, valueAt, secAt, LANES, MP, axis, niceStep };
 })();

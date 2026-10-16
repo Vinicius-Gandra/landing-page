@@ -10,9 +10,9 @@
   const { fx, f0, fsf } = engine;
   const controls = new Map(), helps = new Map(), readouts = new Map();
   const ss = { get(k, d) { try { const v = sessionStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } }, set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
-  let tables = { sections: [], keys: [], fits: [] };
-  let timer = null, last = null, lastErr = null, spy = null, lastTitle = '', sheetZoom = 1, mapCache = { key: '', map: null };
-  let ui = Object.assign({ sel: null, lanes: ['m', 't', 'y', 'u'], dmin: true }, ss.get(UI_KEY, {}));
+  let tables = { sections: [], keys: [], fits: [], refine: [], nodes: [] };
+  let timer = null, last = null, lastErr = null, spy = null, lastTitle = '', sheetZoom = 1, mapCache = { key: '', map: null }, convCache = { key: '', data: null };
+  let ui = Object.assign({ sel: null, lanes: ['m', 't', 'y', 'u'], dmin: true, mesh: false, cq: null }, ss.get(UI_KEY, {}));
   let secOpen = ss.get(SEC_KEY, {}) || {};
   const ex = {};            // referências do explorador vivo
 
@@ -35,6 +35,10 @@
   }
   const toInput = v => v === null || v === undefined || v === '' ? '' : typeof v === 'number' ? String(v).replace('.', ',') : String(v);
   const saveUI = () => ss.set(UI_KEY, ui);
+  // diferença relativa em % com dígitos que bastam para ler (abaixo de 10⁻⁶ é arredondamento)
+  const pctTxt = e => !finite(e) ? '—' : e === 0 ? '0 %' : e < 1e-6 ? '< 0,0001 %' : `${fx(e * 100, e >= 0.01 ? 2 : Math.min(6, 2 - Math.floor(Math.log10(e * 100))))} %`;
+  const minConforme = r => { const k = 'min:' + engine.mapKey(r.d); if (minConforme.k !== k) { minConforme.k = k; minConforme.v = engine.minElems(r); } return minConforme.v; };
+  const beamName = d => d.beam === 'euler' ? 'Euler–Bernoulli' : 'Timoshenko';
   const clone = x => JSON.parse(JSON.stringify(x));
 
   /* ---- Dica flutuante e aviso ------------------------------------------------------------------- */
@@ -66,7 +70,7 @@
   }
 
   /* ---- Formulário ------------------------------------------------------------------------------- */
-  let profileBox = null, profileSum = null, profileCount = null;
+  let profileBox = null, profileSum = null, profileCount = null, meshSum = null, meshCount = null;
   function buildForm() {
     engine.GROUPS.forEach((group, gi) => {
       const g = add(form, 'details', 'g' + (group.premise ? ' g-premise' : ''));
@@ -98,6 +102,16 @@
         return;
       }
       for (const f of engine.FIELDS.filter(x => x.group === group.id)) {
+        if (f.type === 'button') {
+          const c = add(box, 'div', 'f-mesh');
+          const b = add(c, 'button', 'btn-soft', '✎ Refinos e nós');
+          b.type = 'button';
+          b.title = 'Regiões com elementos menores e nós em posições escolhidas';
+          meshCount = add(b, 'span', 'btn-count', '0');
+          meshSum = add(c, 'span', 'f-mesh-sum', '');
+          b.addEventListener('click', () => editor.open('refine'));
+          continue;
+        }
         if (f.type === 'calc') {
           const c = add(box, 'div', 'f-calc');
           const lab = add(c, 'span', 'f-calc-label');
@@ -130,7 +144,7 @@
         } else {
           control = add(fbox, 'input');
           control.type = 'text';
-          if (f.type !== 'text') control.inputMode = 'decimal';
+          if (f.type !== 'text') control.inputMode = f.type === 'int' ? 'numeric' : 'decimal';
           control.autocomplete = 'off';
           control.spellcheck = false;
           control.enterKeyHint = 'next';
@@ -195,7 +209,9 @@
     tables = {
       sections: clone(Array.isArray(values.sections) ? values.sections : engine.EXAMPLE_SECTIONS),
       keys: clone(Array.isArray(values.keys) ? values.keys : engine.EXAMPLE_KEYS),
-      fits: clone(Array.isArray(values.fits) ? values.fits : engine.EXAMPLE_FITS)
+      fits: clone(Array.isArray(values.fits) ? values.fits : engine.EXAMPLE_FITS),
+      refine: clone(Array.isArray(values.meshRefine) ? values.meshRefine : []),
+      nodes: clone(Array.isArray(values.meshNodes) ? values.meshNodes : [])
     };
     syncOff();
     editor.refresh();
@@ -206,7 +222,7 @@
       const t = control.dataset.type;
       values[key] = t === 'select' || t === 'text' || t === 'textarea' ? control.value.trim() : parseNumber(control.value);
     }
-    values.sections = tables.sections; values.keys = tables.keys; values.fits = tables.fits;
+    values.sections = tables.sections; values.keys = tables.keys; values.fits = tables.fits; values.meshRefine = tables.refine; values.meshNodes = tables.nodes;
     return values;
   }
   function setHelp(key, text) { const h = helps.get(key); if (!h) return; h.node.textContent = text || ''; h.node.hidden = !text; }
@@ -214,26 +230,28 @@
     let req = 0, filled = 0, bad = 0;
     const groups = {};
     for (const f of engine.FIELDS) {
-      if (f.type === 'calc') continue;
+      if (f.type === 'calc' || f.type === 'button') continue;
       const control = controls.get(f.key), wrap = control.closest('.f'), err = wrap.querySelector('.f-err');
       const v = values[f.key], empty = v === null || v === '';
       const msg = fieldErrors[f.key];
       const grp = engine.GROUPS.find(g => g.id === f.group);
-      wrap.classList.toggle('is-empty', empty && f.type === 'num' && !(f.opt || f.def === null));
+      const numeric = f.type === 'num' || f.type === 'int';
+      wrap.classList.toggle('is-empty', empty && numeric && !(f.opt || f.def === null));
       wrap.classList.toggle('is-bad', !!msg);
       control.setAttribute('aria-invalid', msg ? 'true' : 'false');
       err.hidden = !msg;
       err.textContent = msg ? msg.charAt(0).toUpperCase() + msg.slice(1) + '.' : '';
       const g = groups[f.group] ||= { total: 0, filled: 0, bad: 0, changed: 0, premise: !!grp.premise };
       if (grp.premise) { if (!(v === f.def || (empty && (f.def === null || f.opt)))) g.changed++; }
-      else if (f.type === 'num') { g.total++; if (!empty) g.filled++; }
+      else if (numeric) { g.total++; if (!empty) g.filled++; }
       if (msg) { g.bad++; bad++; }
       if (f.req) { req++; if (!empty && !msg) filled++; }
     }
     // tabelas
-    const tErr = Object.keys(fieldErrors).filter(k => /^(sec|key|fit):/.test(k)).length;
+    const tErr = Object.keys(fieldErrors).filter(k => /^(sec|key|fit):/.test(k)).length, mErr = Object.keys(fieldErrors).filter(k => /^(ref|nod):/.test(k)).length;
     groups.perfil = { total: 1, filled: 1, bad: tErr, changed: 0, premise: false, table: true };
-    bad += tErr;
+    if (groups.mef) groups.mef.bad += mErr;
+    bad += tErr + mErr;
     for (const det of form.querySelectorAll('.g')) {
       const g = groups[det.dataset.group];
       if (!g) continue;
@@ -264,11 +282,24 @@
     const ump = finite(values.ump) ? values.ump : null;
     setHelp('ump', ump !== null ? `= ${fx(ump * engine.G0 / 1000, 2)} kN, para baixo (pior caso).` : helps.get('ump').base);
     setHelp('xUmp', r ? `Trecho ${r.res[figs.secAt(r, r.d.xUmp)].code}.` : '');
+    if (meshSum) {
+      const nz = tables.refine.length, nn = tables.nodes.length;
+      meshCount.textContent = nz + nn;
+      meshSum.textContent = nz || nn ? [nz ? `${nz} ${plural(nz, 'região', 'regiões')} de refino` : '', nn ? `${nn} ${plural(nn, 'nó pedido', 'nós pedidos')}` : ''].filter(Boolean).join(' · ') : 'Arraste sobre o eixo para refinar uma região; clique para pôr um nó.';
+    }
     if (!r) { for (const key of readouts.keys()) set(key, '—', 'Complete ou revise os dados.'); return; }
     const d = r.d, gen = d.machine !== 'motor';
     set('rdP', `${fx(r.Pshaft, 2)} kW`, d.powerBase === 'rend' ? `Pel ${gen ? '÷' : '×'} η = ${fx(d.pElec, 0)} ${gen ? '÷' : '×'} ${fx(d.eff, 3)} · pelas perdas: ${fx(r.PshaftAlt, 2)}` : `${fx(d.pElec, 0)} ${gen ? '+' : '−'} ${fx(d.lossMech, 2)} ${gen ? '+' : '−'} ${fx(d.lossElec, 2)} · por η: ${fx(r.PshaftAlt, 2)}`);
     set('rdT', `${fx(r.T / 1000, 2)} · ${fx(r.Tpk / 1000, 2)} kN·m`, `T = P·60 000/(2π·${f0(d.speed)}) · pico ${fx(d.peak, 2)} × T`);
     set('rdR', `${fx(r.RA / 1000, 2)} · ${fx(r.RB / 1000, 2)} kN`, `ΣF ${fx(-r.Fy / 1000, 2)} kN para baixo · ${f0(r.RA / engine.G0)} e ${f0(r.RB / engine.G0)} kgf`);
+    if (r.fe && r.fe.ok) {
+      const I = r.fe.info, R = r.fe.refine, worst = R ? Math.max(R.dSpan, R.dTh, R.dM, finite(R.dNc1) ? R.dNc1 : 0) : NaN;
+      set('rdMesh', `${f0(I.ne)} el. · ${f0(I.nn)} nós`, `${f0(I.ndof)} GDL · h ${fx(I.hmin, 1)}–${fx(I.hmax, 1)} mm${finite(worst) ? ` · dobrando: Δ ${pctTxt(worst)}${worst * 100 <= d.convTol ? ' ✓' : ' △'}` : r.fe.refineSkipped ? ' · fina demais para dobrar' : ''}`);
+      const o = r.fe.other, sh = o ? (r.fe.shear ? r.fe.defl.span / o.defl.span : o.defl.span / r.fe.defl.span) - 1 : NaN;
+      setHelp('beam', d.beam === 'euler' ? 'Sem cisalhamento, como o script.' : finite(sh) ? `O cisalhamento soma ${fx(sh * 100, 1)} % à flecha no vão.` : 'Soma o cisalhamento.');
+      setHelp('mesh', I.type === 'conforme' ? 'Nó em toda mudança de seção e carga.' : 'Didática: degraus dentro dos elementos.');
+      setHelp('nElem', I.type === 'conforme' ? (I.ne !== d.nElem ? `Gerou ${f0(I.ne)}: um nó em cada mudança (mín. ${f0(minConforme(r))} aqui).` : 'Nó em toda mudança de seção e carga.') : `${f0(I.ne)} com os nós dos mancais e forças.`);
+    } else set('rdMesh', '—', 'Modelo indisponível.');
     setHelp('xA', `Colo ${r.bearings[0].s.code}: Ø${fx(r.bearings[0].D, 1)} × ${fx(r.bearings[0].B, 1)} mm.`);
     setHelp('xB', `Colo ${r.bearings[1].s.code}: Ø${fx(r.bearings[1].D, 1)} × ${fx(r.bearings[1].B, 1)} mm.`);
     setHelp('se', d.seMode === 'marin' ? `Marin dá ${fx(Math.min(...r.res.map(s => s.se)), 0)}–${fx(Math.max(...r.res.map(s => s.se)), 0)} MPa por trecho.` : 'Já com acabamento, tamanho e confiabilidade.');
@@ -279,15 +310,19 @@
 
   /* ---- Editor do perfil (diálogo) ------------------------------------------------------------- */
   const editor = (() => {
-    const TABS = { sections: { label: 'Trechos', cols: engine.SECTION_COLS, prefix: 'sec' }, keys: { label: 'Chavetas', cols: engine.KEY_COLS, prefix: 'key' }, fits: { label: 'Ajustes', cols: engine.FIT_COLS, prefix: 'fit' } };
+    const TABS = { sections: { label: 'Trechos', cols: engine.SECTION_COLS, prefix: 'sec' }, keys: { label: 'Chavetas', cols: engine.KEY_COLS, prefix: 'key' }, fits: { label: 'Ajustes', cols: engine.FIT_COLS, prefix: 'fit' },
+      refine: { label: 'Refinos', cols: engine.REFINE_COLS, prefix: 'ref', mesh: true }, nodes: { label: 'Nós', cols: engine.NODE_COLS, prefix: 'nod', mesh: true } };
     let dlg = null, tab = 'sections', tbody = null, prev = null, sum = null, status = null, tabBtns = {}, pasteBox = null, focusRow = null;
+    let eyebrow = null, titleEl = null, restoreBtn = null, hint = null, hintX = null, prevLay = null, drag = null;
+    const meshMode = () => !!TABS[tab].mesh;
     function build() {
       dlg = add(document.body, 'dialog', 'ed');
       dlg.setAttribute('aria-labelledby', 'ed-title');
       const head = add(dlg, 'div', 'ed-head');
       const ht = add(head, 'div');
-      add(ht, 'p', 's-eyebrow', 'Geometria do eixo');
-      add(ht, 'h2', '', 'Perfil, chavetas e ajustes').id = 'ed-title';
+      eyebrow = add(ht, 'p', 's-eyebrow', 'Geometria do eixo');
+      titleEl = add(ht, 'h2', '', 'Perfil, chavetas e ajustes');
+      titleEl.id = 'ed-title';
       const tl = add(head, 'div', 'ed-tabs');
       tl.setAttribute('role', 'tablist');
       for (const [id, t] of Object.entries(TABS)) {
@@ -303,7 +338,10 @@
       close.addEventListener('click', () => dlg.close());
       const pv = add(dlg, 'div', 'ed-preview');
       prev = add(pv, 'div', 'ed-fig');
-      sum = add(pv, 'p', 'ed-sum', '');
+      const line = add(pv, 'div', 'ed-line');
+      sum = add(line, 'p', 'ed-sum', '');
+      hint = add(line, 'p', 'ed-hint', '');
+      hintX = add(line, 'p', 'ed-hint-x', '');
       const body = add(dlg, 'div', 'ed-body');
       const tbl = add(body, 'table', 'ed-table');
       tbl.id = 'ed-table';
@@ -313,7 +351,10 @@
       mk('＋ Linha', '', () => insertRow(tables[tab].length - 1), 'Acrescentar uma linha no fim');
       mk('Colar do Excel', '', () => openPaste(), 'Colar várias linhas copiadas de uma planilha');
       mk('Copiar tabela', '', () => copyTable(), 'Copiar no formato de planilha (TSV)');
-      mk('Restaurar exemplo', 'ed-ghost', () => { tables[tab] = clone({ sections: engine.EXAMPLE_SECTIONS, keys: engine.EXAMPLE_KEYS, fits: engine.EXAMPLE_FITS }[tab]); renderTable(); changed(); toast('Tabela do exemplo restaurada'); });
+      restoreBtn = mk('Restaurar exemplo', 'ed-ghost', () => {
+        tables[tab] = meshMode() ? [] : clone({ sections: engine.EXAMPLE_SECTIONS, keys: engine.EXAMPLE_KEYS, fits: engine.EXAMPLE_FITS }[tab]);
+        renderTable(); changed(); toast(meshMode() ? 'Tabela limpa' : 'Tabela do exemplo restaurada');
+      });
       add(foot, 'span', 'ed-spacer');
       status = add(foot, 'span', 'ed-status', '');
       mk('Concluir', 'btn-primary', () => dlg.close());
@@ -332,11 +373,18 @@
       dlg.addEventListener('close', () => { recalculate(true); });
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
     }
+    // dois modos no mesmo diálogo: geometria (trechos, chavetas, ajustes) e malha (refinos, nós)
     function show(id) {
       tab = id;
-      for (const [k, b] of Object.entries(tabBtns)) { b.setAttribute('aria-selected', String(k === id)); b.tabIndex = k === id ? 0 : -1; }
+      const mesh = meshMode();
+      for (const [k, b] of Object.entries(tabBtns)) { b.hidden = !!TABS[k].mesh !== mesh; b.setAttribute('aria-selected', String(k === id)); b.tabIndex = k === id ? 0 : -1; }
+      eyebrow.textContent = mesh ? 'Elementos finitos' : 'Geometria do eixo';
+      titleEl.textContent = mesh ? 'Refinos locais e nós da malha' : 'Perfil, chavetas e ajustes';
+      restoreBtn.textContent = mesh ? 'Limpar tabela' : 'Restaurar exemplo';
+      dlg.classList.toggle('is-mesh', mesh);
       pasteBox.hidden = true;
       renderTable();
+      preview(last);
     }
     function cellVal(v, c) { return c.type === 'text' ? (v ?? '') : toInput(v); }
     function renderTable() {
@@ -369,6 +417,10 @@
         const ins = add(acts, 'button', 'ed-act', '＋'); ins.type = 'button'; ins.title = 'Inserir linha abaixo'; ins.setAttribute('aria-label', `Inserir linha abaixo da ${i + 1}`); ins.dataset.act = 'ins';
         const del = add(acts, 'button', 'ed-act', '✕'); del.type = 'button'; del.title = 'Remover linha'; del.setAttribute('aria-label', `Remover a linha ${i + 1}`); del.dataset.act = 'del';
       });
+      if (!rows.length) {
+        const td = add(add(tb, 'tr', 'ed-empty'), 'td', '', tab === 'refine' ? 'Nenhuma região de refino. Arraste sobre o eixo, acima, ou use ＋ Linha.' : 'Nenhum nó pedido. Clique no eixo, acima, ou use ＋ Linha.');
+        td.colSpan = cols.length + 2;
+      }
       markErrors(lastErr);
       updateTabs();
     }
@@ -396,7 +448,15 @@
         row = { name: `S${String(i + 2).padStart(2, '0')} novo`, end: Math.round(((e0 + (finite(e1) ? e1 : e0 + 100)) / 2) * 100) / 100, d: src.d, di: null, flats: null, kt: src.kt, kf: src.kf, tpct: null };
         if (!nx) row.end = Math.round((e0 + 100) * 100) / 100;
       } else if (tab === 'keys') row = { name: 'nova', d: 200, b: 45, t: 15, h: null, L: 100, share: 100 };
-      else row = { name: 'novo', d: 300, L: 200, hub: null, share: 100 };
+      else if (tab === 'refine') {
+        const d = last?.d, cur = rows[i];
+        if (cur) { const a = parseNumber(cur.b) || 0, w = Math.max(50, (parseNumber(cur.b) || 0) - (parseNumber(cur.a) || 0)); row = { name: nextName(rows, 'Região '), a, b: Math.round(Math.min(d ? d.L : a + w, a + w) * 10) / 10, h: cur.h }; }
+        else if (d) { const a = d.rotorMass > 0 ? d.rotorFrom : d.xA, b = d.rotorMass > 0 ? d.rotorTo : d.xB; row = { name: d.rotorMass > 0 ? 'Pacote' : 'Vão', a, b, h: suggestH(a, b) }; }
+        else row = { name: 'Região 1', a: 0, b: 100, h: 10 };
+      } else if (tab === 'nodes') {
+        const d = last?.d, cur = rows[i], x = cur ? (parseNumber(cur.x) || 0) + 100 : d ? (d.xA + d.xB) / 2 : 100;
+        row = { name: nextName(rows, 'N'), x: Math.round(Math.min(d ? d.L : x, x) * 10) / 10 };
+      } else row = { name: 'novo', d: 300, L: 200, hub: null, share: 100 };
       rows.splice(i + 1, 0, row);
       renderTable();
       changed();
@@ -443,17 +503,106 @@
         inp.title = msg ? msg.charAt(0).toUpperCase() + msg.slice(1) : '';
         inp.setAttribute('aria-invalid', msg ? 'true' : 'false');
       });
-      const n = Object.keys(fields).filter(k => /^(sec|key|fit):/.test(k)).length;
-      if (status) { status.textContent = n ? `${n} ${plural(n, 'célula', 'células')} a revisar` : 'Tudo certo'; status.classList.toggle('is-bad', n > 0); }
+      const n = Object.keys(fields).filter(k => (meshMode() ? /^(ref|nod):/ : /^(sec|key|fit):/).test(k)).length, general = meshMode() && err?.errors?.length;
+      if (status) { status.textContent = n ? `${n} ${plural(n, 'célula', 'células')} a revisar` : general ? 'Malha grande demais' : 'Tudo certo'; status.classList.toggle('is-bad', n > 0 || !!general); }
+    }
+    // malha: prévia interativa (clique põe um nó; arrastar marca uma região de refino)
+    const nextName = (rows, pre) => { let k = rows.length + 1; const names = new Set(rows.map(x => String(x.name))); while (names.has(pre + k)) k++; return pre + k; };
+    const niceH = h => { if (!(h > 1)) return 1; const p = Math.pow(10, Math.floor(Math.log10(h))), m = h / p; return (m < 1.5 ? 1 : m < 2.25 ? 2 : m < 3.5 ? 2.5 : m < 7.5 ? 5 : 10) * p; };
+    function suggestH(a, b) {
+      const m = last?.fe?.model;
+      let hmax = 0;
+      if (m) for (const e of m.elems) if (e.x1 > a && e.x0 < b) hmax = Math.max(hmax, e.x1 - e.x0);
+      return niceH(hmax ? hmax / 2 : (b - a) / 10);
+    }
+    function xAt(e) {
+      const svg = prev.querySelector('svg');
+      if (!svg || !prevLay || !last) return null;
+      const rc = svg.getBoundingClientRect(), px = (e.clientX - rc.left) / rc.width * prevLay.W;
+      if (px < prevLay.gl - 10 || px > prevLay.W - prevLay.gr + 10) return null;
+      return Math.max(0, Math.min(last.d.L, prevLay.Xinv(px)));
+    }
+    function snapX(x) {                                  // ímã de 6 px: pontas de trecho, mancais, pacote e pontas do eixo
+      if (!last || !prevLay) return x;
+      const d = last.d, tol = 6 / (prevLay.X(1) - prevLay.X(0));
+      let best = x, bd = tol;
+      for (const c of [0, d.L, d.xA, d.xB, ...last.res.map(z => z.b), ...(d.rotorMass > 0 ? [d.rotorFrom, d.rotorTo] : [])]) { const dd = Math.abs(c - x); if (dd < bd) { bd = dd; best = c; } }
+      return best;
+    }
+    function guide(x, x0) {
+      const svg = prev.querySelector('svg');
+      if (!svg || !prevLay) return;
+      const g = svg.querySelector('.ms-guide'), b = svg.querySelector('.ms-drag');
+      if (x === null) { g?.setAttribute('visibility', 'hidden'); b?.setAttribute('visibility', 'hidden'); hintX.textContent = ''; return; }
+      const px = prevLay.X(x);
+      g.setAttribute('x1', px); g.setAttribute('x2', px); g.setAttribute('visibility', 'visible');
+      if (b && x0 !== null && x0 !== undefined) { const a = prevLay.X(Math.min(x, x0)), c = prevLay.X(Math.max(x, x0)); b.setAttribute('x', a); b.setAttribute('width', Math.max(1, c - a)); b.setAttribute('visibility', 'visible'); }
+      else b?.setAttribute('visibility', 'hidden');
+      hintX.textContent = x0 !== null && x0 !== undefined ? `${fx(Math.min(x, x0), 1)} → ${fx(Math.max(x, x0), 1)} mm` : `x = ${fx(x, 1)} mm`;
+    }
+    function addNode(x) {
+      const rows = tables.nodes, name = nextName(rows, 'N');
+      rows.push({ name, x: Math.round(x * 10) / 10 });
+      renderTable(); changed();
+      toast(`Nó ${name} em x = ${fx(x, 1)} mm`);
+    }
+    function addZone(a, b) {
+      const rows = tables.refine, h = suggestH(a, b), name = nextName(rows, 'Região ');
+      rows.push({ name, a: Math.round(a * 10) / 10, b: Math.round(b * 10) / 10, h });
+      renderTable(); changed();
+      toast(`${name}: de ${fx(a, 0)} a ${fx(b, 0)} mm com h ≤ ${fx(h, h < 10 ? 1 : 0)} mm`);
+    }
+    function attachPreview() {
+      prev.addEventListener('pointerdown', e => {
+        if (!meshMode()) return;
+        const x = xAt(e);
+        if (x === null) return;
+        e.preventDefault();
+        drag = { x0: snapX(x), last: snapX(x), cx: e.clientX };
+        try { prev.setPointerCapture(e.pointerId); } catch (_) {}
+        guide(drag.x0, tab === 'refine' ? drag.x0 : null);
+      });
+      prev.addEventListener('pointermove', e => {
+        if (!meshMode()) return;
+        const raw = xAt(e);
+        if (raw === null && !drag) { guide(null); return; }
+        const x = raw === null ? drag.last : snapX(raw);
+        if (drag) drag.last = x;
+        guide(x, drag && tab === 'refine' ? drag.x0 : null);
+      });
+      prev.addEventListener('pointerup', e => {
+        if (!drag) return;
+        const { x0, last: x1, cx } = drag, moved = Math.abs(e.clientX - cx) > 5;
+        drag = null;
+        guide(null);
+        if (tab === 'nodes' && !moved) addNode(x0);
+        else if (tab === 'refine' && moved && Math.abs(x1 - x0) >= 1) addZone(Math.min(x0, x1), Math.max(x0, x1));
+        else if (tab === 'refine') toast('Arraste sobre o eixo para marcar a região');
+      });
+      prev.addEventListener('pointercancel', () => { drag = null; guide(null); });
+      prev.addEventListener('pointerleave', () => { if (!drag) guide(null); });
     }
     function preview(r) {
       if (!dlg || !dlg.open) return;
+      if (meshMode()) {
+        hint.textContent = tab === 'nodes' ? 'Clique no eixo para pôr um nó.' : 'Arraste sobre o eixo para marcar uma região de refino.';
+        if (r && r.fe && r.fe.ok) {
+          const ch = figs.meshSVG(r, { W: Math.round(Math.max(420, Math.min(900, prev.clientWidth || 900))), edit: true });
+          prev.innerHTML = ch.svg;
+          prevLay = ch;
+          const I = r.fe.info;
+          sum.textContent = `${f0(I.ne)} elementos · ${f0(I.nn)} nós · h de ${fx(I.hmin, 1)} a ${fx(I.hmax, 1)} mm${I.zones ? ` · ${I.zones} ${plural(I.zones, 'região', 'regiões')}` : ''}${I.user ? ` · ${I.user} ${plural(I.user, 'nó pedido', 'nós pedidos')}` : ''}`;
+        } else { prevLay = null; sum.textContent = lastErr?.errors?.[0] || 'Revise as células marcadas: a prévia volta quando os dados fecharem.'; }
+        return;
+      }
+      hint.textContent = ''; hintX.textContent = '';
       if (r) {
         prev.innerHTML = figs.miniProfile(r, { W: 900, status: true, sel: focusRow !== null && tab === 'sections' ? focusRow : undefined, label: 'Prévia do perfil' });
         sum.textContent = `${r.res.length} trechos · L ${f0(r.d.L)} mm · ${f0(r.mass.shaft)} kg · ${r.fails.length ? `${r.fails.length} ${plural(r.fails.length, 'trecho abaixo', 'trechos abaixo')} dos mínimos` : 'todos atingem os mínimos'}`;
       } else sum.textContent = 'Revise as células marcadas: a prévia volta quando a tabela fechar.';
     }
     function attach() {
+      attachPreview();
       tbody.addEventListener('input', onInput);
       tbody.addEventListener('focusin', e => {
         const inp = e.target.closest('.ed-in');
@@ -534,6 +683,12 @@
     if (dyn) { const ok = dyn.rpm[0] >= d.speed * (1 + d.margin / 100); chip(ok ? 'chip-ok' : 'chip-fail', `${ok ? '✓' : '✗'} 1ª crítica ${fx(dyn.rpm[0] / d.speed, 2)} × n`); }
     const ch = add(chips, 'span', 'chip', 'kpico adm. ');
     add(ch, 'b', '', `${fx(r.fpkAdm.v, 2)} ×`);
+    if (r.fe && r.fe.ok) {
+      const mc = add(chips, 'a', 'chip chip-info chip-link', r.method === 'mef' ? `MEF · ${beamName(d)} · ` : 'Estática do script · críticas por MEF · ');
+      add(mc, 'b', '', `${f0(r.fe.info.ne)} el.`);
+      mc.href = '#passo-mef';
+      mc.title = 'Ver a malha e a convergência';
+    }
     // figura: perfil colorido pela utilização
     const fig = add(hero, 'figure', 'hero-figure');
     const btn = add(fig, 'button', 'hero-shaft');
@@ -587,9 +742,9 @@
     const ol = add(box, 'ol', 'seq');
     const stages = [
       ['Torque', [['def', 'Pel', `${f0(d.pElec)} kW`, `FTD · n = ${f0(d.speed)} rpm`], ['calc', 'Peixo', `${fx(r.Pshaft, 2)} kW`, d.powerBase === 'rend' ? 'pelo rendimento' : 'potência + perdas'], ['calc', 'T', `${fx(r.T / 1000, 2)} kN·m`, `pico ${fx(r.Tpk / 1000, 1)} kN·m (${fx(d.peak, 1)} ×)`]]],
-      ['Cargas e apoios', [['def', 'mrot', `${f0(d.rotorMass)} kg`, `Fmag ${fx(d.ump * engine.G0 / 1000, 1)} kN · eixo ${f0(r.mass.shaft)} kg`], ['calc', 'RA · RB', `${fx(r.RA / 1000, 1)} · ${fx(r.RB / 1000, 1)} kN`, 'estática, apoios simples'], ['calc', 'Mmáx', `${fx(Math.abs(r.Mmax.v) / 1e6, 1)} kN·m`, `em x = ${f0(r.Mmax.x)} mm`]]],
+      ['Cargas e apoios', [['def', 'mrot', `${f0(d.rotorMass)} kg`, `Fmag ${fx(d.ump * engine.G0 / 1000, 1)} kN · eixo ${f0(r.mass.shaft)} kg`], ['calc', 'RA · RB', `${fx(r.RA / 1000, 1)} · ${fx(r.RB / 1000, 1)} kN`, r.method === 'mef' ? `MEF · ${f0(r.fe.info.ne)} elementos` : 'estática, apoios simples'], ['calc', 'Mmáx', `${fx(Math.abs(r.Mmax.v) / 1e6, 1)} kN·m`, `em x = ${f0(r.Mmax.x)} mm`]]],
       ['Trechos', [['def', 'Kt · Kf', `${r.res.length} trechos`, `${engine.CRITERIA[d.fatigue]} · Se ${d.seMode === 'marin' ? 'Marin' : fx(d.se, 0) + ' MPa'}`], ['calc', 'SF mín.', `${fsf(Math.min(...r.res.map(s => s.sfy)))} · ${fsf(Math.min(...r.res.map(s => s.sff)))}`, 'escoamento · fadiga'], ['final', 'Situação', r.fails.length ? `${r.fails.length} abaixo` : 'todos atingem', r.fails.length ? r.fails.map(s => s.code).join(', ') : `pior ${r.crit.code}`]]],
-      ['Rigidez e dinâmica', [['def', 'E', `${f0(d.E / 1000)} GPa`, d.kBearing ? `mancais ${f0(d.kBearing)} kN/mm` : 'mancais rígidos'], ['calc', 'y vão', `${fx(r.defl.span, 3)} mm`, `θ nos mancais ${fx(Math.max(Math.abs(r.defl.thA), Math.abs(r.defl.thB)) * 1000, 2)} mrad`], ['final', 'nc1', dyn ? `${f0(dyn.rpm[0])} rpm` : '—', dyn ? `${fx(dyn.rpm[0] / d.speed, 2)} × n` : '']]]
+      ['Rigidez e dinâmica', [['def', 'Malha', r.fe && r.fe.ok ? `${f0(r.fe.info.ne)} el.` : '—', `${beamName(d)} · ${d.mesh}`], ['def', 'E', `${f0(d.E / 1000)} GPa`, d.kBearing ? `mancais ${f0(d.kBearing)} kN/mm` : 'mancais rígidos'], ['calc', 'y vão', `${fx(r.defl.span, 3)} mm`, `θ nos mancais ${fx(Math.max(Math.abs(r.defl.thA), Math.abs(r.defl.thB)) * 1000, 2)} mrad`], ['final', 'nc1', dyn ? `${f0(dyn.rpm[0])} rpm` : '—', dyn ? `${fx(dyn.rpm[0] / d.speed, 2)} × n` : '']]]
     ];
     stages.forEach(([title, rows], i) => {
       const li = add(ol, 'li', 'seq-stage');
@@ -638,6 +793,13 @@
         saveUI();
         drawExplorer();
       });
+    }
+    if (r.fe && r.fe.ok) {
+      const mb = add(chips, 'button', 'sx-chip sx-chip-mesh', 'Malha');
+      mb.type = 'button';
+      mb.title = 'Mostrar os nós da malha de elementos finitos sobre o eixo';
+      mb.setAttribute('aria-pressed', String(!!ui.mesh));
+      mb.addEventListener('click', () => { ui.mesh = !ui.mesh; mb.setAttribute('aria-pressed', String(ui.mesh)); saveUI(); drawExplorer(); });
     }
     const dm = add(chips, 'button', 'sx-chip sx-chip-dmin', 'Ø mínimo');
     dm.type = 'button';
@@ -701,7 +863,7 @@
     const w = ex.printW || ex.pendingW || ex.stageW || Math.round(ex.stage.clientWidth) || 900;
     ex.pendingW = 0;
     ex.w = w;
-    const lay = figs.explorer(ex.r, { W: w, lanes: ui.lanes, sel: ui.sel, dmin: ui.dmin });
+    const lay = figs.explorer(ex.r, { W: w, lanes: ui.lanes, sel: ui.sel, dmin: ui.dmin, mesh: !!ui.mesh });
     ex.lay = lay;
     ex.stage.innerHTML = lay.svg;
     ex.sel.value = ui.sel;
@@ -884,7 +1046,7 @@
     const rows = [];
     const row = (lab, c, note) => { if (c && c.ok) rows.push({ cells: [lab, f0(c.rpm[0]), f0(c.rpm[1]), f0(c.rpm[2]), `${fx(c.rpm[0] / d.speed, 2)} ×`, note] }); };
     row('Mancais rígidos', D.rigid, 'referência');
-    row(`Mancais de ${f0(d.kBearing)} kN/mm`, D.flex, 'grupo 06');
+    row(`Mancais de ${f0(d.kBearing)} kN/mm`, D.flex, 'grupo 07');
     row(`Com rigidez magnética (${fx(D.kMag, 0)} N/mm)`, D.mag, `e = ${fx(d.umpEcc, 0)} % de g`);
     add(det, 'p', 'sub-h', 'Críticas por configuração');
     table(det, ['Configuração', '1ª (rpm)', '2ª (rpm)', '3ª (rpm)', '1ª / n', 'Nota'], rows.map(x => ({ ...x, cls: ['l', '', '', '', '', 'l dim'] })));
@@ -1012,10 +1174,295 @@
       'Material: propriedades do certificado na seção e na direção reais da peça forjada.'
     ]) add(ul, 'li', '', t);
   }
+  /* ---- Elementos finitos: malha, MEF × script e convergência ------------------------------------------- */
+  const idle = fn => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 600 }) : setTimeout(fn, 60));
+  const dTxt = (a, b) => { const e = b ? a / b - 1 : NaN; if (!finite(e)) return '—'; if (Math.abs(e) < 1e-6) return 'igual'; return `${e > 0 ? '+' : '−'}${pctTxt(Math.abs(e))}`; };
+  const listPt = a => a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} e ${a[a.length - 1]}`;
+  // usa uma malha do estudo: o mesmo fator vale para o número de elementos e para o h de cada refino
+  function useMesh(row) {
+    const c = controls.get('nElem');
+    if (!c) return;
+    c.value = toInput(row.n);
+    const f = row.f || 1;
+    if (f !== 1) for (const z of tables.refine) { const h = typeof z.h === 'number' ? z.h : parseNumber(z.h); if (finite(h)) z.h = Math.max(1, Math.round(h / f * 100) / 100); }
+    editor.refresh();
+    recalculate();
+    toast(`Malha refeita: ${f0(row.ne)} elementos${tables.refine.length && f !== 1 ? ` (refinos com h ${f > 1 ? '÷' : '×'} ${fx(f > 1 ? f : 1 / f, f > 1 ? 0 : 0)})` : ''}`);
+  }
+  // resultados nos nós: os pedidos, os mancais e a força magnética; a lista completa sob demanda e para a planilha
+  function nodeRows(r) {
+    const N = r.fe.nodes, d = r.d, out = [], seen = new Set();
+    const push = (name, i, kind) => { const k = name + '@' + i; if (seen.has(k)) return; seen.add(k); out.push({ name, i, kind }); };
+    N.user.forEach(u => push(u.name, u.idx, 'user'));
+    const near = x => r.fe.model.near(x);
+    push('Mancal A', near(d.xA), 'brg');
+    push('Mancal B', near(d.xB), 'brg');
+    if (d.ump > 0) push('Força magnética', near(d.xUmp), 'load');
+    if (Math.abs(d.coupleF) > 0) push('Acoplamento', near(r.loads.xc), 'load');
+    return out;
+  }
+  const vTxt = (l, r2v) => Math.abs(l - r2v) < 1e-9 ? fx(r2v, 2) : `${fx(l, 2)} · ${fx(r2v, 2)}`;
+  function nodalExtras(det, r) {
+    const N = r.fe.nodes;
+    add(det, 'p', 'sub-h', `Resultados nos nós${N.user.length ? ` · ${N.user.length} ${plural(N.user.length, 'pedido', 'pedidos')}` : ''}`);
+    const rows = nodeRows(r);
+    const t = table(det, ['Nó', 'Nº', 'x (mm)', 'v (mm)', 'θ (mrad)', 'M (kN·m)', 'V esq. · dir. (kN)'], rows.map(o => {
+      const i = o.i, u = o.kind === 'user' ? N.user.find(z => z.name === o.name && z.idx === i) : null;
+      const moved = u && Math.abs(u.at - u.x) > 1e-6;
+      return { cells: [o.name, String(i), `${fx(N.x[i], 1)}${moved ? ` (pediu ${fx(u.x, 1)})` : ''}`, fx(N.v[i], 5), fx(N.th[i], 4), fx(N.M[i], 3), vTxt(N.Vl[i], N.Vr[i])], cls: ['l' + (o.kind === 'user' ? ' nd-user' : ''), 'dim-n', '', '', '', '', ''] };
+    }), 'nd-tbl');
+    const acts = add(det, 'div', 'nd-acts');
+    const all = add(acts, 'button', 'btn-soft', `Mostrar os ${f0(N.x.length)} nós`);
+    all.type = 'button';
+    const cp = add(acts, 'button', 'btn-soft', 'Copiar todos para a planilha');
+    cp.type = 'button';
+    add(acts, 'span', 'nd-note', 'v para cima positivo · M positivo tracionando embaixo · V salta onde há força ou apoio');
+    const labels = new Map(rows.map(o => [o.i, o.name]));
+    cp.addEventListener('click', () => {
+      const num = (v, dd) => (Math.abs(v) < 0.5 * Math.pow(10, -dd) ? 0 : v).toFixed(dd).replace('.', ',');
+      const lines = ['Nó\tx (mm)\tv (mm)\tθ (mrad)\tM (kN·m)\tV esq. (kN)\tV dir. (kN)\tRótulo'].concat(N.x.map((x, i) => [i, num(x, 3), num(N.v[i], 6), num(N.th[i], 5), num(N.M[i], 4), num(N.Vl[i], 4), num(N.Vr[i], 4), labels.get(i) || ''].join('\t')));
+      copyText(lines.join('\n'), `${f0(N.x.length)} nós copiados: cole na planilha`);
+    });
+    let box = null;
+    all.addEventListener('click', () => {
+      if (box) { box.hidden = !box.hidden; all.textContent = box.hidden ? `Mostrar os ${f0(N.x.length)} nós` : 'Esconder a lista'; return; }
+      box = el('div', 'nd-all');
+      acts.after(box);
+      const wrap = add(box, 'div', 'tbl-wrap');
+      const tt = add(wrap, 'table', 'tbl nd-tbl');
+      const hr = add(add(tt, 'thead'), 'tr');
+      for (const h of ['Nº', 'x (mm)', 'h (mm)', 'v (mm)', 'θ (mrad)', 'M (kN·m)', 'V esq. · dir. (kN)', '']) add(hr, 'th', h === 'Nº' ? 'l' : '', h);
+      const tb = add(tt, 'tbody');
+      const frag = document.createDocumentFragment();
+      N.x.forEach((x, i) => {
+        const tr = el('tr', labels.has(i) ? 'nd-mark' : '');
+        for (const [txt, cls] of [[String(i), 'l dim-n'], [fx(x, 1), ''], [i ? fx(x - N.x[i - 1], 1) : '—', 'dim-n'], [fx(N.v[i], 5), ''], [fx(N.th[i], 4), ''], [fx(N.M[i], 3), ''], [vTxt(N.Vl[i], N.Vr[i]), ''], [labels.get(i) || '', 'l nd-lab']]) tr.append(el('td', cls, txt));
+        frag.append(tr);
+      });
+      tb.append(frag);
+      all.textContent = 'Esconder a lista';
+    });
+    return t;
+  }
+  // dica sobre a figura da malha: o nó mais próximo, seus elementos e resultados
+  function meshHover(wrap, ch, r) {
+    const svg = wrap.querySelector('svg'), g = svg && svg.querySelector('.ms-guide');
+    if (!g) return;
+    const N = r.fe.nodes, m = r.fe.model, zones = r.d.meshRefine || [];
+    const labels = new Map(nodeRows(r).map(o => [o.i, o.name]));
+    const at = e => { const rc = svg.getBoundingClientRect(), px = (e.clientX - rc.left) / rc.width * ch.W; return Math.max(0, Math.min(r.d.L, ch.Xinv(px))); };
+    const show = e => {
+      const i = m.near(at(e)), x = N.x[i], px = ch.X(x);
+      g.setAttribute('x1', px); g.setAttribute('x2', px); g.setAttribute('visibility', 'visible');
+      const z = zones.find(q => x >= q.a - 1e-6 && x <= q.b + 1e-6);
+      const hl = i ? x - N.x[i - 1] : NaN, hr = i < N.x.length - 1 ? N.x[i + 1] - x : NaN;
+      tipRows(`Nó ${i} · x = ${fx(x, 1)} mm${labels.has(i) ? ` · ${labels.get(i)}` : ''}`, [
+        { value: `${finite(hl) ? fx(hl, 1) : '—'} | ${finite(hr) ? fx(hr, 1) : '—'} mm`, label: `elementos vizinhos${z ? ` · ${z.name} (h ≤ ${fx(z.h, 1)})` : ''}` },
+        { value: `${fx(N.v[i], 4)} mm · ${fx(N.th[i], 3)} mrad`, label: 'v · θ' },
+        { value: `${fx(N.M[i], 2)} kN·m · ${vTxt(N.Vl[i], N.Vr[i])} kN`, label: 'M · V' }
+      ]);
+      const rc = svg.getBoundingClientRect();
+      placeTip(rc.left + px / ch.W * rc.width, rc.top + 8);
+    };
+    const hide = () => { g.setAttribute('visibility', 'hidden'); tip.hidden = true; };
+    svg.addEventListener('pointermove', show);
+    svg.addEventListener('pointerdown', show);
+    svg.addEventListener('pointerleave', hide);
+  }
+  function mefExtras(det, r) {
+    const F = r.fe, d = r.d;
+    if (!F || !F.ok) { add(det, 'p', 'step-note', 'O modelo de elementos finitos não fechou com estes dados: a estática ficou com o método do script.'); return; }
+    const I = F.info;
+    // malha
+    add(det, 'p', 'sub-h', `Malha gerada · ${f0(I.ne)} elementos ${I.type === 'conforme' ? 'conformes' : 'uniformes'} · ${beamName(d)}`);
+    const mf = add(det, 'figure', 'chart chart-mesh');
+    const bar = add(mf, 'div', 'ms-bar');
+    const editBtn = add(bar, 'button', 'btn-soft', '✎ Refinos e nós');
+    editBtn.type = 'button';
+    add(editBtn, 'span', 'btn-count', String((d.meshRefine || []).length + (d.meshNodes || []).length));
+    editBtn.addEventListener('click', () => editor.open((d.meshRefine || []).length || !(d.meshNodes || []).length ? 'refine' : 'nodes'));
+    add(bar, 'span', 'ms-bar-note', `${matchMedia('(hover: none)').matches ? 'Toque' : 'Passe o mouse'} na figura para ler cada nó. No editor: arraste sobre o eixo para refinar uma região, ${matchMedia('(hover: none)').matches ? 'toque' : 'clique'} para pôr um nó.`);
+    const mw = add(mf, 'div', 'pf-wrap');
+    const mch = figs.meshSVG(r, { W: Math.round(Math.max(360, Math.min(680, innerWidth - 40))) });
+    if (mch) { mw.innerHTML = mch.svg; meshHover(mw, mch, r); }
+    add(mf, 'figcaption', '', (I.type === 'conforme'
+      ? `Cada traço é um nó. Malha conforme: nó em toda mudança de seção, nos mancais, na força magnética, no acoplamento e nas pontas do pacote; cada intervalo entre esses pontos é dividido na proporção do comprimento (alvo ${f0(d.nElem)} → ${f0(I.ne)} elementos; o mínimo aqui é ${f0(minConforme(r))}, um por intervalo).`
+      : `Cada traço é um nó. Malha uniforme: ${f0(d.nElem)} elementos iguais de ${fx(d.L / d.nElem, 1)} mm, mais os nós obrigatórios dos mancais e das forças. Os degraus do eixo caem dentro dos elementos, que levam rigidez pela média harmônica e massa pela média simples do que cobrem.`)
+      + (I.zones || I.user ? ` Em destaque: ${[I.zones ? `${I.zones} ${plural(I.zones, 'região', 'regiões')} de refino (nenhum elemento passa do h pedido)` : '', I.user ? `${I.user} ${plural(I.user, 'nó pedido', 'nós pedidos')} (a menos de ${f0(engine.MESH_SNAP)} mm de um nó obrigatório, junta-se a ele)` : ''].filter(Boolean).join(' e ')}.` : ''));
+    nodalExtras(det, r);
+    // MEF × script
+    const timo = F.shear ? F : F.other, eb = F.shear ? F.other : F, an = r.an;
+    const used = r.method !== 'mef' ? 0 : d.beam === 'euler' ? 1 : 2;
+    add(det, 'p', 'sub-h', 'MEF × método do script');
+    const rowsC = [
+      ['Reação em A', 'kN', x => x.RA / 1000, 3], ['Reação em B', 'kN', x => x.RB / 1000, 3], ['Momento máximo', 'kN·m', x => Math.abs(x.Mmax[1]), 3],
+      ['Flecha no vão', 'mm', x => x.defl.span, 5], ['Flecha na ponta', 'mm', x => x.defl.tip, 5],
+      ['Inclinação em A', 'mrad', x => Math.abs(x.defl.thA) * 1000, 4], ['Inclinação em B', 'mrad', x => Math.abs(x.defl.thB) * 1000, 4]
+    ];
+    const mark = (t, i) => i === used ? `${t} · usado` : t;
+    table(det, ['Grandeza', mark('Script', 0), mark('MEF Euler–Bernoulli', 1), 'Δ', mark('MEF Timoshenko', 2), 'Δ'], rowsC.map(([lab, u, g, dec]) => {
+      const a = g(an), e = eb ? g(eb) : NaN, t = timo ? g(timo) : NaN;
+      return { cells: [`${lab} (${u})`, fx(a, dec), fx(e, dec), dTxt(e, a), fx(t, dec), dTxt(t, a)], cls: ['l', used === 0 ? 'cv-used' : '', used === 1 ? 'cv-used' : '', 'dim-n', used === 2 ? 'cv-used' : '', 'dim-n'] };
+    }), 'cmp-tbl');
+    const dR = Math.max(Math.abs(F.RA / an.RA - 1), Math.abs(F.RB / an.RB - 1));
+    const shear = timo && eb ? timo.defl.span / eb.defl.span - 1 : NaN, ebs = eb ? eb.defl.span / an.defl.span - 1 : NaN;
+    const inSpan = r.res.filter(s => s.b > d.xA && s.a < d.xB), dmx = Math.max(...inSpan.map(s => s.d));
+    add(det, 'p', 'step-note', `${dR < 1e-6 ? 'Reações e momento coincidem nos três: com dois mancais o eixo é isostático, e o peso entra no MEF como cargas nodais consistentes.' : `As reações diferem ${pctTxt(dR)} da estática: na malha uniforme o peso de cada elemento é a média do que ele cobre.`} Euler–Bernoulli resolve a mesma equação do script (y″ = M/EI): na flecha do vão a diferença é ${pctTxt(Math.abs(ebs))}${I.type === 'conforme' ? ', da integração numérica do script numa grade de 10 mm' : ', quase toda da malha'}. Timoshenko soma a deformação por cisalhamento: ${shear >= 0 ? '+' : '−'}${fx(Math.abs(shear) * 100, 1)} % no vão, porque o eixo é curto e grosso (vão/Ø ≈ ${fx((d.xB - d.xA) / dmx, 1)}).`).classList.add('cmp-note');
+    // convergência (sob demanda, em cache pelo que muda a malha e as cargas)
+    add(det, 'p', 'sub-h', 'Estudo de convergência da malha');
+    const box = add(det, 'div', 'cv-box');
+    add(box, 'p', 'cv-wait', 'Calculando a mesma análise em várias malhas…');
+    if (lastCvH) box.style.minHeight = lastCvH + 'px';          // segura o lugar enquanto o estudo é refeito
+    const key = engine.convKey(d);
+    const run = () => {
+      if (!box.isConnected || box.dataset.done) return;
+      if (convCache.key !== key) convCache = { key, data: engine.convergence(r) };
+      renderConv(box, r, convCache.data);
+    };
+    if (convCache.key === key) renderConv(box, r, convCache.data);
+    else if (det.open) idle(run);
+    det.addEventListener('toggle', () => { if (det.open) idle(run); });
+  }
+  function renderConv(box, r, C) {
+    box.replaceChildren();
+    box.style.minHeight = '';
+    box.dataset.done = '1';
+    if (!C || C.rows.length < 3) { add(box, 'p', 'step-note', 'Estudo indisponível com estes dados.'); return; }
+    const keys = C.keys.filter(k => C.rows.some(x => finite(x[k])));
+    const cur = C.rows.find(x => x.cur) || C.rows[0], tolTxt = `${fx(C.tol * 100, C.tol * 100 < 0.1 ? 3 : 2)} %`;
+    const okAt = k => C.conv[k] && cur.ne >= C.conv[k].ne;
+    const bad = keys.filter(k => !okAt(k)), low = k => figs.CQ[k].label.replace(/^./, c => c.toLowerCase());
+    // situação da malha atual
+    const st = add(box, 'div', 'cv-status ' + (bad.length ? 'is-warn' : 'is-ok'));
+    add(st, 'span', 'cv-status-mark', bad.length ? '△' : '✓').setAttribute('aria-hidden', 'true');
+    const stx = add(st, 'p');
+    if (!bad.length) {
+      add(stx, 'b', '', 'Malha atual convergida. ');
+      if (cur === C.ref) stx.append(`A malha atual (${f0(cur.ne)} elementos) é a mais fina do estudo; a partir de ${f0(Math.max(...keys.map(k => C.conv[k].ne)))} elementos, refinar já muda menos que ${tolTxt} em todas as grandezas.`);
+      else stx.append(`Com ${f0(cur.ne)} elementos, as ${keys.length} grandezas ficam a menos de ${tolTxt} da malha mais fina (${f0(C.ref.ne)} elementos) e mudam menos que isso a cada refinamento.`);
+    } else {
+      const fix = bad.filter(k => C.conv[k]), never = bad.filter(k => !C.conv[k]);
+      add(stx, 'b', '', 'Malha grossa para a tolerância. ');
+      stx.append(`Com ${f0(cur.ne)} elementos, ${listPt(bad.map(low))} ainda ${bad.length === 1 ? 'muda' : 'mudam'} mais que ${tolTxt} ao refinar.`);
+      if (never.length) stx.append(` ${listPt(never.map(low)).replace(/^./, c => c.toUpperCase())}: nem com ${f0(C.ref.ne)} elementos; afrouxe a tolerância.`);
+      if (fix.length) {
+        const need = fix.map(k => C.conv[k]).reduce((a, b) => b.ne > a.ne ? b : a);
+        const b = add(stx, 'button', 'cv-use', `Usar a malha de ${f0(need.ne)} elementos`);
+        b.type = 'button';
+        b.addEventListener('click', () => useMesh(need));
+      }
+    }
+    // grandeza dos gráficos
+    const chips = add(box, 'div', 'cv-chips');
+    chips.setAttribute('role', 'group');
+    chips.setAttribute('aria-label', 'Grandeza nos gráficos');
+    for (const k of keys) {
+      const b = add(chips, 'button', 'sx-chip cv-chip' + (okAt(k) ? '' : ' is-warn'), figs.CQ[k].short);
+      b.type = 'button';
+      b.dataset.k = k;
+      b.title = `${figs.CQ[k].label}: ${okAt(k) ? 'convergida na malha atual' : 'ainda muda mais que a tolerância'}`;
+      b.addEventListener('click', () => { ui.cq = k; saveUI(); draw(); });
+    }
+    const info = add(box, 'p', 'cv-info');
+    const grid = add(box, 'div', 'cv-grid');
+    const f1 = add(grid, 'figure', 'chart cv-fig'), w1 = add(f1, 'div', 'pf-wrap');
+    add(f1, 'figcaption', '', 'Valor em cada malha. Tracejado: a malha mais fina; faixa: ± a tolerância; anel: a malha atual; linha pontilhada: a partir dali refinar muda menos que a tolerância.');
+    const f2 = add(grid, 'figure', 'chart cv-fig'), w2 = add(f2, 'div', 'pf-wrap');
+    add(f2, 'figcaption', '', 'Diferença para a malha mais fina, com as outras grandezas ao fundo. A inclinação da reta é a ordem de convergência; pontos vazados estão no piso de arredondamento.');
+    const tw = add(box, 'div', 'cv-table');
+    const draw = () => {
+      const k = keys.includes(ui.cq) ? ui.cq : (keys.find(x => !C.exact[x]) || keys[0]), q = figs.CQ[k];
+      chips.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
+      info.replaceChildren();
+      add(info, 'b', '', `${q.label}: `);
+      info.append(`${fx(cur[k], q.d)} ${q.unit} com ${f0(cur.ne)} elementos; ${fx(C.ref[k], q.d)} com ${f0(C.ref.ne)}${cur === C.ref ? ' (a atual é a mais fina)' : ` (diferença ${pctTxt(cur[k + 'Err'])})`}. `);
+      const o = C.order[k];
+      if (C.exact[k]) info.append('Exata com qualquer malha: as diferenças ficam abaixo de 0,0001 %. ');
+      else if (o) info.append(`Ordem observada ≈ ${fx(o.p, 1)}${o.r2 < 0.8 ? ', aos solavancos' : ''}: dobrar os elementos divide o erro por cerca de ${fx(Math.pow(2, o.p), 0)}. `);
+      else info.append(`Diferença máxima de ${pctTxt(Math.max(...C.rows.map(x => x[k + 'Err']).filter(finite)))}, já na malha mais grossa. `);
+      info.append(C.conv[k] ? `Refinar muda menos que ${tolTxt} a partir de ${f0(C.conv[k].ne)} elementos.` : `Ainda muda mais que ${tolTxt} entre as duas malhas mais finas.`);
+      const v = figs.convValueSVG(C, k), e = figs.convErrorSVG(C, k);
+      w1.innerHTML = v ? v.svg : '';
+      w2.innerHTML = e ? e.svg : '';
+      if (v) convHover(w1, v, C, k);
+      if (e) convHover(w2, e, C, k);
+      convTable(tw, C, k);
+    };
+    draw();
+    const o1 = C.order.nc1;
+    add(box, 'p', 'step-note cv-note', (C.type !== 'uniforme'
+      ? `Malha conforme: reações e momento saem exatos com qualquer número de elementos, porque o eixo é isostático e o peso entra como cargas nodais consistentes; deslocamentos e rotações nos nós também. A malha muda a flecha dentro dos elementos${C.beam !== 'euler' ? ' (o cisalhamento é parabólico e a interpolação, cúbica)' : ''} e, sobretudo, as críticas${o1 ? `, que convergem com ordem ≈ ${fx(o1.p, 1)}` : ''}.`
+      : 'Malha uniforme: os degraus do eixo caem dentro dos elementos, que levam propriedades médias, e o peso fica espalhado por igual em cada um. Tudo converge, mas aos solavancos: o erro depende de onde cada degrau cai em relação aos nós. Por isso a malha conforme é a recomendada.')
+      + ` O estudo refina a malha inteira na mesma proporção, de 1/16 a 16 vezes a atual${C.zones ? ' (o número de elementos e o h de cada refino)' : ''}, até cerca de 1.100 elementos. Abaixo de 0,0001 % a diferença é arredondamento (com elementos muito curtos a matriz de viga fica mal condicionada), não erro de malha. ${C.rows.length} malhas calculadas em ${f0(C.ms)} ms.`);
+  }
+  function convTable(tw, C, k) {
+    tw.replaceChildren();
+    const wrap = add(tw, 'div', 'tbl-wrap');
+    const t = add(wrap, 'table', 'tbl cv-tbl');
+    const hr = add(add(t, 'thead'), 'tr');
+    add(hr, 'th', 'l', 'Elementos');
+    for (const c of C.keys) { const th = add(hr, 'th', c === k ? 'cv-selcol' : '', figs.CQ[c].short); add(th, 'small', '', figs.CQ[c].unit); }
+    const thd = add(hr, 'th', 'cv-selcol', 'Δ ao refinar');
+    add(thd, 'small', '', figs.CQ[k].short);
+    add(hr, 'th').append(el('span', 'sr-only', 'Ações'));
+    const tb = add(t, 'tbody');
+    C.rows.forEach((row, i) => {
+      const tr = add(tb, 'tr', row.cur ? 'sel' : '');
+      const td0 = add(tr, 'td', 'l cv-n');
+      add(td0, 'b', '', f0(row.ne));
+      if (row.cur) add(td0, 'span', 'cv-tag', 'atual');
+      else if (row === C.ref) add(td0, 'span', 'cv-tag is-ref', 'ref.');
+      add(td0, 'small', '', `${f0(row.ndof)} GDL · h ≤ ${fx(row.hmax, 0)} mm`);
+      for (const c of C.keys) add(tr, 'td', c === k ? 'cv-selcol' : '', fx(row[c], figs.CQ[c].d));
+      const chg = row[k + 'Chg'];
+      add(tr, 'td', 'cv-selcol' + (i ? (chg <= C.tol ? ' ok' : ' warn') : ''), i ? pctTxt(chg) : '—');
+      const ta = add(tr, 'td', 'cv-act');
+      if (!row.cur) {
+        const b = add(ta, 'button', 'cv-use-row', 'usar');
+        b.type = 'button';
+        b.title = `Recalcular com esta malha (alvo de ${f0(row.n)} elementos${C.zones ? ', refinos na mesma proporção' : ''})`;
+        b.setAttribute('aria-label', `Usar a malha de ${f0(row.ne)} elementos`);
+        b.addEventListener('click', () => useMesh(row));
+      }
+    });
+  }
+  function convHover(wrap, ch, C, k) {
+    const svg = wrap.querySelector('svg'), cross = svg && svg.querySelector('.pf-cross'), q = figs.CQ[k], rows = C.rows, CV = figs.CV;
+    if (!cross) return;
+    let idx = Math.max(0, rows.findIndex(x => x.cur));
+    const drawAt = i => {
+      idx = Math.max(0, Math.min(rows.length - 1, i));
+      const row = rows[idx], x = ch.X(row.ne);
+      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
+      const lines = [{ value: `${fx(row[k], q.d)} ${q.unit}`, label: q.label.toLowerCase() }];
+      if (row !== C.ref) lines.push({ value: pctTxt(row[k + 'Err']), label: 'da mais fina' });
+      if (idx) lines.push({ value: pctTxt(row[k + 'Chg']), label: 'ao refinar da anterior' });
+      tipRows(`${f0(row.ne)} elementos · ${f0(row.ndof)} GDL${row.cur ? ' · atual' : row === C.ref ? ' · mais fina' : ''}`, lines);
+      const rect = svg.getBoundingClientRect();
+      placeTip(rect.left + x / CV.W * rect.width, rect.top + CV.y0 / CV.H * rect.height + 6);
+    };
+    const fromEvent = e => {
+      const rect = svg.getBoundingClientRect(), px = (e.clientX - rect.left) / rect.width * CV.W;
+      let best = 0;
+      rows.forEach((row, i) => { if (Math.abs(ch.X(row.ne) - px) < Math.abs(ch.X(rows[best].ne) - px)) best = i; });
+      drawAt(best);
+    };
+    const hide = () => { cross.setAttribute('visibility', 'hidden'); tip.hidden = true; };
+    svg.addEventListener('pointermove', fromEvent);
+    svg.addEventListener('pointerdown', fromEvent);
+    svg.addEventListener('pointerleave', hide);
+    wrap.tabIndex = 0;
+    wrap.setAttribute('aria-label', `${q.label} por malha: use as setas para percorrer as malhas`);
+    wrap.addEventListener('focus', () => drawAt(idx));
+    wrap.addEventListener('blur', hide);
+    wrap.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { e.preventDefault(); drawAt(idx + 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); drawAt(idx - 1); } });
+  }
   const REFS = [
     ['Projeto de eixos: tensões, Goodman, ASME e Marin', 'Fluxo de cálculo de eixos com flexão alternada e torção constante; critérios DE-Goodman, DE-Gerber, DE-ASME elíptico e DE-Soderberg; fatores de Marin e sensibilidade ao entalhe.', 'Budynas & Nisbett, Shigley’s Mechanical Engineering Design, cap. 6 e 7'],
     ['Inclinações admissíveis nos mancais', 'Faixas típicas de inclinação para rolamentos de rolos, esferas e engrenagens; base do campo "inclinação admissível".', 'Shigley, tab. 7-2'],
     ['Viga de Timoshenko e massa consistente', 'Elementos de 2 nós com deformação por cisalhamento (coeficiente de Cowper para seção vazada) e inércia de rotação.', 'Przemieniecki, Theory of Matrix Structural Analysis · Cowper (1966)'],
+    ['Elementos finitos de viga', 'Hermite cúbica (Euler–Bernoulli) e interpolação interdependente de Timoshenko, sem travamento por cisalhamento; cargas nodais consistentes e esforços recuperados por equilíbrio em cada elemento.', 'Friedman & Kosmatka, Computers & Structures 47 (1993) · Reddy, CMAME 149 (1997)'],
+    ['Convergência de malha', 'Refinar até a resposta mudar menos que a tolerância; ordem observada pela inclinação do erro em escala log–log, com a malha mais fina como referência.', 'Roache, Verification and Validation in Computational Science and Engineering (1998)'],
     ['Iteração em subespaço', 'Autovalores mais baixos do problema K·φ = ω²·M·φ com fatoração em banda; o quociente de Rayleigh com a deflexão pelo peso confere a 1ª crítica.', 'Bathe, Finite Element Procedures, cap. 11'],
     ['Qualidade de balanceamento', 'Uper = 1000·G·m/ω; G 2,5 para máquinas elétricas acima de 950 rpm; divisão nos planos dos mancais com limites de 30 % e 70 % para rotor entre mancais.', 'ISO 1940-1 / ISO 21940-11, cl. 6 e 7'],
     ['Sobrevelocidade', 'Ensaio de sobrevelocidade das máquinas girantes; 1,2 × a rotação máxima na maioria dos casos.', 'IEC 60034-1'],
@@ -1027,7 +1474,7 @@
     for (const [t, p, s] of REFS) { const c = add(box, 'div', 'ref'); add(c, 'strong', '', t); add(c, 'p', '', p); add(c, 'span', '', s); }
     const sc = add(det, 'p', 'scope');
     add(sc, 'b', '', 'Escopo. ');
-    sc.append('Porte do calcular.py (mesmos números com as mesmas premissas) com acréscimos: caminho do torque, critérios de fadiga, Se por Marin, fator de pico admissível, flecha no vão e inclinação nos mancais, críticas por elementos finitos com mapa de rigidez e rigidez magnética, balanceamento ISO 1940, pressões nas chavetas, Lamé nos ajustes e pressão específica nos colos. Triagem: não libera o eixo.');
+    sc.append('Porte do calcular.py (com o método do script, mesmos números com as mesmas premissas) com acréscimos: estática por elementos finitos de viga com estudo de convergência da malha, caminho do torque, critérios de fadiga, Se por Marin, fator de pico admissível, flecha no vão e inclinação nos mancais, críticas por elementos finitos com mapa de rigidez e rigidez magnética, balanceamento ISO 1940, pressões nas chavetas, Lamé nos ajustes e pressão específica nos colos. Triagem: não libera o eixo.');
   }
   function sheetSection(det, r) {
     if (!drawing) { add(det, 'p', 'step-note', 'Módulo de desenho não carregado.'); return; }
@@ -1073,16 +1520,26 @@
     ['esforcos', 'Esforços ao longo do eixo', 'Momento fletor por superposição, cortante e momentos nos mancais.'],
     ['trechos', 'Coeficientes por trecho e Ø mínimo', 'Von Mises com pico e Kt no escoamento; flexão alternada e torque constante na fadiga.'],
     ['flecha', 'Flecha e inclinação', 'Dupla integração de M/(E·I) com flecha zero nos mancais, conferida por elementos finitos.'],
+    ['mef', 'Elementos finitos e malha', 'Discretização, malha com refinos e nós pedidos, resultados em cada nó, comparação com o script e estudo de convergência.'],
     ['criticas', 'Velocidades críticas', 'Viga de Timoshenko em elementos finitos: mancais rígidos, elásticos e rigidez magnética.'],
     ['balanceamento', 'Balanceamento', 'Desbalanceamento residual admissível (ISO 1940) e força girante nos mancais.'],
     ['interfaces', 'Chavetas e ajustes', 'Cisalhamento e esmagamento das chavetas; pressão requerida e gerada nos ajustes.'],
     ['mancais', 'Mancais', 'Pressão específica, velocidade periférica e inclinação nos colos.'],
     ['checks', 'Verificações', 'Todas as conferências automáticas, inclusive as que passaram.'],
     ['pendencias', 'Pendências e escopo', 'O que ainda falta para liberar o eixo.'],
-    ['refs', 'Referências', 'Shigley, Bathe, ISO 1940, IEC 60034-1, DIN 7190 e DIN 743.'],
+    ['refs', 'Referências', 'Shigley, Bathe, Reddy, Roache, ISO 1940, IEC 60034-1, DIN 7190 e DIN 743.'],
     ['desenho', 'Folha A3 · opcional', 'Eixo em escala, diagramas, tabelas e carimbo. Abra para gerar a folha.']
   ];
   const SEC_DEFAULT_CLOSED = new Set(['refs', 'desenho', 'pendencias']);
+  // textos de abertura que dependem do método e da teoria de viga
+  function sectionIntro(id, r, intro) {
+    const d = r.d, mef = r.method === 'mef';
+    if (id === 'reacoes' && mef) return 'Pelo MEF: esforços dos elementos nos nós dos mancais. Com dois mancais o eixo é isostático, e a estática confere.';
+    if (id === 'esforcos' && mef) return 'Momento e cortante recuperados por equilíbrio dentro de cada elemento: f = Ke·ue − feq.';
+    if (id === 'flecha' && mef) return 'Deslocamentos do MEF interpolados pelas funções de forma de cada elemento, conferidos pela dupla integração do script.';
+    if (id === 'criticas') return `Viga de ${beamName(d)} em elementos finitos, com a malha do grupo Método e malha: mancais rígidos, elásticos e rigidez magnética.`;
+    return intro;
+  }
   function sectionKey(id, r) {
     const d = r.d, nW = r.checks.filter(c => c.sev === 'warn').length, nF = r.checks.filter(c => c.sev === 'fail').length, D = r.dyn?.design;
     return {
@@ -1092,6 +1549,7 @@
       esforcos: ['Mmáx', `${fx(Math.abs(r.Mmax.v) / 1e6, 2)} kN·m`],
       trechos: ['Abaixo', r.fails.length ? r.fails.map(s => s.code).join(', ') : 'nenhum'],
       flecha: ['Vão · ponta', `${fx(r.defl.span, 3)} · ${fx(r.defl.max, 3)} mm`],
+      mef: ['Malha', r.fe && r.fe.ok ? `${f0(r.fe.info.ne)} el. · ${r.fe.refine ? (Math.max(r.fe.refine.dSpan, r.fe.refine.dTh, r.fe.refine.dM, finite(r.fe.refine.dNc1) ? r.fe.refine.dNc1 : 0) * 100 <= d.convTol ? 'convergida' : 'refinar') : d.beam}` : '—'],
       criticas: ['1ª crítica', D && D.ok ? `${f0(D.rpm[0])} rpm` : '—'],
       balanceamento: ['Uper', r.bal ? `${f0(r.bal.U)} g·mm` : '—'],
       interfaces: ['Chavetas', `${r.keyRes.filter(k => k.ok).length}/${r.keyRes.length} ok`],
@@ -1104,9 +1562,34 @@
   }
 
   /* ---- Renderização ------------------------------------------------------------------------------ */
+  // A cada recálculo o resultado é refeito. Para não pular a leitura: guarda o bloco que cruza o topo
+  // da tela e a altura de cada seção (que o content-visibility usa enquanto ela não aparece) e repõe depois.
+  let lastCvH = 0;
+  const anchorKey = n => n.id || String(n.className).split(' ')[0];
+  function captureScroll() {
+    if (!output.firstElementChild || !output.getClientRects().length) return null;
+    const heights = {};
+    let anchor = null;
+    for (const node of output.children) {
+      if (node.classList.contains('sec')) heights[node.id] = node.offsetHeight;
+      if (!anchor && !node.classList.contains('stepnav')) { const rc = node.getBoundingClientRect(); if (rc.bottom > 0) anchor = { key: anchorKey(node), top: rc.top }; }
+    }
+    const cv = output.querySelector('.cv-box[data-done]');
+    if (cv && cv.offsetHeight) lastCvH = cv.offsetHeight;
+    return { heights, anchor };
+  }
+  function restoreScroll(keep) {
+    if (!keep || !keep.anchor) return;
+    const node = [...output.children].find(n => anchorKey(n) === keep.anchor.key);
+    if (!node) return;
+    const dy = node.getBoundingClientRect().top - keep.anchor.top;
+    if (Math.abs(dy) > 0.5) window.scrollBy(0, dy);
+  }
   function render(r) {
     last = r;
     ex.r = r;
+    const keep = captureScroll(), root = document.documentElement;
+    root.style.overflowAnchor = 'none';
     output.replaceChildren();
     heroSection(r);
     alertsSection(r);
@@ -1118,13 +1601,14 @@
     SECTIONS.forEach(([id, t, intro], i) => {
       const sec = add(output, 'section', 'sec' + (id === 'desenho' ? ' sec-sheet' : ''));
       sec.id = 'passo-' + id;
+      if (keep && keep.heights[sec.id]) sec.style.containIntrinsicSize = `auto ${keep.heights[sec.id]}px`;
       const det = add(sec, 'details');
       det.open = id in secOpen ? !!secOpen[id] : !SEC_DEFAULT_CLOSED.has(id);
       det.addEventListener('toggle', () => { secOpen[id] = det.open; ss.set(SEC_KEY, secOpen); });
       const sm = add(det, 'summary');
       add(sm, 'span', 'sec-n', i + 1);
       add(sm, 'h3', '', t);
-      add(sm, 'p', 'sec-intro', intro);
+      add(sm, 'p', 'sec-intro', sectionIntro(id, r, intro));
       const [kl, kv] = sectionKey(id, r);
       const key = add(sm, 'div', 'sec-key');
       add(key, 'small', '', kl);
@@ -1132,6 +1616,7 @@
       const steps = r.steps.filter(x => x.section === id);
       if (steps.length) { const list = add(det, 'div', 'steps'); for (const st of steps) stepRow(list, st); }
       if (id === 'trechos') sectionsTable(det, r);
+      if (id === 'mef') mefExtras(det, r);
       if (id === 'criticas') criticalExtras(det, r);
       if (id === 'balanceamento') balanceExtras(det, r);
       if (id === 'interfaces') interfacesExtras(det, r);
@@ -1147,6 +1632,8 @@
     });
     setupSpy(nav);
     updatePeek(r);
+    restoreScroll(keep);
+    requestAnimationFrame(() => requestAnimationFrame(() => { root.style.overflowAnchor = ''; }));
   }
   function setupSpy(nav) {
     if (spy) spy.disconnect();
@@ -1212,11 +1699,11 @@
       for (const m of general) add(ul, 'li', '', m);
       for (const [k, m] of Object.entries(fields)) {
         const li = add(ul, 'li');
-        const tm = /^(sec|key|fit):(\d+):(\w+)$/.exec(k);
+        const tm = /^(sec|key|fit|ref|nod):(\d+):(\w+)$/.exec(k);
         if (tm) {
-          const tab = { sec: 'sections', key: 'keys', fit: 'fits' }[tm[1]], row = tables[tab][+tm[2]];
-          const col = { sec: engine.SECTION_COLS, key: engine.KEY_COLS, fit: engine.FIT_COLS }[tm[1]].find(c => c.key === tm[3]);
-          const a = add(li, 'a', '', `${{ sec: 'Trecho', key: 'Chaveta', fit: 'Ajuste' }[tm[1]]} ${row?.name || +tm[2] + 1} · ${col ? col.label : tm[3]}`);
+          const tab = { sec: 'sections', key: 'keys', fit: 'fits', ref: 'refine', nod: 'nodes' }[tm[1]], row = tables[tab][+tm[2]];
+          const col = { sec: engine.SECTION_COLS, key: engine.KEY_COLS, fit: engine.FIT_COLS, ref: engine.REFINE_COLS, nod: engine.NODE_COLS }[tm[1]].find(c => c.key === tm[3]);
+          const a = add(li, 'a', '', `${{ sec: 'Trecho', key: 'Chaveta', fit: 'Ajuste', ref: 'Refino', nod: 'Nó' }[tm[1]]} ${row?.name || +tm[2] + 1} · ${col ? col.label : tm[3]}`);
           a.href = '#';
           a.addEventListener('click', e => { e.preventDefault(); editor.open(tab); setTimeout(() => { const inp = document.querySelector(`.ed-in[data-row="${tm[2]}"][data-col="${tm[3]}"]`); inp?.focus(); inp?.scrollIntoView({ block: 'center' }); }, 30); });
         } else {
@@ -1259,6 +1746,7 @@
       `Potência no eixo ${fx(r.Pshaft, 2)} kW a ${f0(d.speed)} rpm · T ${fx(r.T / 1000, 2)} kN·m · pico ${fx(r.Tpk / 1000, 2)} kN·m (${fx(d.peak, 2)} ×)`,
       `Reações: A ${fx(r.RA / 1000, 2)} kN · B ${fx(r.RB / 1000, 2)} kN · massa do eixo ${f0(r.mass.shaft)} kg + rotor ${f0(d.rotorMass)} kg`,
       `Momento máximo ${fx(Math.abs(r.Mmax.v) / 1e6, 2)} kN·m em x = ${fx(r.Mmax.x, 1)} mm · flecha ${fx(r.defl.span, 3)} mm no vão, ${fx(r.defl.max, 3)} mm máx.`,
+      r.method === 'mef' ? `Estática por MEF de viga ${beamName(d)}: ${f0(r.fe.info.ne)} elementos, malha ${r.fe.info.type}${r.fe.info.zones ? ` com ${r.fe.info.zones} ${plural(r.fe.info.zones, 'região', 'regiões')} de refino` : ''}${r.fe.info.user ? ` e ${r.fe.info.user} ${plural(r.fe.info.user, 'nó pedido', 'nós pedidos')}` : ''}${r.fe.refine ? `; dobrando a malha, a maior variação é ${pctTxt(Math.max(r.fe.refine.dSpan, r.fe.refine.dTh, r.fe.refine.dM, finite(r.fe.refine.dNc1) ? r.fe.refine.dNc1 : 0))}` : ''}` : 'Estática pelo método do script (superposição e dupla integração)',
       D && D.ok ? `Críticas (${r.dyn.designLabel}): ${D.rpm.map(v => f0(v)).join(' · ')} rpm · 1ª = ${fx(D.rpm[0] / d.speed, 2)} × n` : '',
       r.bal ? `Balanceamento G ${fx(r.bal.G, 1)}: Uper ${f0(r.bal.U)} g·mm (A ${f0(r.bal.UA)} · B ${f0(r.bal.UB)})` : '',
       `Trechos abaixo dos mínimos (SF esc. ${fx(d.sfY, 1)} · fad. ${fx(d.sfF, 1)}): ${r.fails.length ? r.fails.map(s => s.code).join(', ') : 'nenhum'}`].filter(Boolean);

@@ -1,7 +1,9 @@
-/* Laboratório de eixos · modelo de elementos finitos de viga (Timoshenko + inércia de rotação).
-   Velocidades críticas não amortecidas, sem efeito giroscópico, com mancais rígidos ou molas.
-   Matrizes em banda (meia-largura 3): fatoração de Cholesky em banda e iteração em subespaço,
-   o que deixa cada solução em fração de milissegundo e permite o mapa de críticas × rigidez.
+/* Laboratório de eixos · modelo de elementos finitos de viga (Timoshenko ou Euler–Bernoulli + inércia de rotação).
+   Estática completa (deslocamentos, reações, esforços recuperados em cada elemento) e velocidades críticas
+   não amortecidas, sem efeito giroscópico, com mancais rígidos ou molas. Malha conforme (nós em toda mudança
+   de seção, carga e mancal) ou uniforme (didática: os degraus caem dentro dos elementos, com propriedades médias).
+   Matrizes em banda (meia-largura 3): Cholesky em banda e iteração em subespaço, frações de milissegundo por
+   solução, o que permite o mapa de críticas × rigidez e o estudo de convergência de malha.
    Unidades SI internas: m, N, kg, Pa. Sem dependências; funciona no navegador e no Node. */
 (function (root, factory) {
   const api = factory();
@@ -99,35 +101,87 @@
 
   /* ---- Montagem do modelo ------------------------------------------------------------------ */
   // geo: { L (mm), secs: [{a,b,A,I,di,d}] (mm), E (MPa), nu, rho (kg/m³), bearings: [xA,xB] (mm),
-  //        addMass: [{a,b,kgPerMm}], foundation: [{a,b,kPerMm (N/mm por mm)}], breaks: [x...], hmax (mm) }
+  //        addMass: [{a,b,kgPerMm}], foundation: [{a,b,kPerMm (N/mm por mm)}], points: [x...] (forças),
+  //        breaks: [x...], mesh: 'conforme' | 'uniforme', n: elementos (alvo), hmax (mm, sem n),
+  //        nodes: [x...] (nós pedidos), refine: [{a, b, h}] (regiões com elemento de no máximo h mm), snap (mm) }
   function buildModel(geo) {
-    const E = geo.E * 1e6, nu = geo.nu ?? 0.3, G = E / (2 * (1 + nu)), rho = geo.rho;
-    const set = new Set([0, geo.L, ...geo.bearings, ...(geo.breaks || [])]);
-    for (const s of geo.secs) { set.add(s.a); set.add(s.b); }
-    for (const m of geo.addMass || []) { set.add(m.a); set.add(m.b); }
-    for (const f of geo.foundation || []) { set.add(f.a); set.add(f.b); }
-    const bp = [...set].filter(x => x >= 0 && x <= geo.L).sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 1e-6);
-    const hmax = geo.hmax || 50;
-    const xs = [bp[0]];
-    for (let i = 1; i < bp.length; i++) {
-      const n = Math.max(1, Math.ceil((bp[i] - bp[i - 1]) / hmax - 1e-9));
-      for (let k = 1; k <= n; k++) xs.push(bp[i - 1] + (bp[i] - bp[i - 1]) * k / n);
+    const E = geo.E * 1e6, nu = geo.nu ?? 0.3, G = E / (2 * (1 + nu)), rho = geo.rho, Lt = geo.L;
+    const type = geo.mesh === 'uniforme' ? 'uniforme' : 'conforme';
+    const clean = arr => [...new Set(arr)].filter(x => x >= 0 && x <= Lt).sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 1e-6);
+    const snap = geo.snap ?? 1;                                                    // nós pedidos a menos disso de um obrigatório juntam-se a ele
+    const close = (list, x, tol = snap) => list.some(v => Math.abs(v - x) < tol);
+    const zones = (geo.refine || []).map(z => ({ a: Math.max(0, z.a), b: Math.min(Lt, z.b), h: z.h })).filter(z => z.b > z.a && z.h > 0);
+    const hZone = (a, b) => { const m = (a + b) / 2; let h = Infinity; for (const z of zones) if (m >= z.a && m <= z.b && z.h < h) h = z.h; return h; };
+    const base = clean([0, Lt, ...geo.bearings, ...(geo.points || [])]);          // mancais e forças sempre em nós
+    const forced = clean(base.concat((geo.nodes || []).filter(x => x > 0 && x < Lt && !close(base, x))));
+    let xs;
+    if (type === 'uniforme') {
+      const n = Math.max(2, Math.round(geo.n || 100)), h = Lt / n;
+      xs = Array.from({ length: n + 1 }, (_, k) => k === n ? Lt : k * h);          // a ponta exata: n·h pode passar de L por arredondamento
+      for (const f of forced) {
+        const k = Math.round(f / h);
+        if (f === 0 || f === Lt) continue;
+        if (k > 0 && k < n && Math.abs(xs[k] - f) <= 0.25 * h && !forced.includes(xs[k])) xs[k] = f; else xs.push(f);
+      }
+      xs = clean(xs);
+      // refino: cada elemento da grade com o meio numa região é dividido até ficar com no máximo h
+      if (zones.length) {
+        const out = [xs[0]];
+        for (let i = 1; i < xs.length; i++) {
+          const a = xs[i - 1], b = xs[i], hz = hZone(a, b), k = hz < Infinity ? Math.max(1, Math.ceil((b - a) / hz - 1e-9)) : 1;
+          for (let j = 1; j <= k; j++) out.push(j === k ? b : a + (b - a) * j / k);
+        }
+        xs = out;
+      }
+    } else {
+      const set = [...forced, ...(geo.breaks || [])];
+      for (const s of geo.secs) set.push(s.a, s.b);
+      for (const m of geo.addMass || []) set.push(m.a, m.b);
+      for (const f of geo.foundation || []) set.push(f.a, f.b);
+      let bp = clean(set);
+      // as pontas de cada região de refino também viram nós, salvo se um nó já existe a menos de h/2 (evita lascas)
+      const zb = [];
+      for (const z of zones) for (const x of [z.a, z.b]) if (x > 0 && x < Lt && !close(bp, x, Math.max(snap, z.h / 2))) zb.push(x);
+      if (zb.length) bp = clean(bp.concat(zb));
+      xs = [bp[0]];
+      for (let i = 1; i < bp.length; i++) {
+        const len = bp[i] - bp[i - 1], hz = hZone(bp[i - 1], bp[i]);
+        let n = geo.n ? Math.max(1, Math.round(len * geo.n / Lt)) : Math.max(1, Math.ceil(len / (geo.hmax || 50) - 1e-9));
+        if (hz < Infinity) n = Math.max(n, Math.ceil(len / hz - 1e-9));
+        for (let k = 1; k <= n; k++) xs.push(k === n ? bp[i] : bp[i - 1] + len * k / n);
+      }
     }
-    const near = x => { let b = 0, d = Infinity; xs.forEach((v, i) => { const e = Math.abs(v - x); if (e < d) { d = e; b = i; } }); return b; };
+    const near = x => {                                                            // nó mais próximo (busca binária)
+      let lo = 0, hi = xs.length - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] <= x) lo = m; else hi = m; }
+      return Math.abs(xs[hi] - x) < Math.abs(xs[lo] - x) ? hi : lo;
+    };
+    // propriedades de cada elemento integradas sobre os trechos que ele cobre: rigidez à flexão e ao cisalhamento
+    // pela média harmônica (flexibilidades somam em série), massa, inércia de rotação e peso pela média simples.
+    // Na malha conforme cada elemento fica dentro de um só trecho e as médias são os valores exatos do trecho.
     const elems = [];
-    let si = 0;
+    let si = 0, hmin = Infinity, hmx = 0;
+    const kapOf = s => { const m = s.di > 0 ? s.di / s.d : 0; return 6 * (1 + nu) * (1 + m * m) ** 2 / ((7 + 6 * nu) * (1 + m * m) ** 2 + (20 + 12 * nu) * m * m); };
     for (let e = 0; e < xs.length - 1; e++) {
-      const x0 = xs[e], x1 = xs[e + 1], xm = (x0 + x1) / 2;
-      while (si < geo.secs.length - 1 && xm > geo.secs[si].b) si++;
-      const s = geo.secs[si];
-      const A = s.A * 1e-6, I = s.I * 1e-12, m = s.di > 0 ? s.di / s.d : 0;
-      const kappa = 6 * (1 + nu) * (1 + m * m) ** 2 / ((7 + 6 * nu) * (1 + m * m) ** 2 + (20 + 12 * nu) * m * m);
+      const x0 = xs[e], x1 = xs[e + 1], h = x1 - x0, xm = (x0 + x1) / 2;
+      while (si < geo.secs.length - 1 && x0 >= geo.secs[si].b) si++;
+      let fEI = 0, fGA = 0, mA = 0, mI = 0, kap = 1, sm = si;
+      for (let j = si; j < geo.secs.length && geo.secs[j].a < x1; j++) {
+        const s = geo.secs[j], len = Math.min(x1, s.b) - Math.max(x0, s.a);
+        if (!(len > 0)) continue;
+        const A = s.A * 1e-6, I = s.I * 1e-12, k = kapOf(s);
+        fEI += len / (E * I); fGA += len / (k * G * A); mA += rho * A * len; mI += rho * I * len;
+        if (xm >= s.a && xm <= s.b) { kap = k; sm = j; }
+      }
       let mAdd = 0, kf = 0;
-      for (const a of geo.addMass || []) if (xm > a.a && xm < a.b) mAdd += a.kgPerMm * 1000;      // kg/m
-      for (const f of geo.foundation || []) if (xm > f.a && xm < f.b) kf += f.kPerMm * 1e6;     // N/m por m
-      elems.push({ x0, x1, L: (x1 - x0) / 1000, E, G, A, I, kappa, rhoA: rho * A, rhoI: rho * I, mAdd, kf, sec: si });
+      for (const a of geo.addMass || []) { const ov = Math.min(x1, a.b) - Math.max(x0, a.a); if (ov > 0) mAdd += a.kgPerMm * 1000 * ov / h; }      // kg/m
+      for (const f of geo.foundation || []) { const ov = Math.min(x1, f.b) - Math.max(x0, f.a); if (ov > 0) kf += f.kPerMm * 1e6 * ov / h; }     // N/m por m
+      elems.push({ x0, x1, L: h / 1000, EI: h / fEI, kGA: h / fGA, rhoA: mA / h, rhoI: mI / h, mAdd, kf, kappa: kap, sec: sm });
+      hmin = Math.min(hmin, h); hmx = Math.max(hmx, h);
     }
-    return { xs, elems, bearingNodes: geo.bearings.map(near), nNodes: xs.length };
+    const userNodes = (geo.nodes || []).map(x => near(x));                         // onde cada nó pedido ficou na malha
+    const info = { type, target: geo.n || null, ne: elems.length, nn: xs.length, ndof: 2 * xs.length, hmin, hmax: hmx, zones: zones.length, user: new Set(userNodes).size };
+    return { xs, elems, bearingNodes: geo.bearings.map(near), nNodes: xs.length, info, zones, userNodes, near };
   }
   // GDL livres: v (transversal) e θ por nó; apoio rígido remove v do nó do mancal
   function dofMap(model, rigid) {
@@ -144,8 +198,8 @@
     const shear = opt.shear !== false, rotary = opt.rotary !== false, found = opt.foundation !== false;
     for (let e = 0; e < model.elems.length; e++) {
       const el = model.elems[e], L = el.L, L2 = L * L;
-      const phi = shear ? 12 * el.E * el.I / (el.kappa * el.G * el.A * L2) : 0;
-      const k = el.E * el.I / ((1 + phi) * L2 * L);
+      const phi = shear ? 12 * el.EI / (el.kGA * L2) : 0;
+      const k = el.EI / ((1 + phi) * L2 * L);
       const Ke = [12, 6 * L, -12, 6 * L, 6 * L, (4 + phi) * L2, -6 * L, (2 - phi) * L2, -12, -6 * L, 12, -6 * L, 6 * L, (2 - phi) * L2, -6 * L, (4 + phi) * L2];
       const C = [156, 22 * L, 54, -13 * L, 22 * L, 4 * L2, 13 * L, -3 * L2, 54, 13 * L, 156, -22 * L, -13 * L, -3 * L2, -22 * L, 4 * L2];
       const Rr = [36, 3 * L, -36, 3 * L, 3 * L, 4 * L2, -3 * L, -L2, -36, -3 * L, 36, -3 * L, 3 * L, -L2, -3 * L, 4 * L2];
@@ -242,33 +296,116 @@
     if (!res.ok) return { ok: false, reason: res.reason };
     return { ok: true, rigid, rpm: res.vals.map(rpmOf), w: res.vals.map(l => Math.sqrt(Math.max(0, l))), shapes: res.vals.map((_, i) => shapeOf(model, base.dm, res.X[i])), X: res.X, iterations: res.iterations };
   }
-  // deflexão estática por MEF (cargas nodais consistentes) e quociente de Rayleigh com o peso próprio
+  // funções de forma da viga de Timoshenko com interpolação interdependente (Φ = 0: Hermite de Euler–Bernoulli)
+  function shapeV(xi, L, phi) {
+    const c = 1 / (1 + phi), x2 = xi * xi, x3 = x2 * xi;
+    return [c * (2 * x3 - 3 * x2 - phi * xi + 1 + phi), c * L * (x3 - (2 + phi / 2) * x2 + (1 + phi / 2) * xi),
+      c * (-2 * x3 + 3 * x2 + phi * xi), c * L * (x3 - (1 - phi / 2) * x2 - (phi / 2) * xi)];
+  }
+  function shapeT(xi, L, phi) {
+    const c = 1 / (1 + phi), x2 = xi * xi;
+    return [c * 6 / L * (x2 - xi), c * (3 * x2 - (4 + phi) * xi + 1 + phi), c * 6 / L * (xi - x2), c * (3 * x2 - (2 - phi) * xi)];
+  }
+  // extremos internos do deslocamento interpolado: v(ξ) é cúbico no elemento, dv/dξ = 0 tem até duas raízes em (0, 1)
+  function vStationary(ue, L, phi) {
+    const c = 1 / (1 + phi);
+    const a3 = c * (2 * ue[0] + L * ue[1] - 2 * ue[2] + L * ue[3]);
+    const a2 = c * (-3 * ue[0] - (2 + phi / 2) * L * ue[1] + 3 * ue[2] - (1 - phi / 2) * L * ue[3]);
+    const a1 = c * (-phi * ue[0] + (1 + phi / 2) * L * ue[1] + phi * ue[2] - (phi / 2) * L * ue[3]);
+    const A = 3 * a3, B = 2 * a2, C = a1, out = [], scale = Math.abs(A) + Math.abs(B) + Math.abs(C);
+    if (!(scale > 0)) return out;
+    const roots = [];
+    if (Math.abs(A) <= 1e-12 * scale) { if (Math.abs(B) > 1e-12 * scale) roots.push(-C / B); }
+    else {
+      const disc = B * B - 4 * A * C;
+      if (disc >= 0) { const q = -0.5 * (B + (B >= 0 ? 1 : -1) * Math.sqrt(disc)); roots.push(q / A); if (q !== 0) roots.push(C / q); }
+    }
+    for (const z of roots) if (z > 1e-9 && z < 1 - 1e-9) out.push(z);
+    return out.sort((a, b) => a - b);
+  }
+  function elemK(el, shear) {
+    const L = el.L, L2 = L * L;
+    const phi = shear ? 12 * el.EI / (el.kGA * L2) : 0;
+    const k = el.EI / ((1 + phi) * L2 * L);
+    return { phi, K: [12, 6 * L, -12, 6 * L, 6 * L, (4 + phi) * L2, -6 * L, (2 - phi) * L2, -12, -6 * L, 12, -6 * L, 6 * L, (2 - phi) * L2, -6 * L, (4 + phi) * L2].map(v => v * k) };
+  }
+  // estática por MEF: cargas nodais consistentes (qL/2, qL²/12), forças nos nós, apoios rígidos ou molas.
+  // Devolve deslocamentos nodais, reações, esforços nas pontas de cada elemento (f = Ke·ue − feq),
+  // diagramas de V e M recuperados por equilíbrio dentro de cada elemento e a curva interpolada.
   function staticSolve(model, o = {}) {
     const rigid = !(o.springs && o.springs.every(k => k > 0));
-    const base = baseSystem(model, rigid, { foundation: false, shear: o.shear, rotary: o.rotary });
+    const shear = o.shear !== false;
+    const base = baseSystem(model, rigid, { foundation: false, shear, rotary: o.rotary });
     const dm = base.dm, sys = withSprings(model, base, rigid ? null : o.springs);
-    const L = bchol(sys.K, sys.n);
-    if (!L) return null;
-    const f = new Float64Array(sys.n);
+    const Lc = bchol(sys.K, sys.n);
+    if (!Lc) return null;
+    const ne = model.elems.length, nn = model.nNodes;
+    const f = new Float64Array(sys.n), qe = new Float64Array(ne), P = new Float64Array(nn);
     const addAt = (node, dof, val) => { const k = dm.map[2 * node + dof]; if (k >= 0) f[k] += val; };
-    // carga distribuída: q (N/m) por elemento, de o.q(xm) — consistente: qL/2, qL²/12
     model.elems.forEach((el, e) => {
       const q = o.q ? o.q((el.x0 + el.x1) / 2, el) : 0;
+      qe[e] = q;
       if (!q) return;
       addAt(e, 0, q * el.L / 2); addAt(e, 1, q * el.L * el.L / 12); addAt(e + 1, 0, q * el.L / 2); addAt(e + 1, 1, -q * el.L * el.L / 12);
     });
     for (const p of o.points || []) {
       let best = 0, bd = Infinity;
       model.xs.forEach((x, i) => { const d = Math.abs(x - p.x); if (d < bd) { bd = d; best = i; } });
+      P[best] += p.F;
       addAt(best, 0, p.F);
     }
-    const u = bsolve(L, sys.n, f, new Float64Array(sys.n));
-    const v = new Array(model.nNodes).fill(0), th = new Array(model.nNodes).fill(0);
-    for (let i = 0; i < model.nNodes; i++) { const a = dm.map[2 * i], b = dm.map[2 * i + 1]; v[i] = a >= 0 ? u[a] : 0; th[i] = b >= 0 ? u[b] : 0; }
+    const u = bsolve(Lc, sys.n, f, new Float64Array(sys.n));
+    const v = new Array(nn).fill(0), th = new Array(nn).fill(0);
+    for (let i = 0; i < nn; i++) { const a = dm.map[2 * i], b = dm.map[2 * i + 1]; v[i] = a >= 0 ? u[a] : 0; th[i] = b >= 0 ? u[b] : 0; }
+    // esforços nas pontas: forças que os nós aplicam no elemento [V1, M1, V2, M2] (N, N·m; anti-horário +)
+    const ends = new Float64Array(ne * 4), phis = new Float64Array(ne);
+    model.elems.forEach((el, e) => {
+      const { phi, K } = elemK(el, shear);
+      phis[e] = phi;
+      const ue = [v[e], th[e], v[e + 1], th[e + 1]], q = qe[e], L = el.L;
+      const feq = [q * L / 2, q * L * L / 12, q * L / 2, -q * L * L / 12];
+      for (let a = 0; a < 4; a++) { let sum = 0; for (let b = 0; b < 4; b++) sum += K[4 * a + b] * ue[b]; ends[4 * e + a] = sum - feq[a]; }
+    });
+    // esforços em cada nó: momento (contínuo) e cortante dos dois lados (salta onde há força)
+    const nM = new Float64Array(nn), nVl = new Float64Array(nn), nVr = new Float64Array(nn);
+    model.elems.forEach((el, e) => {
+      const V1 = ends[4 * e], M1 = ends[4 * e + 1], q = qe[e], L = el.L;
+      nM[e] = -M1; nVr[e] = V1; nVl[e + 1] = V1 + q * L;
+      if (e === ne - 1) nM[e + 1] = -M1 + V1 * L + q * L * L / 2;
+    });
+    // reações: equilíbrio de cada nó de mancal, R = Σ esforços dos elementos − força aplicada no nó
+    const R = model.bearingNodes.map(b => (b > 0 ? ends[4 * (b - 1) + 2] : 0) + (b < ne ? ends[4 * b] : 0) - P[b]);
+    let Ftot = 0; model.elems.forEach((el, e) => { Ftot += qe[e] * el.L; }); P.forEach(p => { Ftot += p; });
+    const residual = (R.reduce((a, b) => a + b, 0) + Ftot) / Math.max(1, Math.abs(Ftot));
+    // diagramas por equilíbrio dentro do elemento: V(ξ) = V1 + q·ξ · M(ξ) = −M1 + V1·ξ + q·ξ²/2 (positivo tracionando embaixo)
+    const big = ne > 400, dx = [], dV = [], dM = [];
+    model.elems.forEach((el, e) => {
+      const V1 = ends[4 * e], M1 = ends[4 * e + 1], q = qe[e], L = el.L;
+      const pts = big ? [0, L] : [0, L / 4, L / 2, 3 * L / 4, L];
+      if (q && -V1 / q > 0 && -V1 / q < L) pts.push(-V1 / q);                // vértice da parábola (V = 0)
+      pts.sort((a, b) => a - b);
+      for (const z of pts) { dx.push(el.x0 + z * 1000); dV.push(V1 + q * z); dM.push(-M1 + V1 * z + q * z * z / 2); }
+    });
+    // curva deformada e rotação interpoladas com as funções de forma do próprio elemento,
+    // com os extremos internos de v: a flecha máxima sai do campo do MEF, não só dos nós
+    const px = [], pv = [], pt = [];
+    const sub0 = big ? [0] : [0, 1 / 3, 2 / 3];
+    model.elems.forEach((el, e) => {
+      const ue = [v[e], th[e], v[e + 1], th[e + 1]];
+      const ext = vStationary(ue, el.L, phis[e]);
+      const sub = ext.length ? sub0.concat(ext).sort((a, b) => a - b) : sub0;
+      for (const xi of sub) {
+        const Nv = shapeV(xi, el.L, phis[e]), Nt = shapeT(xi, el.L, phis[e]);
+        px.push(el.x0 + xi * (el.x1 - el.x0));
+        pv.push(Nv[0] * ue[0] + Nv[1] * ue[1] + Nv[2] * ue[2] + Nv[3] * ue[3]);
+        pt.push(Nt[0] * ue[0] + Nt[1] * ue[1] + Nt[2] * ue[2] + Nt[3] * ue[3]);
+      }
+    });
+    px.push(model.xs[nn - 1]); pv.push(v[nn - 1]); pt.push(th[nn - 1]);
     let uf = 0; for (let k = 0; k < sys.n; k++) uf += u[k] * f[k];
     const Mu = bmul(sys.M, sys.n, u, new Float64Array(sys.n));
     let uMu = 0; for (let k = 0; k < sys.n; k++) uMu += u[k] * Mu[k];
-    return { v, th, rayleighW2: uMu > 0 ? uf / uMu : NaN };
+    return { v, th, R, ends, qe, P, phis, residual, Ftot, nodal: { M: nM, Vl: nVl, Vr: nVr }, diag: { x: dx, V: dV, M: dM }, plot: { x: px, v: pv, th: pt }, rayleighW2: uMu > 0 ? uf / uMu : NaN, ndof: sys.n };
   }
   // mapa de críticas × rigidez dos mancais (mesma rigidez nos dois)
   function criticalMap(model, o = {}) {
@@ -276,7 +413,7 @@
     const out = [];
     let start = null;
     for (const k of ks) {
-      const c = criticals(model, { springs: [k, k], q: o.q || 3, start, foundation: o.foundation });
+      const c = criticals(model, { springs: [k, k], q: o.q || 3, start, foundation: o.foundation, shear: o.shear });
       if (!c.ok) { out.push({ k, rpm: [NaN, NaN, NaN] }); start = null; continue; }
       out.push({ k, rpm: c.rpm });
       start = c.X;
@@ -284,5 +421,5 @@
     return out;
   }
 
-  return { buildModel, criticals, staticSolve, criticalMap, rpmOf, _internal: { band, badd, bmul, bchol, bsolve, jacobi, geneig, dofMap, assemble, lowestModes } };
+  return { buildModel, criticals, staticSolve, criticalMap, rpmOf, shapeV, shapeT, vStationary, _internal: { band, badd, bmul, bchol, bsolve, jacobi, geneig, dofMap, assemble, lowestModes, elemK } };
 });

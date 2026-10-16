@@ -119,8 +119,9 @@
     };
     const dTop = yb + 74;
     plot(S.m, dTop, 66, 'MOMENTO FLETOR', 'kN·m', 2, { fill: true });
-    const iy = r.mesh.indexOf(r.defl.xspan);
-    plot(S.y, dTop + 100, 58, 'FLECHA', 'mm', 3, { marks: [[r.defl.xspan, r.y[iy >= 0 ? iy : 0]], [r.defl.xmax, r.defl.ymax]] });
+    const marks = [[r.defl.xspan, r.defl.yspan]];
+    if (Math.abs(r.defl.xmax - r.defl.xspan) > 1e-6) marks.push([r.defl.xmax, r.defl.ymax]);
+    plot(S.y, dTop + 100, 58, r.method === 'mef' ? `FLECHA · MEF ${r.d.beam === 'euler' ? 'EULER–BERNOULLI' : 'TIMOSHENKO'}, ${r.fe.info.ne} ELEMENTOS` : 'FLECHA', 'mm', 3, { marks });
 
     /* tabela dos trechos */
     const ty0 = 548, tx0 = 18, rh = 11.4;
@@ -176,8 +177,9 @@
       '1. Triagem pela fórmula simplificada (Kt e Kf estimados): não libera o eixo.',
       `2. Cotas em mm; Ø e posições na tabela. Tracejado = Ø mínimo; balão grosso = trecho abaixo.`,
       `3. Torque ${d.torqueMode === 'linear' ? 'pelo caminho acoplamento → pacote' : 'integral em todos os trechos'}; força magnética para baixo.`,
-      `4. Críticas não amortecidas, sem giroscópico; ${r.dyn ? r.dyn.designLabel : '—'}.`
-    ].concat(r.notes.slice(0, 2).map((t, i) => `${i + 5}. ${t}`));
+      `4. Estática ${r.method === 'mef' ? `por MEF de viga (${d.beam === 'euler' ? 'Euler–Bernoulli' : 'Timoshenko'}), ${r.fe.info.ne} elementos, malha ${r.fe.info.type}${r.fe.refine ? `; dobrando a malha, Δ ≤ ${fmt(Math.max(r.fe.refine.dSpan, r.fe.refine.dTh, r.fe.refine.dM, isNum(r.fe.refine.dNc1) ? r.fe.refine.dNc1 : 0) * 100, 4)} %` : ''}` : 'pelo método do script (superposição e dupla integração)'}.`,
+      `5. Críticas não amortecidas, sem giroscópico; ${r.dyn ? r.dyn.designLabel : '—'}.`
+    ].concat(r.notes.slice(0, 2).map((t, i) => `${i + 6}. ${t}`));
     notes.forEach((t, i) => { const y = ny + 9.4 * (i + 1); if (y < 778) Tx(qx, y, fit(t, qw, 6.1), { size: 6.1 }); });
 
     /* carimbo (mesmo dos outros laboratórios) */
