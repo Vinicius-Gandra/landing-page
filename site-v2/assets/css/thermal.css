@@ -37,7 +37,8 @@ body.thermal-app { min-height: 100dvh; font-size: 14px; line-height: 1.55; }
 html[data-theme="light"] .t-theme-sun { display: none; }
 html[data-theme="light"] .t-theme-moon { display: inline; }
 @media (prefers-color-scheme: light) { html:not([data-theme]) .t-theme-sun { display: none; } html:not([data-theme]) .t-theme-moon { display: inline; } }
-.t-areas { position: sticky; top: var(--hh); z-index: 70; display: flex; gap: 2px; height: var(--ah); padding: 0 var(--gut) 0 16px; border-bottom: 1px solid var(--line); background: var(--bg-alt); }
+.t-areas { position: sticky; top: var(--hh); z-index: 70; display: flex; gap: 2px; height: var(--ah); padding: 0 var(--gut) 0 16px; border-bottom: 1px solid var(--line); background: var(--bg-alt); overflow-x: auto; scrollbar-width: none; }
+.t-areas::-webkit-scrollbar { display: none; }
 .t-area { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border-bottom: 2px solid transparent; color: var(--text-2); font-size: .76rem; font-weight: 650; white-space: nowrap; }
 .t-area:hover { color: var(--text); background: var(--surface); }
 .t-area[aria-current="page"] { border-bottom-color: var(--accent); color: var(--text); background: var(--accent-wash); }
@@ -580,7 +581,7 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
   .pf-axis { font-size: 12.5px; }
   .pf-lab { font-size: 13.5px; }
 }
-@media (max-width: 640px) { .t-area-detail { display: none; } }
+@media (max-width: 900px) { .t-area-detail { display: none; } } /* quatro laboratórios na barra */
 @media (max-width: 420px) {
   .t-act { min-width: 36px; height: 36px; padding: 0 8px; }
   .t-actions { gap: 0; }

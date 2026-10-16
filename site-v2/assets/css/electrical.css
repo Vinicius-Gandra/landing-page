@@ -40,7 +40,8 @@ body.electrical-app { min-height: 100dvh; font-size: 14px; line-height: 1.55; }
 html[data-theme="light"] .e-theme-sun { display: none; }
 html[data-theme="light"] .e-theme-moon { display: inline; }
 @media (prefers-color-scheme: light) { html:not([data-theme]) .e-theme-sun { display: none; } html:not([data-theme]) .e-theme-moon { display: inline; } }
-.e-areas { position: sticky; top: var(--hh); z-index: 70; display: flex; gap: 2px; height: var(--ah); padding: 0 var(--gut) 0 16px; border-bottom: 1px solid var(--line); background: var(--bg-alt); }
+.e-areas { position: sticky; top: var(--hh); z-index: 70; display: flex; gap: 2px; height: var(--ah); padding: 0 var(--gut) 0 16px; border-bottom: 1px solid var(--line); background: var(--bg-alt); overflow-x: auto; scrollbar-width: none; }
+.e-areas::-webkit-scrollbar { display: none; }
 .e-area { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border-bottom: 2px solid transparent; color: var(--text-2); font-size: .76rem; font-weight: 650; white-space: nowrap; }
 .e-area:hover { color: var(--text); background: var(--surface); }
 .e-area[aria-current="page"] { border-bottom-color: var(--accent); color: var(--text); background: var(--accent-wash); }
@@ -351,7 +352,7 @@ html[data-theme="light"] .e-theme-moon { display: inline; }
   .kpi dd { font-size: 1rem; }
   .budget { padding: 14px; }
 }
-@media (max-width: 640px) { .e-area-detail { display: none; } } /* três laboratórios na barra */
+@media (max-width: 900px) { .e-area-detail { display: none; } } /* quatro laboratórios na barra */
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
 /* ---- Impressão ---------------------------------------------------------- */

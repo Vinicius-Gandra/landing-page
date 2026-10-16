@@ -38,8 +38,10 @@ html[data-theme="light"] .theme-btn .i-moon { display: block; }
 .lab-areas {
   position: sticky; top: var(--appbar-h); z-index: 50; min-height: var(--lab-areas-h);
   display: flex; align-items: stretch; gap: 4px; padding: 0 16px;
-  background: var(--bg-alt); border-bottom: 1px solid var(--line);
+  background: var(--bg-alt); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none;
 }
+.lab-areas::-webkit-scrollbar { display: none; }
+@media (max-width: 1100px) { .lab-area-detail { display: none; } } /* quatro laboratórios na barra */
 .lab-areas-label { display: inline-flex; align-items: center; margin-right: 16px; color: var(--text-3); font-size: .62rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .lab-area { display: inline-flex; align-items: center; gap: 6px; min-height: var(--lab-areas-h); padding: 0 15px;
   border-bottom: 2px solid transparent; color: var(--text-2); font-size: .78rem; font-weight: 650; white-space: nowrap; }
