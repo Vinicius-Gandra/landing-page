@@ -137,7 +137,7 @@
     document.querySelectorAll('.tabpanel').forEach(p => { p.hidden = p.id !== 'p-' + a; });
     renderizar(a);
     gravarHash();
-    if (window.matchMedia('(max-width: 900px)').matches) definirVista('resultados');
+    if (window.matchMedia('(max-width: 1050px)').matches) definirVista('resultados');
     const topo = $('.res-top');
     const y = topo.getBoundingClientRect().top + window.scrollY - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--appbar-h') || 58);
     if (window.scrollY > y) window.scrollTo(0, Math.max(0, y));
@@ -154,7 +154,7 @@
     });
   }
   function irDados(k) {
-    if (window.matchMedia('(max-width: 900px)').matches) definirVista('dados');
+    if (window.matchMedia('(max-width: 1050px)').matches) definirVista('dados');
     form.focar(k);
   }
   function definirCampo(k, v) {

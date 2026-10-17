@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Máquinas síncronas por dentro · VG Engineering Lab</title>
+<meta name="description" content="Explore rotores síncronos laminados integrais e de polos montados, de 2 a 60 polos. Visualizações vetoriais, fundamentos, pré-dimensionamento e referências técnicas.">
+<style>:root{color-scheme:dark;--bg:#0b1015;--bg2:#0f161d;--panel:#121c25;--panel2:#18242f;--hover:#1b2b37;--line:#25333f;--line2:#3a4b59;--text:#eaf0f2;--text2:#b5c2ca;--text3:#8c9ea9;--acc:#85dfcd;--acc2:#a6f4e4;--accw:#85dfcd10;--ok:#81c99e;--warn:#e5b775;--bad:#ef9696;--info:#93b7e0;--st:#526271;--st2:#8d9ba5;--iron:#8ec1bb;--iron2:#568d8b;--copper:#dc955a;--copper2:#88522e;--brass:#f3d98b;--shaft:#aab5bf;--mono:ui-monospace,"SFMono-Regular",Consolas,monospace;--r:12px}
+html[data-theme=light]{color-scheme:light;--bg:#f3f5f4;--bg2:#eaf0ed;--panel:#fff;--panel2:#eff3f1;--hover:#e5ece9;--line:#d3deda;--line2:#a6b8b0;--text:#162d2a;--text2:#425e58;--text3:#627a74;--acc:#087d6b;--acc2:#086555;--accw:#087d6b0b;--ok:#25805a;--warn:#956221;--bad:#b44141;--info:#446c9b;--st:#bac6c5;--st2:#758e8a;--iron:#83b3a7;--iron2:#477e73;--copper:#bd7846;--copper2:#87502d;--brass:#d5ae44;--shaft:#94a4a7}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input,select{font:inherit;color:inherit}button,a,input{touch-action:manipulation}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.4}a{color:inherit}button{transition:background .15s,border-color .15s}button:hover{border-color:var(--acc)}:focus-visible{outline:2px solid var(--acc);outline-offset:4px}input[type=checkbox],input[type=range]{accent-color:var(--acc)}[hidden]{display:none!important}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.skip{position:fixed;left:16px;top:-100px;z-index:99;padding:12px;background:var(--acc);color:var(--bg)}.skip:focus{top:10px}.num{font-family:var(--mono)}.subtle{font-size:11px;color:var(--text3)}.eyebrow{font:600 10px/1.5 var(--mono);letter-spacing:.12em;color:var(--acc);display:block}.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 12px;border:1px solid var(--line2);border-radius:7px;background:transparent;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap}.btn:hover{background:var(--hover)}.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--bg)}.btn.icon{min-width:36px;padding:4px;font-size:21px}.text-btn{border:0;color:var(--text3)}.only-m{display:none}
+.hdr{height:72px;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:0 30px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;background:var(--bg)}.brand{display:flex;align-items:center;gap:11px;font-size:13px;font-weight:700;letter-spacing:-.03em;line-height:1.3}.brand small{display:block;color:var(--text3);font:9px var(--mono);letter-spacing:.1em;margin-top:5px}.logo{width:35px;height:35px;display:grid;place-items:center;background:var(--acc);color:var(--bg);border-radius:7px;font:800 13px var(--mono)}.hdr-r{display:flex;gap:8px;align-items:center}.app{display:grid;grid-template-columns:285px minmax(0,1fr)}.side{position:sticky;top:72px;height:calc(100dvh - 72px);border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;z-index:40;min-height:0}.side-h{padding:22px 18px 18px;border-bottom:1px solid var(--line)}.side-titlebar{display:flex;align-items:center;justify-content:space-between}.side-h h2{font-size:20px;letter-spacing:-.03em;margin:7px 0 0;display:flex;align-items:center;justify-content:space-between}.side-h h2 span{font:9px var(--mono);color:var(--text3);padding:4px 6px;background:var(--panel2);border-radius:4px}.side-desc{font-size:11px;color:var(--text3);margin:9px 0 17px}.search{display:block;position:relative}.search input{height:36px;width:100%;border:1px solid var(--line2);background:var(--panel);border-radius:6px;padding:0 11px;font-size:11px}.search kbd{position:absolute;right:9px;top:8px;border:1px solid var(--line);padding:0 4px;border-radius:3px;font:11px var(--mono);color:var(--text3)}.side-b{flex:1;min-height:100px;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}.grp{border-bottom:1px solid var(--line)}.grp-t{width:100%;padding:14px 16px;display:flex;align-items:center;gap:10px;border:0;background:transparent;font-size:11px;font-weight:650;text-align:left}.grp-t:hover{background:var(--hover)}.grp-t .ix{font:9px var(--mono);color:var(--text3)}.grp-t .mods{margin-left:auto;font:9px var(--mono);color:var(--acc)}.grp-t .chev{width:10px;margin-left:auto;transition:transform .2s}.grp-t[aria-expanded=true] .chev{transform:rotate(90deg)}.grp-b{padding:0 17px 9px}.grp-d{font-size:10px;color:var(--text3);margin:0 0 14px}.fld{margin-bottom:13px}.fld label{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;font-size:10.5px;color:var(--text2);font-weight:550}.fld .k{font:9px var(--mono);color:var(--text3)}.fld.mod label:before{content:"";width:4px;height:4px;background:var(--acc);border-radius:50%;flex-shrink:0}.ctl{position:relative}.ctl input,.ctl select{width:100%;height:35px;border:1px solid var(--line2);border-radius:5px;background:var(--panel);padding:0 9px;font:11px var(--mono)}.ctl.has-u input{padding-right:64px}.ctl .u{position:absolute;right:9px;top:9px;color:var(--text3);font:10px var(--mono);pointer-events:none}.fld small{font-size:10px;color:var(--text3);display:block;line-height:1.5;margin-top:5px}input[aria-invalid=true]{border-color:var(--bad)!important;color:var(--bad)!important}.side-f{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;color:var(--text3);font-size:9px}.side-f .btn{width:100%;font-size:10px;min-height:30px}.examples{padding:13px 16px;border-top:1px solid var(--line);font-size:10px}.examples summary{font-weight:600;cursor:pointer}.examples summary span{float:right}.examples p{color:var(--text3)}.presets{display:grid;gap:7px}.preset{border:1px solid var(--line2);background:var(--panel);padding:10px;text-align:left;border-radius:6px}.preset strong,.preset small{display:block;font-size:10px}.preset small{font-size:9px;color:var(--text3);margin-top:4px}.preset.on{border-color:var(--acc);background:var(--accw)}
+.main{padding:42px clamp(22px,3vw,48px) 24px;max-width:1670px;width:100%;margin:auto;min-width:0}.ph{display:flex;align-items:center;justify-content:space-between;gap:40px;padding-bottom:28px}.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acc);margin:0 8px 1px 0}.ph h1{font-size:clamp(32px,3.5vw,56px);font-weight:580;line-height:1.08;letter-spacing:-.055em;margin:17px 0}.ph h1 span{color:var(--acc)}.ph p{color:var(--text3);font-size:13px;max-width:550px;margin:0}.hero-index{display:flex;gap:15px;align-items:center;flex-shrink:0}.hero-index>span{font:300 64px var(--mono);letter-spacing:-.09em;color:var(--line2)}.hero-index small{font:8px/1.8 var(--mono);letter-spacing:.08em;color:var(--text3)}.definition{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:26px;padding:20px 0;margin-bottom:38px}.definition-symbol{font:20px var(--mono);white-space:nowrap;color:var(--acc)}.definition p{font-size:12px;color:var(--text2);max-width:740px;margin:0}.definition p b{color:var(--text);font-weight:600}.definition a{font-size:10px;color:var(--acc);margin-left:auto;max-width:135px;text-decoration:none}.section-line{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:0 0 18px}.section-line h2{font-size:23px;font-weight:550;line-height:1.25;letter-spacing:-.035em;margin:7px 0 0}.section-line>.subtle{max-width:220px;text-align:right}.casebar{padding:22px 24px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:38px}.casebar .section-line h2{font-size:19px}.case-grid{display:grid;grid-template-columns:1.2fr 1.2fr .9fr .9fr 1.25fr;gap:8px}.quick-field{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line2);border-radius:6px;padding:11px 13px;min-width:0}.quick-field:focus-within{border-color:var(--acc)}.q-label{font-size:10px;color:var(--text3);font-weight:550}.q-control{display:flex;align-items:baseline;gap:5px}.q-control input{width:100%;min-width:0;background:none;outline:0;border:0;padding:0;font:500 22px var(--mono);letter-spacing:-.06em}.q-unit{font:9px var(--mono);color:var(--text3)}.quick-field select{width:100%;min-width:0;background:none;border:0;font:600 11px/2 var(--mono);padding:0}.quick-result{background:var(--accw);border:1px solid color-mix(in srgb,var(--acc) 40%,var(--line));border-radius:6px;padding:11px 14px;display:flex;flex-direction:column;justify-content:space-between;gap:4px}.quick-result>span{font:8px var(--mono);letter-spacing:.08em;color:var(--acc)}.quick-result strong{font:500 24px var(--mono);letter-spacing:-.06em;white-space:nowrap}.quick-result strong small{font-size:10px;font-weight:400;color:var(--text3);margin-left:3px}.quick-result>small{font:9px var(--mono);color:var(--text3)}.pole-options{display:flex;align-items:center;gap:14px;margin:16px 0;font-size:10px;color:var(--text3)}.pole-options>div{display:flex;flex-wrap:wrap;gap:5px}.pole-options button{background:none;border:1px solid var(--line2);border-radius:4px;min-width:31px;height:29px;font:11px var(--mono)}.pole-options button.on{color:var(--acc);background:var(--accw);border-color:var(--acc)}.pole-options>small{font-size:9px;line-height:1.5;margin-left:auto}.casebar-foot{display:flex;gap:20px;justify-content:space-between;border-top:1px solid var(--line);padding:11px 0;font-size:9px;color:var(--text3);flex-wrap:wrap}.quick-error{width:100%;color:var(--bad);font-size:11px}.quick-error:empty{display:none}
+.visual-lab{margin-bottom:46px}.visual-shell{border:1px solid var(--line2);border-radius:var(--r);overflow:hidden;background:var(--bg2)}.viz-top{display:flex;justify-content:space-between;align-items:center;padding:10px 13px;border-bottom:1px solid var(--line);background:var(--panel)}.viz-tabs{display:flex;gap:5px}.viz-tabs button{border:0;background:none;color:var(--text3);padding:9px 11px;border-radius:5px;font-size:11px;font-weight:550}.viz-tabs button.on{background:var(--panel2);color:var(--acc)}.viz-top>.btn{min-height:31px;font-size:10px}.viz-body{display:grid;grid-template-columns:minmax(0,1fr) 260px}.drawing-area{position:relative;display:flex;flex-direction:column;min-width:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px;background-position:center}.drawing-label{display:flex;justify-content:space-between;gap:10px;padding:20px 22px 0;font:8px var(--mono);color:var(--text3);letter-spacing:.08em}.drawing-label span:last-child{color:var(--acc)}#mwrap{display:grid;place-items:center;flex:1;min-height:420px}#machine-svg{display:block;width:100%;max-height:600px;overflow:visible;filter:drop-shadow(0 14px 16px #0002)}.drawing-caption{padding:0 22px 18px;min-height:44px;font:9px/1.6 var(--mono);color:var(--text3)}.inspector{border-left:1px solid var(--line);background:var(--panel);padding:22px 18px}.inspector>.eyebrow{font-size:8px}.inspector h3{font-size:20px;line-height:1.25;letter-spacing:-.03em;font-weight:550;margin:7px 0 8px}.inspector-intro{font-size:11px;color:var(--text3);margin:0 0 17px}.architecture{display:grid;gap:7px}.architecture button{display:flex;align-items:center;gap:9px;border:1px solid var(--line2);background:none;border-radius:6px;padding:11px 9px;text-align:left}.architecture button.on{background:var(--accw);border-color:var(--acc)}.architecture button b{display:block;font-size:11px;font-weight:600}.architecture button small{display:block;font-size:9px;color:var(--text3);margin-top:3px}.arch-icon{color:var(--acc);font-size:24px}.architecture button i{font-style:normal;font-size:11px;margin-left:auto;color:var(--acc);opacity:0}.architecture button.on i{opacity:1}.construction-text{font-size:10.5px;line-height:1.7;color:var(--text3);margin:14px 0 18px}.construction-text b{color:var(--text2);font-weight:550}.construction-text a{color:var(--acc)}.layers{border:0;border-top:1px solid var(--line);padding:12px 0 0;margin:0 0 18px;display:grid;gap:8px}.layers legend{font-size:9px;color:var(--text3);padding-right:10px}.layers label{display:flex;gap:7px;align-items:center;font-size:10px;color:var(--text2)}.layers input{width:12px;height:12px;margin:0}.part-inspector{padding:13px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;min-height:135px}.part-inspector .eyebrow{font-size:8px;letter-spacing:.05em}.part-inspector b{display:block;margin:6px 0;font-size:12px;font-weight:550}.part-inspector p{font-size:10px;line-height:1.7;margin:0;color:var(--text3)}.viz-controls{padding:13px 18px;border-top:1px solid var(--line);display:flex;gap:13px;align-items:center;background:var(--panel);font-size:9px;color:var(--text3)}.seg{display:flex;border:1px solid var(--line2);border-radius:5px;overflow:hidden;flex-shrink:0}.seg button{border:0;background:none;padding:6px 10px;font-size:9px;color:var(--text3)}.seg button.on{background:var(--accw);color:var(--acc)}#rotor-angle{flex:1;min-width:60px;height:15px}#angle-readout{min-width:110px;font:9px var(--mono);color:var(--text2)}#spin-note{font-size:8px;max-width:120px}.legend{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 13px;border-top:1px solid var(--line);padding:9px 12px;background:var(--panel)}.legend button{font-size:9px;border:0;padding:5px 0;color:var(--text3);background:none}.legend button:hover{color:var(--text)}.legend i{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}.insight-strip{display:flex;gap:20px;align-items:flex-start;padding:17px 20px;border-bottom:1px solid var(--line)}.insight-strip>span{font:9px var(--mono);color:var(--acc);padding-top:3px}.insight-strip p{font-size:11px;color:var(--text2);margin:0;max-width:900px}.svg-part{cursor:pointer;outline:none}.svg-part:hover,.svg-part:focus{filter:brightness(1.18)}.sv-label{fill:var(--text3);font:10px var(--mono);letter-spacing:.02em}.sv-value{fill:var(--text);font:500 13px var(--mono)}.sv-tiny{fill:var(--text3);font:8px var(--mono)}.sv-line{stroke:var(--text3);stroke-width:1;fill:none;opacity:.7}.sv-center{stroke:var(--text3);stroke-width:.7;stroke-dasharray:7 4 1 4;fill:none;opacity:.6}
+.fundamentals{margin:0 0 46px;scroll-margin-top:100px}.concept-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);overflow:hidden}.concept-grid article{padding:23px;border-right:1px solid var(--line);background:var(--panel)}.concept-grid article:last-child{border:0}.concept-n{font:8px var(--mono);letter-spacing:.07em;color:var(--text3)}.concept-grid h3{font-size:18px;font-weight:550;letter-spacing:-.03em;line-height:1.2;margin:12px 0 19px}.concept-grid p,.deep-grid p{color:var(--text3);font-size:11px;line-height:1.8;margin:15px 0 0}.concept-grid a,.deep-grid a{color:var(--acc);text-decoration:none}.speed-experiment{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.speed-experiment button{border:1px solid var(--line);background:var(--bg2);border-radius:4px;padding:7px 3px;font-size:9px;color:var(--text3)}.speed-experiment button.on{border-color:var(--acc)}.speed-experiment b{font:11px var(--mono);display:block;color:var(--text);margin-bottom:3px}.equation{font:16px/1.5 var(--mono);letter-spacing:-.05em;padding:12px 0;color:var(--acc)}.lamination-mark{height:47px;display:flex;align-items:center;padding-left:12px}.lamination-mark i{width:19px;height:34px;transform:skewY(-24deg);background:var(--iron);border:1px solid var(--bg2);margin-left:-8px;box-shadow:3px 2px 0 var(--iron2)}.lamination-mark span{margin-left:17px;color:var(--text3);font:9px var(--mono)}.text-action{background:none;border:0;padding:10px 0 0;color:var(--acc);font-size:10px}.deep-dive{border:1px solid var(--line);border-radius:8px;margin-top:13px;background:var(--panel)}.deep-dive summary{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:17px 22px;cursor:pointer;list-style:none}.deep-dive summary>span{font-size:12px;font-weight:600}.deep-dive summary>b{font-size:10px;color:var(--text3);font-weight:400}.deep-dive[open] summary{border-bottom:1px solid var(--line)}.deep-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:25px}.deep-grid h3{font-size:15px;font-weight:550;margin:0 0 8px}.deep-grid p+h3{margin-top:20px}.small-eq{font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+.calculation{margin-bottom:48px}.ph-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.pill{font:8px var(--mono);padding:5px 8px;border:1px solid currentColor;border-radius:4px;color:var(--text3)}.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}.stamp{font:8px var(--mono);color:var(--text3)}.scope-note{padding:15px 18px;border:1px solid var(--line);border-left:2px solid var(--acc);border-radius:0 6px 6px 0;color:var(--text3);font-size:11px;line-height:1.8;margin-bottom:18px;background:var(--accw)}.scope-note b{color:var(--text2);font-weight:600}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}.kpi{padding:17px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.kpi:nth-child(4n){border-right:0}.kpi:nth-last-child(-n+4){border-bottom:0}.kpi .l{font-size:10px;color:var(--text3)}.kpi .v{font:500 23px var(--mono);letter-spacing:-.05em;margin:6px 0}.kpi .v small{font-size:9px;margin-left:4px;color:var(--text3);font-weight:400}.kpi .s{font-size:9px;color:var(--text3)}.kpi .s.ok{color:var(--ok)}.kpi .s.warn{color:var(--warn)}.kpi .s.bad{color:var(--bad)}.banner{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);padding:12px 15px;margin-top:10px;border-radius:6px;color:var(--text3);font-size:10px;background:var(--panel)}.banner svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;color:var(--warn)}.banner b{color:var(--warn);font-weight:600}.banner.ok b,.banner.ok svg{color:var(--ok)}.tabs{display:flex;overflow-x:auto;gap:3px;margin:24px 0 17px;border-bottom:1px solid var(--line)}.tab{display:flex;gap:5px;align-items:center;white-space:nowrap;background:none;border:0;border-bottom:2px solid transparent;color:var(--text3);padding:11px 12px;font-size:10px}.tab.on{color:var(--acc);border-bottom-color:var(--acc);background:var(--accw)}.c{font:8px var(--mono);border-radius:4px;background:var(--panel2);padding:1px 4px}.c.warn{color:var(--warn)}.c.bad{color:var(--bad)}.page{display:none}.page.on{display:block}.card{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin-bottom:16px;overflow:hidden}.card-h{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:16px 18px;border-bottom:1px solid var(--line)}.card-h h3{margin:0;font-size:13px;font-weight:550}.card-h .t{font:9px var(--mono);color:var(--text3)}.card-b{padding:18px}.card-b>svg{width:100%;display:block;max-height:300px}.card-f{border-top:1px solid var(--line);padding:12px 17px;font-size:10px;color:var(--text3)}.scroll{overflow-x:auto}.dt{border-collapse:collapse;width:100%;font-size:11px}.dt th{font-size:9px;color:var(--text3);text-align:left;background:var(--bg2);font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:10px 16px;border-bottom:1px solid var(--line);white-space:nowrap}.dt td{padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}.dt tr:last-child td{border:0}.dt code{display:block;font:9px/1.7 var(--mono);color:var(--text3);margin-top:4px;max-width:700px;overflow-wrap:anywhere}.dt .r{text-align:right}.dt .val{font:500 11px var(--mono);white-space:nowrap}.dt .u{font:9px var(--mono);white-space:nowrap;color:var(--text3)}.dt .ref{font:9px var(--mono);color:var(--acc);white-space:nowrap}.dt .nt{display:block;font-size:9px;color:var(--warn);margin-top:4px}.dt .sel{background:var(--accw)}.tag{font:8px var(--mono);padding:3px 5px;border-radius:4px;white-space:nowrap}.tag.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 8%,transparent)}.tag.no{color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}.hbar{height:5px;display:flex;gap:3px;border-radius:5px;overflow:hidden}.hstat{display:flex;gap:20px;font-size:10px;color:var(--text3);margin-top:12px}.hstat b{color:var(--text);font-family:var(--mono);font-weight:500;margin-right:5px}.hstat i{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:6px}.chk{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:5px 10px;padding:14px 18px;border-bottom:1px solid var(--line)}.chk:last-child{border:0}.chk .ic{font:600 10px var(--mono);border:1px solid currentColor;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;line-height:1}.chk.pass .ic{color:var(--ok)}.chk.warn .ic{color:var(--warn)}.chk.fail .ic{color:var(--bad)}.chk .n{font-size:11px;font-weight:550}.chk .v{font:10px var(--mono)}.chk .d{grid-column:2/-1;font-size:10px;color:var(--text3)}.gauge{grid-column:2/-1;position:relative;height:30px;margin-top:5px}.gauge .tr{position:absolute;left:0;right:0;top:5px;height:2px;background:var(--line)}.gauge .ok{position:absolute;top:3px;height:6px;background:color-mix(in srgb,var(--ok) 30%,transparent);border-radius:2px}.gauge .mk{position:absolute;top:0;width:2px;height:12px;background:var(--text)}.chk.warn .mk{background:var(--warn)}.chk.fail .mk{background:var(--bad)}.gauge .lo,.gauge .hi{position:absolute;top:16px;font:8px var(--mono);color:var(--text3);transform:translateX(-50%)}.health-more{width:100%;background:var(--panel2);border:0;border-top:1px solid var(--line);padding:13px;color:var(--acc);font-size:11px}.note{border:1px solid var(--line);border-left:2px solid var(--info);border-radius:6px;padding:14px 17px;margin-bottom:16px;background:var(--panel);font-size:11px;color:var(--text3)}.note b{color:var(--text2)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.donut-w{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.donut-w>svg{flex:1;min-width:110px;max-width:160px}.donut-w>.dt{flex:2;min-width:210px}.donut-c{fill:var(--text);font:500 25px var(--mono)}.donut-s{fill:var(--text3);font:8px var(--mono)}.sw{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:6px}.toolbar{display:flex;align-items:center;gap:15px;margin-bottom:13px}.toolbar .search{flex:1}.err{padding:20px;border-left:2px solid var(--bad);color:var(--bad);font-size:12px}.empty{padding:25px;color:var(--text3);font-size:11px}
+.references{margin-top:50px;scroll-margin-top:100px}.reference-list{border-top:1px solid var(--line)}.reference-list>a{display:flex;gap:20px;align-items:flex-start;padding:19px 5px;border-bottom:1px solid var(--line);text-decoration:none}.reference-list>a:hover{background:var(--accw)}.reference-list>a>span{font:10px var(--mono);color:var(--acc);padding-top:2px}.reference-list b{font-size:12px;font-weight:550}.reference-list p{font-size:11px;color:var(--text3);margin:5px 0 0;max-width:800px}.reference-list i{font-style:normal;margin-left:auto;color:var(--acc)}.references .scope-note{margin-top:23px}.foot{padding:22px 0 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;font:8px var(--mono);color:var(--text3)}.foot b{font-weight:500;color:var(--text2)}.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:6px;font-size:12px;box-shadow:0 5px 30px #0003;opacity:0;pointer-events:none;z-index:99;transition:opacity .2s,transform .2s}.toast.show{transform:translate(-50%,0);opacity:1}
+.scrim{display:none}
+@media(min-width:1800px){.app{grid-template-columns:310px minmax(0,1fr)}.viz-body{grid-template-columns:minmax(0,1fr) 290px}.inspector{padding:27px 22px}}
+@media(max-width:1300px){.app{grid-template-columns:260px minmax(0,1fr)}.main{padding:32px 24px}.viz-body{grid-template-columns:minmax(0,1fr) 230px}.inspector{padding:18px 14px}.case-grid{grid-template-columns:repeat(4,1fr)}.quick-result{grid-column:1/-1;flex-direction:row;align-items:center}.quick-result strong{margin-left:auto}.quick-result>small{margin-left:12px}.hero-index{display:none}.definition a{display:none}.pole-options{flex-wrap:wrap}.pole-options>small{margin-left:0}.concept-grid article{padding:18px}.concept-grid h3{font-size:16px}.grid2{grid-template-columns:1fr}.drawing-label{padding:16px 15px 0;letter-spacing:0;font-size:7px}#mwrap{min-height:350px}.viz-controls{flex-wrap:wrap}.angle-label{display:none}#spin-note{max-width:none}.section-line h2{font-size:21px}}
+@media(max-width:1050px){.app{grid-template-columns:1fr}.side{position:fixed;left:0;top:0;bottom:0;width:min(360px,90vw);height:100dvh;transform:translateX(-105%);transition:transform .2s;box-shadow:10px 0 60px #0005}.side.open{transform:none}.only-m{display:inline-flex}.scrim{display:block;position:fixed;inset:0;background:#0009;z-index:35;opacity:0;pointer-events:none;transition:opacity .2s}.scrim.on{opacity:1;pointer-events:auto}.main{padding:34px}.ph h1{font-size:47px}.case-grid{grid-template-columns:1.2fr 1.2fr .9fr .9fr 1.3fr}.quick-result{grid-column:auto;flex-direction:column;align-items:flex-start}.quick-result strong{margin:0}.quick-result>small{margin:0}.viz-body{grid-template-columns:minmax(0,1fr) 260px}.hdr{padding:0 25px}.side-h{padding-top:24px}}
+@media(max-width:720px){html{scroll-padding-top:80px}.hdr{height:62px;padding:0 15px;gap:10px}.brand{font-size:11px;gap:8px}.brand small{font-size:7px}.logo{width:29px;height:29px;font-size:10px}.hdr-r{gap:5px}.hdr-r .btn{min-height:31px;padding:5px 8px;font-size:9px}.hdr-r .text-btn,.hdr-r #btn-load,.hdr-r #btn-print{display:none}.hdr-r .icon{min-width:30px;font-size:19px}.main{padding:27px 17px 20px}.ph{padding-bottom:24px}.ph h1{font-size:38px;margin:14px 0}.ph .eyebrow{font-size:8px}.ph p{font-size:12px}.definition{align-items:flex-start;gap:17px;padding:18px 0;margin-bottom:28px}.definition-symbol{font-size:15px;padding-top:2px}.definition p{font-size:11px}.section-line{align-items:flex-start;gap:10px}.section-line h2{font-size:21px}.section-line .eyebrow{font-size:8px}.section-line>.subtle{display:none}.casebar{padding:18px 14px 0;margin-bottom:28px}.casebar .section-line h2{font-size:17px;max-width:185px}.casebar .only-m{font-size:8px;padding:6px;white-space:normal;text-align:left;max-width:110px;min-height:37px}.case-grid{grid-template-columns:repeat(2,1fr)}.quick-result{grid-column:1/-1;flex-direction:row;align-items:center;padding:11px}.quick-result strong{margin-left:auto;font-size:23px}.quick-result>small{display:none}.quick-field{padding:10px 11px;gap:7px}.q-control input{font-size:22px}.q-label{font-size:9px}.pole-options{gap:9px}.pole-options>span{width:100%}.pole-options button{min-width:32px;height:30px}.pole-options>small{width:100%;font-size:9px}.pole-options>small br{display:none}.casebar-foot{gap:6px;font-size:8px}.viz-body{grid-template-columns:1fr}.viz-top{padding:8px;gap:5px}.viz-tabs{gap:0}.viz-tabs button{padding:8px;font-size:9px}.viz-top>.btn{font-size:8px;min-height:29px;padding:5px 7px}.drawing-area{background-size:24px 24px}.drawing-label{font-size:7px;padding:15px 13px 0}#mwrap{min-height:300px}#machine-svg{max-height:450px}.drawing-caption{padding:0 14px 15px;font-size:8px}.inspector{border-left:0;border-top:1px solid var(--line);padding:17px;display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.inspector>.eyebrow,.inspector>h3,.inspector>.inspector-intro,.architecture,.construction-text{grid-column:1/-1}.inspector>h3{font-size:18px}.inspector>.inspector-intro{margin-bottom:12px}.architecture{grid-template-columns:1fr 1fr;gap:7px}.architecture button{padding:9px 8px;gap:6px}.architecture button b{font-size:10px}.architecture button small{font-size:8px}.architecture button i{display:none}.arch-icon{font-size:21px}.construction-text{font-size:10px;margin:12px 0 17px}.layers{margin:0;border-top:0;gap:7px;padding:8px 0}.layers legend{padding:0;font-size:9px}.layers label{font-size:9px}.part-inspector{min-height:0;padding:10px}.part-inspector p{font-size:9px}.part-inspector b{font-size:11px}.viz-controls{gap:10px;padding:12px}.seg button{font-size:8px;padding:6px 8px}#angle-readout{min-width:94px;font-size:8px}#spin-note{width:100%;text-align:center;font-size:8px}.legend{gap:3px 12px;padding:9px}.legend button{font-size:8px}.insight-strip{padding:15px 8px;gap:14px}.insight-strip p{font-size:10px}.insight-strip>span{font-size:8px}.visual-lab{margin-bottom:32px}.concept-grid{grid-template-columns:1fr}.concept-grid article{border-right:0;border-bottom:1px solid var(--line);padding:21px}.concept-grid h3{font-size:19px;margin-bottom:14px}.concept-grid p{font-size:11px}.concept-n{font-size:9px}.speed-experiment{max-width:320px}.speed-experiment button{padding:8px}.deep-dive summary{display:block;padding:15px 18px}.deep-dive summary>b{display:block;margin-top:6px;font-size:9px}.deep-grid{grid-template-columns:1fr;padding:18px;gap:25px}.scope-note{font-size:10px;padding:13px}.calculation .section-line h2{font-size:20px}.calculation .ph-r{max-width:130px}.pill{font-size:7px}.stamp{font-size:7px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi{padding:14px}.kpi:nth-child(4n){border-right:1px solid var(--line)}.kpi:nth-child(2n){border-right:0}.kpi:nth-last-child(-n+4){border-bottom:1px solid var(--line)}.kpi:nth-last-child(-n+2){border-bottom:0}.kpi .v{font-size:21px}.kpi .s{font-size:8px}.kpi .l{font-size:9px}.banner{padding:12px;font-size:10px}.tabs{margin-top:18px}.tab{padding:10px;font-size:10px}.card-h{padding:13px}.card-h h3{font-size:12px}.card-h .t{font-size:8px}.card-b{padding:14px}.hstat{gap:10px;flex-wrap:wrap;font-size:9px}.chk{padding:13px;gap:5px 8px}.chk .n{font-size:10px}.chk .v{font-size:9px}.chk .d{font-size:9px}.dt td,.dt th{padding:10px 12px}.dt{min-width:500px}.donut-w .dt{min-width:0}.donut-w{justify-content:center}.toolbar{gap:7px;flex-wrap:wrap}.toolbar .stamp{order:3;width:100%}.references{margin-top:30px}.reference-list>a{gap:14px;padding:18px 0}.reference-list b{font-size:11px}.reference-list p{font-size:10px}.foot{font-size:7px;flex-direction:column;gap:8px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}.hdr,.side,.scrim,.btn,.tabs,.viz-controls,.viz-top,.layers,.architecture,.legend,.toolbar,.health-more,.toast{display:none!important}.app{display:block}.main{max-width:none;padding:0}.ph h1{font-size:30px}.ph{padding-bottom:15px}.casebar{margin-bottom:20px}.visual-lab{break-inside:avoid}.viz-body{grid-template-columns:1fr 210px}.drawing-area{background:var(--bg2)}#machine-svg{max-height:380px}#mwrap{min-height:320px}.inspector{display:block}.inspector .part-inspector{display:none}.concept-grid{grid-template-columns:repeat(3,1fr)}.concept-grid article{padding:15px;border:1px solid var(--line)}.page{display:block!important;break-before:page}.calculation{break-before:page}.references{break-before:page}.kpis{grid-template-columns:repeat(4,1fr)}.section-line{margin-top:20px}.card{break-inside:avoid}.deep-dive summary>b{display:none}.reference-list>a{padding:12px 0}.foot{font-size:8px}}
+
+.mobile-file-actions{width:100%;gap:7px}.mobile-file-actions .btn{flex:1}
+.fld .hint{color:var(--acc);opacity:.9;margin-top:3px}.fld .hint:empty{display:none}.ctl input::placeholder{color:var(--text3);opacity:.85}.fld.auto .k:after{content:' · auto';color:var(--acc)}.fld[hidden]{display:none!important}.dt tr.sec td{background:var(--bg2);color:var(--acc);font:600 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:9px 16px}
+</style>
+</head>
+<body>
+<a class="skip" href="#resultados">Ir para o laboratório</a>
+<header class="hdr">
+ <div class="brand"><span class="logo">VG</span><span>Engineering Lab<small>ELÉTRICAS / LAB 04</small></span></div>
+ <div class="hdr-r"><a class="btn text-btn" href="#bibliografia">Referências ↗</a><button class="btn icon" id="btn-theme" aria-label="Alternar tema" title="Alternar tema">◐</button><button class="btn" id="btn-load">Abrir projeto</button><button class="btn" id="btn-save">Salvar projeto</button><button class="btn pri" id="btn-print">Relatório ↗</button><input id="json-file" type="file" accept=".json,application/json" hidden></div>
+</header>
+<div class="app">
+ <aside class="side" id="side" aria-label="Parâmetros de pré-dimensionamento">
+  <div class="side-h"><div class="side-titlebar"><span class="eyebrow">PRÉ-DIMENSIONAMENTO</span><button class="btn icon only-m" id="btn-close-side" aria-label="Fechar parâmetros">×</button></div><h2>Seu projeto <span id="mod-total">0 alterados</span></h2><p class="side-desc">Campos em branco usam a sugestão do manual (tabelas e figuras), exibida em cinza e explicada em verde. Digite um valor para fixá-lo; apague para voltar ao automático.</p><label class="search"><span class="sr-only">Buscar parâmetro</span><input id="q-in" placeholder="Buscar parâmetro ou símbolo…"><kbd>/</kbd></label></div>
+  <div class="side-b" id="inputs-root"></div>
+  <details class="examples"><summary>Exemplos completos <span>↙</span></summary><p>Substituem as entradas do projeto. Não limitam as configurações disponíveis.</p><div class="presets"><button class="preset" data-preset="compact"><strong>4 polos · laminado integral</strong><small>Estudo construtivo · 60 Hz · fora do domínio do manual</small></button><button class="preset" data-preset="ref"><strong>12 polos · polos montados</strong><small>2 MVA · base didática · 50 Hz</small></button></div></details>
+  <div class="side-f"><div class="mobile-file-actions only-m"><button class="btn" id="mobile-load">Abrir projeto</button><button class="btn" id="mobile-print">Relatório PDF</button></div><span>Decimal com vírgula ou ponto · frações como 3 1/2</span><button class="btn" id="btn-reset">Restaurar base</button></div>
+ </aside>
+ <div class="scrim" id="scrim"></div>
+ <main class="main" id="resultados">
+  <div class="ph"><div><div class="eyebrow"><i class="live-dot"></i> LABORATÓRIO DE MÁQUINAS ELÉTRICAS</div><h1>Máquinas síncronas.<br><span>Entenda a construção.</span></h1><p>Do pacote de lâminas ao campo girante. Explore a máquina por dentro e conecte forma, polos e velocidade.</p></div><div class="hero-index"><span>04 /</span><small>EXPLORAR<br>CALCULAR<br>INVESTIGAR</small></div></div>
+  <div class="definition"><span class="definition-symbol">n<sub>r</sub> = n<sub>s</sub></span><p><b>O que torna a máquina síncrona?</b> Em regime permanente síncrono, o rotor gira à mesma velocidade do campo girante fundamental do estator. Neste laboratório, o rotor tem <b>excitação por corrente contínua e polos salientes</b>: o entreferro varia ao longo da circunferência.</p><a href="#fundamentos">Entender os fundamentos ↓</a></div>
+  <section class="casebar" aria-labelledby="quick-title">
+   <div class="section-line"><div><span class="eyebrow">01 / CONFIGURAÇÃO LIVRE</span><h2 id="quick-title">A máquina que você quer explorar</h2></div><button class="btn only-m" id="btn-side">Parâmetros avançados ↗</button></div>
+   <div class="case-grid">
+    <label class="quick-field quick-type"><span class="q-label">Aplicação</span><select id="quick-type" aria-label="Aplicação"><option value="generator">Gerador síncrono</option><option value="motor">Motor síncrono</option></select></label>
+    <label class="quick-field"><span class="q-label" id="power-label">Potência aparente nominal</span><span class="q-control"><input id="quick-power" inputmode="decimal" autocomplete="off" aria-labelledby="power-label"><span class="q-unit" id="quick-power-unit">kVA</span></span></label>
+    <label class="quick-field"><span class="q-label">Total de polos · P</span><span class="q-control"><input id="quick-poles" inputmode="numeric" autocomplete="off" aria-label="Número total de polos"><span class="q-unit">polos</span></span></label>
+    <label class="quick-field"><span class="q-label">Frequência · f</span><span class="q-control"><input id="quick-freq" inputmode="decimal" autocomplete="off" aria-label="Frequência"><span class="q-unit">Hz</span></span></label>
+    <div class="quick-result"><span>VELOCIDADE SÍNCRONA</span><strong id="quick-speed">—</strong><small>nₛ = 120 f / P</small></div>
+   </div>
+   <div class="pole-options"><span>Experimente P:</span><div id="pole-shortcuts"></div><small>Ou digite qualquer número par de 2 a 60.<br>Limite de exibição, não de máquinas reais.</small></div>
+   <div class="casebar-foot"><span id="case-label">Projeto personalizado</span><span id="pair-summary"></span><span class="quick-error" id="quick-error" role="alert"></span></div>
+  </section>
+  <section class="visual-lab" aria-labelledby="visual-title">
+   <div class="section-line"><div><span class="eyebrow">02 / EXPLORAR A CONSTRUÇÃO</span><h2 id="visual-title">O rotor não tem uma única forma.</h2></div><span class="subtle">Modelo vetorial · ampliação sem perda de definição</span></div>
+   <div class="visual-shell">
+    <div class="viz-top"><div class="viz-tabs" role="tablist" aria-label="Vistas da máquina"><button class="on" role="tab" aria-selected="true" data-view="radial">Corte radial</button><button role="tab" aria-selected="false" data-view="axial">Pacote axial</button><button role="tab" aria-selected="false" data-view="detail">Detalhe do polo</button></div><button class="btn" id="btn-svg" title="Exportar a vista atual em SVG">Baixar SVG ↗</button></div>
+    <div class="viz-body"><div class="drawing-area"><div class="drawing-label"><span id="view-label">CORTE A–A / TRANSVERSAL</span><span id="drawing-scale">PROPORÇÕES ILUSTRATIVAS</span></div><div id="mwrap"><svg id="machine-svg" viewBox="0 0 760 590" role="img" aria-labelledby="machine-title machine-desc"></svg></div><div class="drawing-caption" id="drawing-caption"></div></div>
+     <div class="inspector"><span class="eyebrow">ARQUITETURA DO NÚCLEO</span><h3>Polos ≠ montagem</h3><p class="inspector-intro">Escolha a construção sem alterar o número de polos.</p><div class="architecture" role="group" aria-label="Construção do rotor"><button data-arch="integral" class="on" aria-pressed="true"><span class="arch-icon">✣</span><span><b>Laminado integral</b><small>Corpo e polos no mesmo pacote</small></span><i>✓</i></button><button data-arch="mounted" aria-pressed="false"><span class="arch-icon">◉</span><span><b>Polos montados</b><small>Coroa apoiada em aranha</small></span><i>✓</i></button></div><div class="construction-text" id="construction-text"></div>
+      <fieldset class="layers"><legend>Camadas do corte</legend><label><input type="checkbox" data-layer="stator" checked> Estator e ranhuras</label><label><input type="checkbox" data-layer="coils" checked> Bobinas de campo</label><label><input type="checkbox" data-layer="dampers" checked> Barras amortecedoras</label><label><input type="checkbox" data-layer="axes" checked> Eixos direto e quadratura</label></fieldset>
+      <div class="part-inspector" id="part-inspector" aria-live="polite"><span class="eyebrow">INSPECIONE UMA PEÇA</span><b>Núcleo magnético</b><p>Clique nas partes do corte ou use a legenda abaixo para entender cada função.</p></div>
+     </div>
+    </div>
+    <div class="viz-controls"><div class="seg"><button id="spin-off" class="on" aria-pressed="true">Pausado</button><button id="spin-on" aria-pressed="false">▶ Girar</button></div><label class="angle-label" for="rotor-angle">Posição mecânica</label><input id="rotor-angle" type="range" min="0" max="360" step="1" value="0"><output id="angle-readout" for="rotor-angle">0° mec / 0° el</output><span id="spin-note">Rotação demonstrativa</span></div>
+    <div class="legend" id="part-legend"><button data-part="stator"><i style="background:var(--st)"></i>Estator</button><button data-part="core"><i style="background:var(--iron)"></i>Núcleo / polos</button><button data-part="coil"><i style="background:var(--copper)"></i>Excitação CC</button><button data-part="damper"><i style="background:var(--brass)"></i>Amortecedor</button><button data-part="shaft"><i style="background:var(--shaft)"></i>Eixo</button><button data-part="gap"><i style="background:var(--acc)"></i>Entreferro</button></div>
+   </div>
+ 
+  </section>
+  <section class="fundamentals" id="fundamentos">
+   <div class="section-line"><div><span class="eyebrow">03 / LER A MÁQUINA</span><h2>Forma mecânica. Consequência elétrica.</h2></div><span class="subtle">Fundamentos que explicam o desenho</span></div>
+   <div class="concept-grid"><article><span class="concept-n">01 — SINCRONISMO</span><h3>Polos definem a rotação.</h3><div id="speed-experiment" class="speed-experiment"></div><p>Com f constante, dobrar P reduz nₛ à metade. O número de polos não escolhe o tipo de núcleo. <a href="#ref-mit">[3]</a></p></article><article><span class="concept-n">02 — DOIS EIXOS MAGNÉTICOS</span><h3>d e q: 90° elétricos.</h3><div class="equation" id="dq-equation">90° el = 45° mec</div><p>O eixo <b>d</b> passa pelo centro do polo; <b>q</b>, pela região interpolar. Em uma máquina saliente convencional, o caminho em d tem menor relutância; em geral, Xd &gt; Xq. <a href="#ref-mit">[3]</a></p></article><article><span class="concept-n">03 — ORIENTAÇÃO DAS CHAPAS</span><h3>Laminado na direção certa.</h3><div class="lamination-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><span>eixo →</span></div><p>As chapas ficam em planos transversais ao eixo. A CC é estacionária no referencial do rotor; a laminação reduz perdas causadas por componentes variáveis de fluxo. <a href="#ref-stamford">[2]</a></p><button class="text-action" id="show-axial">Ver o empilhamento →</button></article></div>
+   <details class="deep-dive"><summary><span>Investigue além da geometria</span><b>Torque de relutância, amortecimento e compromisso de projeto ↗</b></summary><div class="deep-grid"><article><h3>Por que existe torque de relutância?</h3><p>Quando Xd e Xq diferem, a potência não depende apenas da excitação. Para gerador ideal, em regime permanente, com resistência desprezada e valores RMS por fase:</p><div class="equation small-eq">P = 3VE/Xd · sen δ + 3V²/2 · (1/Xq − 1/Xd) · sen 2δ</div><p>δ aqui é o ângulo de carga elétrico. Na memória geométrica, δ representa entreferro em mm: são grandezas diferentes. Xd e Xq calculados pelo §9 do manual aparecem na aba Desempenho. <a href="#ref-mit">[3]</a></p></article><article><h3>Amortecedor não é excitação.</h3><p>As barras nas sapatas são curto-circuitadas pelas conexões de extremidade. Correntes induzidas respondem ao movimento relativo e ajudam a amortecer oscilações. Em motores projetados para isso, também participam da partida assíncrona. <a href="#ref-nptel">[4]</a></p><h3>Uma tendência não aprova um projeto.</h3><p>Arco polar, ranhuras e entreferro afetam distribuição de campo, harmônicas e perdas. O estudo de Bazzo, Moura e Carlson compara o projeto analítico com elementos finitos — uma etapa que este visualizador não substitui. <a href="#ref-study">[5]</a></p></article></div></details>
+  </section>
+  <section class="calculation" id="calculos">
+   <div class="section-line"><div><span class="eyebrow">04 / PRÉ-DIMENSIONAR E CONFERIR</span><h2>Da hipótese ao número.</h2></div><div class="ph-r"><span class="pill" id="status" role="status">—</span><span class="stamp" id="stamp"></span></div></div>
+   <div class="scope-note"><b>Um modelo de referência, com alcance definido.</b> Correlações do manual NTU KhPI: máquinas trifásicas em Y, 300–4.000 kVA/kW, 50 Hz e 300–1.000 rpm. Outras configurações continuam exploráveis, com dimensões extrapoladas. O desenho acima é construtivo e ilustrativo; não é uma geometria validada pelo cálculo.</div>
+   <div id="kpis" class="kpis"></div><div id="banner" class="banner" role="status" aria-live="polite"></div>
+   <div class="tabs" role="tablist" aria-label="Resultados do pré-dimensionamento"><button class="tab on" role="tab" aria-selected="true" data-tab="overview">Verificações</button><button class="tab" role="tab" data-tab="geometria">Geometria</button><button class="tab" role="tab" data-tab="estator">Estator <span id="c-estator" class="c"></span></button><button class="tab" role="tab" data-tab="rotor">Rotor <span id="c-rotor" class="c"></span></button><button class="tab" role="tab" data-tab="desempenho">Desempenho <span id="c-therm" class="c"></span></button><button class="tab" role="tab" data-tab="memoria">Memória</button></div>
+   <section class="page on" id="p-overview"><div class="card"><div class="card-h"><h3>Verificações da hipótese de projeto</h3><span class="t" id="h-count"></span></div><div class="card-b"><div id="hbar" class="hbar"></div><div id="hstat" class="hstat"></div></div><div id="health"></div><button class="health-more" id="health-more">Ver todas as verificações ↓</button></div></section>
+   <section class="page" id="p-geometria"><div class="card"><div class="card-h"><h3>Empilhamento calculado do estator</h3><span class="t">pacotes e dutos radiais</span></div><div class="card-b"><svg id="stack-svg" viewBox="0 0 760 170" role="img" aria-label="Comprimentos dos pacotes e dutos do estator"></svg></div></div><div class="card"><div class="card-h"><h3>Dimensões principais</h3></div><div class="scroll" id="t-geometria"></div></div></section>
+   <section class="page" id="p-estator"><div class="card"><div class="card-h"><h3>Enrolamento · um passo polar</h3><span class="t">ilustração para q inteiro</span></div><div class="card-b"><svg id="winding-svg" viewBox="0 0 680 230" role="img" aria-label="Ilustração do passo de bobina"></svg></div><div class="card-f">Ilustra o passo; não substitui a estrela de ranhuras e o diagrama completo de ligações.</div></div><div class="card"><div class="card-h"><h3>Verificações do estator</h3></div><div id="k-estator"></div></div><div class="card"><div class="card-h"><h3>Enrolamento, ranhuras e parâmetros</h3></div><div class="scroll" id="t-estator"></div></div></section>
+   <section class="page" id="p-rotor"><div class="note" id="rotor-method-note"></div><div class="card"><div class="card-h"><h3>Alternativas de barras amortecedoras</h3><span class="t">comparação geométrica</span></div><div class="scroll"><table class="dt"><thead><tr><th>Barras/polo</th><th class="r">Área</th><th class="r">Diâmetro</th><th class="r">Passo</th><th>Critério</th></tr></thead><tbody id="bars-table"></tbody></table></div></div><div class="card"><div class="card-h"><h3>Verificações do rotor</h3></div><div id="k-rotor"></div></div><div class="card"><div class="card-h"><h3>Entreferro, polo, circuito magnético e campo</h3></div><div class="scroll" id="t-rotor"></div></div></section>
+   <section class="page" id="p-desempenho"><div class="note" id="notice-losses"></div><div class="grid2"><div class="card"><div class="card-h"><h3>Distribuição de perdas</h3><span class="t" id="loss-total"></span></div><div class="card-b donut-w" id="loss-chart"></div></div><div class="card"><div class="card-h"><h3>Verificações de desempenho</h3></div><div id="k-therm"></div></div></div><div class="card"><div class="card-h"><h3>Perdas, aquecimento, reatâncias e constantes de tempo</h3></div><div class="scroll" id="t-desempenho"></div></div></section>
+   <section class="page" id="p-memoria"><div class="toolbar"><label class="search"><span class="sr-only">Buscar na memória de cálculo</span><input id="trace-q" placeholder="Buscar grandeza, equação ou seção…"></label><span class="stamp" id="trace-n"></span><button class="btn" id="btn-csv">Exportar CSV ↗</button></div><div class="card"><div class="scroll" id="trace-table"></div></div><div class="note"><b>Convenções e correções.</b> P = total de polos; p = P/2; comprimentos em mm; conexão Y; potência do motor = saída no eixo. Itens marcados com * corrigem expressões impressas que não fecham (Carter com bs/δc ≤ 2, inclinação das cabeças, velocidade periférica, resistência de campo referida e rendimento por potência ativa); a forma impressa é citada na própria linha. Tabelas e figuras do manual (B–H, ξ, kad, kaq, αth,Ev) entram digitalizadas. Enrolamentos fracionários usam o fator de distribuição com g = bd + c.</div></section>
+  </section>
+  <section class="references" id="bibliografia"><div class="section-line"><div><span class="eyebrow">05 / APROFUNDAR COM FONTES</span><h2>Referências que sustentam o laboratório.</h2></div><span class="subtle">Fabricantes, ensino e pesquisa</span></div><div class="reference-list">
+   <a id="ref-nidec" href="https://www.nidec-conversion.com/products/medium-voltage-motors/synchronous-motors-2/" target="_blank" rel="noopener"><span>01</span><div><b>Nidec Conversion · Synchronous Motors</b><p>A seção “rotor types” documenta lâminas estreladas em 4–6 polos e polos individuais sobre aranha ou forjado. São exemplos da linha do fabricante.</p></div><i>↗</i></a>
+   <a id="ref-stamford" href="https://www.stamford-avk.com/stamford-avk/sites/stamfordavk/files/2024-04/AGN093_F.pdf" target="_blank" rel="noopener"><span>02</span><div><b>STAMFORD | AvK · AGN 093 — Excitation System</b><p>Rotor principal de quatro polos, polos laminados, bobinas de campo e polaridades alternadas. Veja “Main Rotor”, p. 3.</p></div><i>↗</i></a>
+   <a id="ref-mit" href="https://ocw.mit.edu/courses/6-061-introduction-to-electric-power-systems-spring-2011/f99554aa923748fa210a30a874ee5fc8_MIT6_061S11_ch9.pdf" target="_blank" rel="noopener"><span>03</span><div><b>MIT OpenCourseWare · James Kirtley — Synchronous Machine Models</b><p>Modelos de enrolamento, eixos d/q, saliência e potência angular. Base conceitual para conectar a seção transversal ao comportamento elétrico.</p></div><i>↗</i></a>
+   <a id="ref-nptel" href="https://archive.nptel.ac.in/content/storage2/courses/108106072/pdf/2_6.pdf" target="_blank" rel="noopener"><span>04</span><div><b>IIT Madras / NPTEL · Electrical Machines II</b><p>Máquinas síncronas e enrolamentos amortecedores; §6.2.3 explica sua participação na partida de motores.</p></div><i>↗</i></a>
+   <a id="ref-study" href="https://doi.org/10.3390/en14164989" target="_blank" rel="noopener"><span>05</span><div><b>Bazzo, Moura &amp; Carlson · Energies, 2021</b><p>A Step-by-Step Procedure to Perform Preliminary Designs of Salient-Pole Synchronous Generators. Projeto preliminar analítico comparado com FEM.</p></div><i>↗</i></a>
+   <a id="ref-carter" href="https://www.ew.tu-darmstadt.de/media/ew/rd/ew_vorlesungen/lv_cad/CAD_Skript_WS23_24.pdf" target="_blank" rel="noopener"><span>06</span><div><b>TU Darmstadt · Computer-Aided Design of Electrical Machines</b><p>Coeficiente de Carter, seção 2.7.1. Referência para a aproximação de entreferro efetivo e sua consistência quando a abertura tende a zero.</p></div><i>↗</i></a>
+   <a id="ref-manual" href="https://repository.kpi.kharkov.ua/items/083df882-4b42-4777-a841-ff6ce14cfdf7" target="_blank" rel="noopener"><span>07</span><div><b>Yurieva &amp; Shilkova · NTU KhPI, 2024</b><p>Design of Synchronous Salient Pole Machines. Origem das correlações do pré-dimensionamento. Suas faixas didáticas não são requisitos universais ou certificação IEC.</p></div><i>↗</i></a>
+  </div><div class="scope-note"><b>O que ainda exige um projeto completo:</b> curvas B–H do aço real (aqui as Tabs. 5.1 e 5.2 do manual), diagrama de ligações do estator, ventilação, transitórios por simulação, perdas adicionais detalhadas, isolamento, tensões mecânicas e dinâmica do rotor. As ilustrações não são resultados de elementos finitos.</div></section>
+  <footer class="foot"><span><b>VG ENGINEERING LAB</b> / Máquinas síncronas</span><span>Cálculo local · arquivo independente · revisão técnica 2026</span></footer>
+ </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(() => {
+'use strict';
+try{const t=localStorage.getItem('vg-sync-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}
+const PI=Math.PI, MU0=4*PI*1e-7;
+const GROUPS=[
+ {id:'nominal',index:'01',title:'Dados nominais complementares',description:'§1 · Tipo, potência, polos e frequência ficam no painel superior. Ligação em estrela, m = 3 fases.',fields:[
+  {k:'voltage',label:'Tensão de linha U_N',unit:'kV',min:0,help:'Máquinas de referência do manual: 0,38 · 0,66 · 6,3 kV.'},
+  {k:'cosphi',label:'Fator de potência nominal cos φN',unit:'—',min:0,max:1,maxIncl:true,help:'Gerador 0,8 · motor 0,9 nas máquinas de referência.'},
+  {k:'pfMode',label:'Excitação no ponto nominal',type:'select',opts:[['over','Sobre-excitada · fornece reativo'],['under','Subexcitada · absorve reativo']],help:'Gerador com cos φ indutivo e motor com cos φ capacitivo trabalham sobre-excitados. Define o sinal de sen φ no §5.4.'},
+  {k:'etaNom',label:'Rendimento garantido ηN',unit:'%',min:0,max:100,help:'No motor entra em S_em = P/(η cos φ). É comparado ao rendimento calculado no §7.11 (±2 p.p.).'}]},
+ {id:'initial',index:'02',title:'Cargas e dimensões principais',description:'§2 · Constante de Arnold, diâmetros normalizados e comprimento do núcleo. Campo em branco = sugestão do manual.',fields:[
+  {k:'alpha',label:'Arco polar equivalente αₑ',unit:'—',min:0,max:1,maxIncl:true,help:'0,65–0,75 (§2.1). Também define kad e kaq (Figs. 5.2 e 9.1).'},
+  {k:'kf',label:'Fator de forma do campo k′f',unit:'—',min:0,help:'1,08–1,15 para polos salientes (§2.1).'},
+  {k:'kw0',label:'Fator de enrolamento preliminar k′ws',unit:'—',min:0,max:1,maxIncl:true,help:'≈ 0,92 com passo 0,83 τp. O valor final sai do §3.10.'},
+  {k:'A0',label:'Carga linear preliminar A′s',unit:'A/cm',min:0,help:'340–570 A/cm (§2.1 e Apêndice A).'},
+  {k:'B0',label:'Indução preliminar no entreferro B′δ',unit:'T',min:0,help:'0,72–0,90 T (§2.1).'},
+  {k:'ke',label:'Relação FEM/tensão de fase kₑ',unit:'—',min:0,auto:true,help:'Gerador 1,08 · motor 1,00–1,06 (§2.2).'},
+  {k:'lambda',label:'Relação λ = lδ/τp',unit:'—',min:0,auto:true,help:'Fig. 2.1, pela quantidade de pares de polos. Em branco usa o meio da faixa.'},
+  {k:'kds',label:'Razão de diâmetros kds = dse/ds',unit:'—',min:1,auto:true,help:'Tab. 2.1, pelo número de pares de polos.'},
+  {k:'Dext',label:'Diâmetro externo da chapa dse',type:'select',opts:[['auto','Automático · normalizado mais próximo'],['1180','1180 mm'],['1430','1430 mm'],['1730','1730 mm'],['2150','2150 mm'],['manual','Personalizado']],help:'Diâmetros normalizados do §2.3 (corte econômico das chapas).'},
+  {k:'DextManual',label:'dse personalizado',unit:'mm',min:0,help:'Usado só com a opção “Personalizado”.'}]},
+ {id:'pack',index:'03',title:'Pacote e enrolamento do estator',description:'§2.7–2.9 e §3.2–3.20 · Pacotes radiais, ranhuras, caminhos paralelos e segmentação das chapas.',fields:[
+  {k:'packet',label:'Comprimento do pacote lps',type:'select',opts:[['auto','Automático · nv mais próximo de inteiro'],['40','40 mm'],['45','45 mm'],['50','50 mm']],help:'§2.7: entre 40, 45 e 50 mm, o que deixa o número de pacotes mais próximo de um inteiro.'},
+  {k:'duct',label:'Largura do duto radial bk',unit:'mm',min:0,minIncl:true,help:'Usualmente 10 mm (§2.7).'},
+  {k:'kfeS',label:'Empilhamento do estator kFe,s',unit:'—',min:0,max:1,maxIncl:true,help:'0,97 para chapa oxidada de 0,5 mm (§2.9).'},
+  {k:'q',label:'Ranhuras por polo e fase qₛ',unit:'—',min:0,auto:true,help:'Tab. 3.1. Aceita fração (3 1/2 ou 7/2). 2p < 8: inteiro 3–5; 2p ≥ 8: fracionário entre 1¼ e 4½.'},
+  {k:'parallel',label:'Caminhos paralelos aₛ',type:'select',opts:[['auto','Automático · simetria e menor arredondamento'],['1','1'],['2','2'],['3','3'],['4','4']],help:'§3.5 e §3.13: enrolamento simétrico, corrente ≤ 200 A por caminho e zQs par.'},
+  {k:'betaPre',label:'Passo relativo preliminar β′',unit:'—',min:0,max:1,maxIncl:true,help:'0,8 (§3.6). O passo em ranhuras é arredondado.'},
+  {k:'yokeRelief',label:'Desconto do jugo pelos furos hysd',unit:'mm',min:0,minIncl:true,help:'5–10 mm (§3.36).'},
+  {k:'segSteps',label:'Passos de ranhura por segmento Qseg',unit:'—',min:0,int:true,auto:true,help:'§3.4, só quando dse > 990 mm. Em branco: menor sobra de chapa.'},
+  {k:'sheetWidth',label:'Largura da bobina de aço',type:'select',opts:[['auto','Automático'],...[500,530,600,670,740,750,805,815,825,840,860,865,880,905,935,965,985,990].map(w=>[String(w),w+' mm'])],help:'Larguras do §3.4. A corda do segmento deve ficar 8–12 mm menor.'}]},
+ {id:'slot',index:'04',title:'Ranhura, condutores e isolação',description:'§3.21–3.55 · Ranhura aberta com fio retangular (Tabs. 3.3 e 3.4), cabeças, resistência e dispersão.',fields:[
+  {k:'hsPre',label:'Altura preliminar da ranhura h′s',unit:'mm',min:0,help:'60–80 mm (§3.21).'},
+  {k:'Bt0',label:'Indução preliminar no dente B′t⅓',unit:'T',min:0,help:'1,4–1,7 T (§3.22).'},
+  {k:'J0',label:'Densidade de corrente preliminar J′s',unit:'A/mm²',min:0,auto:true,help:'4,5–6 A/mm²; o limite superior vale para máquinas rápidas (§3.24).'},
+  {k:'wireIns',label:'Isolação do fio',type:'select',opts:[['glass','Fibra de vidro'],['enamel','Esmalte + fibra de vidro']],help:'Tab. 3.4. Acima de 1 kV, a fibra de vidro pede isolação entre espiras.'},
+  {k:'Nelb',label:'Fios elementares na largura Nel,b',type:'select',opts:[['auto','Automático'],['1','1'],['2','2']],help:'1 ou 2 (§3.26).'},
+  {k:'Nelh',label:'Fios elementares na altura Nel,h',type:'select',opts:[['auto','Automático'],['1','1'],['2','2'],['3','3'],['4','4']],help:'1–4. O condutor só é dividido quando S_ef > 20 mm² (§3.26).'},
+  {k:'ael',label:'Lado menor do fio nu aₑₗ',unit:'mm',min:0,auto:true,help:'Tab. 3.3, com aₑₗ ≤ 3,55 mm.'},
+  {k:'bel',label:'Lado maior do fio nu bₑₗ',unit:'mm',min:0,auto:true,help:'Tab. 3.3, com bₑₗ ≤ 7,1 mm e bₑₗ/aₑₗ ≥ 1,05. A seção é a·b menos os cantos arredondados.'},
+  {k:'disA',label:'Isolação bilateral no lado a δis,a',unit:'mm',min:0,minIncl:true,auto:true,help:'Tab. 3.4.'},
+  {k:'disB',label:'Isolação bilateral no lado b δis,b',unit:'mm',min:0,minIncl:true,auto:true,help:'Tab. 3.4.'},
+  {k:'insTurn',label:'Isolação entre espiras δc,is',unit:'mm',min:0,minIncl:true,auto:true,help:'0,2 mm acima de 1 kV com fibra de vidro; 0 nos demais casos (§3.30).'},
+  {k:'headSpacing',label:'Folga entre cabeças Δ',unit:'mm',min:0,minIncl:true,help:'5 mm para 6,3 kV (§3.43).'},
+  {k:'headExtension',label:'Distância núcleo–curva l₁',unit:'mm',min:0,minIncl:true,help:'50 mm para 6,3 kV (§3.43).'},
+  {k:'headRadius',label:'Raio de curvatura do condutor rel',unit:'mm',min:0,minIncl:true,help:'50 mm para 6,3 kV (§3.45).'}]},
+ {id:'pole',index:'05',title:'Entreferro, polos e amortecedor',description:'§4 · Entreferro, sapata, corpo polar, jugo do rotor e gaiola amortecedora.',fields:[
+  {k:'gapMode',label:'Entreferro δ',type:'select',opts:[['formula','§4.1 · fórmula com kgap'],['kk','§5.3 · ajustar até Kk ≈ K′k'],['manual','Valor informado']],help:'O §5.3 manda refazer δ quando Kk difere mais de 10% de K′k; a segunda opção faz isso em passos de 0,5 mm.'},
+  {k:'Kk',label:'Relação de curto-circuito preliminar K′k',unit:'—',min:0,help:'0,8–1,2 para 2p de 4 a 24 (§4.1).'},
+  {k:'kgap',label:'Coeficiente do entreferro kgap',unit:'—',min:0,help:'0,35–0,40 (§4.1).'},
+  {k:'deltaManual',label:'δ informado',unit:'mm',min:0,help:'Usado com “Valor informado”.'},
+  {k:'Bpole',label:'Indução preliminar no corpo polar B′p',unit:'T',min:0,help:'1,3–1,6 T (§4.5).'},
+  {k:'poleSheet',label:'Chapa do polo',type:'select',opts:[['1.0','1,0 mm · kFe,r = 0,95'],['1.5','1,5 mm · kFe,r = 0,97']],help:'Fator de empilhamento do corpo polar (§4.5).'},
+  {k:'flange',label:'Espessura do flange lp1',unit:'mm',min:0,minIncl:true,auto:true,help:'Tab. 4.1, por 2p.'},
+  {k:'kc',label:'Coeficiente de altura da bobina kc',unit:'—',min:0,auto:true,help:'Tab. 4.1, por 2p. Dá a altura preliminar do corpo polar; a final sai da bobina (§6.2.8).'},
+  {k:'deltaph',label:'Isolação superior e inferior da bobina δph',unit:'mm',min:0,minIncl:true,help:'8,5 mm: moldura de fibra de vidro e mica (§4.6).'},
+  {k:'kb',label:'Coeficiente da altura da sapata kb',unit:'—',min:0,help:'0,3–0,4 (§4.17).'},
+  {k:'Ndamper',label:'Barras amortecedoras por polo Ndm',type:'select',opts:[['auto','Automático · critério do §4.8.5'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9'],['10','10'],['11','11']],help:'O passo τr das barras é comparado ao passo de ranhura τs.'},
+  {k:'kdamper',label:'Fração de seção do amortecedor k',unit:'—',min:0,auto:true,help:'Gerador 0,15–0,25 · motor 0,25–0,35 (§4.8.2).'},
+  {k:'barMargin',label:'Distância da barra extrema à borda bp1',unit:'mm',min:0,minIncl:true,auto:true,help:'Pelo menos 5 mm (§4.8.4). Em branco: calculada para τr no meio da faixa do §4.8.5.'},
+  {k:'bdmr',label:'Abertura da ranhura da barra bdmr',unit:'mm',min:0,help:'3–4 mm (§4.13).'},
+  {k:'hdmr',label:'Altura da abertura hdmr',unit:'mm',min:0,minIncl:true,help:'2–3 mm (§4.14).'},
+  {k:'damperMat',label:'Material das barras',type:'select',opts:[['brass','Latão · ρ/ρCu = 4'],['copper','Cobre · ρ/ρCu = 1']],help:'Entra nas resistências do amortecedor (§9.8).'},
+  {k:'ByokeR',label:'Indução preliminar no jugo do rotor B′yr',unit:'T',min:0,help:'0,9–1,1 T (§4.20).'},
+  {k:'lengthExtra',label:'Acréscimo axial da coroa K',unit:'mm',min:0,minIncl:true,help:'100–150 mm (§4.19).'},
+  {k:'jointGap',label:'Folga entre polo e coroa δp',unit:'mm',min:0,minIncl:true,help:'0,2 mm com polos montados (§5.2.18); 0 para núcleo laminado integral.'},
+  {k:'shaft',label:'Diâmetro do eixo sob a coroa',unit:'mm',min:0,auto:true,help:'Tab. 4.3, por dse e 2p.'}]},
+ {id:'field',index:'06',title:'Enrolamento de campo e excitação',description:'§6 · Bobinas de cobre em fita, de uma camada, alimentadas por excitador tiristorizado.',fields:[
+  {k:'UE',label:'Tensão do excitador U_E',type:'select',opts:[['auto','Automático · série padronizada'],['48','48 V'],['75','75 V'],['115','115 V'],['150','150 V'],['230','230 V']],help:'Série do §6.1. No automático, a maior tensão que atende a todos os critérios do §6.'},
+  {k:'KE',label:'Reserva de excitação preliminar K′E',unit:'—',min:1,help:'1,16–1,20. Conferida com KE = IEmax/IEN (±5%, §6.2.16).'},
+  {k:'JE',label:'Densidade de corrente no campo J_E',unit:'A/mm²',min:0,help:'3–4,5 A/mm² para bobina de uma camada (§6.2.3).'},
+  {k:'deltaUexc',label:'Queda nas escovas ΔU_E',unit:'V',min:0,minIncl:true,help:'1–3 V (§6.2.2).'},
+  {k:'bE0',label:'Largura preliminar da fita b′E',unit:'mm',min:0,help:'30 mm (§6.2.1).'}]},
+ {id:'losses',index:'07',title:'Perdas e aquecimento',description:'§7–§8 · Constantes empíricas do manual (50 Hz, isolação classe B).',fields:[
+  {k:'pFe',label:'Perdas específicas do aço p1,0/50',unit:'W/kg',min:0,help:'2,6 W/kg para o aço do estator (§7.4).'},
+  {k:'kYs',label:'Fator de fabricação do jugo kys',unit:'—',min:0,help:'1,3 (§7.4).'},
+  {k:'kTs',label:'Fator de fabricação dos dentes kts',unit:'—',min:0,help:'1,7 (§7.6).'},
+  {k:'kPad',label:'Fator de perdas adicionais no cobre kPad',unit:'—',min:0,help:'1,03–1,10 (§8.7).'},
+  {k:'coolAir',label:'Temperatura do ar de entrada',unit:'°C',help:'Somada às elevações de temperatura.'}]}
+];
+const FIELD_LIST=GROUPS.flatMap(g=>g.fields),FIELD=Object.fromEntries(FIELD_LIST.map(f=>[f.k,f]));
+const BASE={construction:'mounted',type:'generator',power:2000,voltage:6.3,freq:50,poles:12,cosphi:0.8,pfMode:'over',etaNom:95,alpha:0.70,kf:1.12,kw0:0.92,A0:450,B0:0.8,ke:'auto',lambda:'auto',kds:'auto',Dext:'auto',DextManual:2150,packet:'auto',duct:10,kfeS:0.97,q:'auto',parallel:'auto',betaPre:0.8,yokeRelief:7.5,segSteps:'auto',sheetWidth:'auto',hsPre:70,Bt0:1.55,J0:'auto',wireIns:'glass',Nelb:'auto',Nelh:'auto',ael:'auto',bel:'auto',disA:'auto',disB:'auto',insTurn:'auto',headSpacing:5,headExtension:50,headRadius:50,gapMode:'formula',Kk:1,kgap:0.375,deltaManual:8,Bpole:1.45,poleSheet:'1.5',flange:'auto',kc:'auto',deltaph:8.5,kb:0.35,Ndamper:'auto',kdamper:'auto',barMargin:'auto',bdmr:3.5,hdmr:2.5,damperMat:'brass',ByokeR:1,lengthExtra:125,jointGap:0.2,shaft:'auto',UE:'auto',KE:1.18,JE:3.5,deltaUexc:2,bE0:30,pFe:2.6,kYs:1.3,kTs:1.7,kPad:1.05,coolAir:40};
+const INDUSTRIAL={...BASE,power:10000,voltage:13.8,freq:60,poles:4,cosphi:.8,etaNom:97,lambda:1.2,kds:1.47,Dext:'manual',DextManual:2250,q:6,parallel:'4',hsPre:85,flange:55,kc:.27,shaft:350,packet:'50',ByokeR:1.5,Kk:.8,alpha:.65};
+const COMPACT={...BASE,construction:'integral',poles:4,freq:60,power:2000,alpha:.65,Kk:.8,ByokeR:1.5,jointGap:0,shaft:120};
+let values={...COMPACT},calculated=null,refPreset=COMPACT;
+const $=id=>document.getElementById(id);
+const safe=x=>Number.isFinite(x)?x:NaN;
+function parseNum(x){
+ if(typeof x==='number')return x;
+ if(x==null)return NaN;
+ const s=String(x).trim().replace(/,/g,'.');
+ let r=s.match(/^(\d+(?:\.\d+)?)\s+(\d+)\s*\/\s*(\d+)$/);
+ if(r)return Number(r[1])+Number(r[2])/Number(r[3]);
+ r=s.match(/^(-?\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+ if(r)return Number(r[1])/Number(r[2]);
+ return /^-?(\d+\.?\d*|\.\d+)(e-?\d+)?$/i.test(s)?Number(s):NaN;
+}
+const numeric=parseNum;
+const NUMFMT={};
+const fmt=(x,d=2)=>Number.isFinite(x)?(NUMFMT[d]||(NUMFMT[d]=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}))).format(x):'—';
+const fmtAdaptive=x=>!Number.isFinite(x)?'—':Math.abs(x)<.0001&&x!==0?x.toExponential(3):Math.abs(x)<.1?fmt(x,5):Math.abs(x)<10?fmt(x,3):fmt(x,2);
+const fmtQ=q=>{if(!Number.isFinite(q))return '—';if(Math.abs(q-Math.round(q))<1e-7)return String(Math.round(q));for(let d=2;d<=12;d++){const g=Math.round(q*d);if(Math.abs(g/d-q)<1e-7){const b=Math.floor(g/d),c=g-b*d;return (b?b+' ':'')+c+'/'+d}}return fmt(q,3)};
+let activePreset='compact';
+let showAllChecks=false;
+const QUICK={type:'quick-type',power:'quick-power',poles:'quick-poles',freq:'quick-freq'};
+function syncQuick(){
+ for(const [k,id] of Object.entries(QUICK)){const el=$(id);if(el&&document.activeElement!==el)el.value=values[k];}
+ $('quick-power-unit').textContent=values.type==='generator'?'kVA':'kW';
+ $('quick-speed').innerHTML=Number.isFinite(120*Number(values.freq)/Number(values.poles))&&Number(values.poles)>0?`${fmt(120*Number(values.freq)/Number(values.poles),approximateInteger(120*Number(values.freq)/Number(values.poles))?0:2)} <small>rpm</small>`:'— <small>rpm</small>';
+}
+function validateQuick(k,raw){
+ if(k==='type')return ['generator','motor'].includes(raw)?'':'Selecione uma aplicação válida.';
+ const v=numeric(raw);if(raw.trim()===''||!Number.isFinite(v)||v<=0)return 'Informe um valor numérico positivo.';
+ if(k==='poles'&&(!Number.isInteger(v)||v<2||v>60||v%2!==0))return 'Use um número par entre 2 e 60 (limite do visualizador).';
+ return '';
+}
+
+const rhalf=x=>Math.max(.5,Math.round(x*2)/2);
+const rEven=x=>Math.max(4,2*Math.round(x/2));
+const approximateInteger=x=>Number.isFinite(x)&&Math.abs(x-Math.round(x))<1e-7;
+const realPositive=x=>Number.isFinite(x)&&x>0;
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
+const download=(f,t,m)=>{const u=URL.createObjectURL(new Blob([t],{type:m}));const a=document.createElement('a');a.href=u;a.download=f;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Manual data (NTU KhPI 2024): tables and digitized figures. */
+const STD_DSE=[1180,1430,1730,2150];
+const SHEETS=[500,530,600,670,740,750,805,815,825,840,860,865,880,905,935,965,985,990];
+const KDS_TAB=[[3,1.40,1.45],[4,1.30,1.40],[5,1.25,1.35],[6,1.23,1.33],[8,1.18,1.24],[10,1.15,1.24]];
+const LAMBDA_FIG=[[2,.45,1.40],[3,.52,1.62],[4,.58,1.83],[5,.65,1.98],[6,.72,2.08],[7,.78,2.15],[8,.84,2.23],[9,.90,2.28],[10,.95,2.32]];
+const TAUS_TAB=[[100,200,15,29],[200,300,17,32],[300,400,20,32],[400,500,25,39],[500,600,30,43],[600,700,35,46],[700,800,40,50]];
+const POLE_TAB=[[6,50,60,.15,.19],[8,45,55,.19,.24],[10,35,50,.25,.28],[12,30,45,.28,.33],[16,25,35,.32,.39],[20,15,30,.38,.41]];
+const SHAFT_TAB={1180:[[6,170,180],[8,160,170],[10,160,170],[12,160,170],[16,150,160],[20,140,160]],1430:[[6,240,250],[8,210,230],[10,210,220],[12,210,220],[16,200,210],[20,190,200]],1730:[[6,290,310],[8,290,310],[10,280,300],[12,280,300],[16,250,270],[20,250,260]],2150:[[6,340,370],[8,340,370],[10,340,370],[12,340,360],[16,310,350],[20,300,350]]};
+const UE_STD=[48,75,115,150,230],IE_CLASSES=[200,320,400,500,630,800,1000];
+const NORMAL_OCC=[[0,0],[.5,.58],[1,1],[1.5,1.21],[2,1.33],[2.5,1.40],[3,1.46],[3.5,1.51]];
+const XI_FIG=[[.4,.61],[.6,.608],[.8,.60],[.9,.585],[1,.555],[1.1,.515],[1.2,.46],[1.3,.41],[1.4,.365],[1.5,.325],[1.6,.302],[1.7,.295],[1.8,.287],[1.9,.282],[2,.272]];
+const KAD_FIG={a:[.65,.675,.7,.725,.75],r:[0,.01,.03,.05],v:[[.850,.842,.836,.8325,.830],[.860,.853,.846,.840,.835],[.870,.8625,.855,.8475,.840],[.880,.8725,.865,.8575,.850]]};
+const KAQ_FIG={a:[.65,.67,.69,.71,.73,.75],r:[0,.01,.03,.05],v:[[.300,.313,.333,.355,.375,.400],[.355,.368,.388,.410,.430,.450],[.430,.443,.462,.481,.500,.516],[.500,.517,.532,.543,.553,.561]]};
+const ALPHA_EV_FIG=[[0,2],[5,5],[10,7],[15,9.9],[20,12.8],[25,14.6],[30,16.1],[35,17.2],[40,18],[45,18.6],[50,19],[60,19.6],[70,20],[80,20.3],[100,20.7],[120,21.2]];
+const CDQ_TAB={5:[4.8,.14,-7.8,2.6],6:[8.9,-.09,-10.7,2.9],7:[20,-.7,-16,3.6],8:[24,-.8,-18,3.8],9:[32,-1,-20,4.1],10:[34,-1,-23,4.4],11:[38,-1,-24,4.4]};
+function makeCurve(rows){const pts=[[0,0]];for(const [b0,hs,step=.01] of rows)hs.forEach((h,i)=>pts.push([Math.round((b0+i*step)*1000)/1000,h]));return pts}
+const BH_STATOR=makeCurve([[.6,[.86,.87,.88,.89,.9,.91,.92,.93,.94,.95]],[.7,[.96,.99,1.03,1.08,1.13,1.18,1.22,1.26,1.31,1.35]],[.8,[1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75,1.8,1.85]],[.9,[1.9,1.95,2,2.05,2.1,2.15,2.2,2.25,2.3,2.35]],[1,[2.4,2.46,2.52,2.58,2.64,2.7,2.76,2.82,2.88,2.94]],[1.1,[3,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9]],[1.2,[4,4.1,4.2,4.3,4.4,4.6,4.7,4.8,5,5.2]],[1.3,[5.5,5.8,6.1,6.5,6.9,7.3,7.8,8.3,8.8,9.4]],[1.4,[10,10.6,11.2,11.8,12.4,13,13.6,14.2,14.8,15.4]],[1.5,[16,17.5,19,20.5,22,23.5,25,27,29,31]],[1.6,[34,36,38,41,44,47,53,59,65,71]],[1.7,[77,82,89,94,100,106,111,117,122,128]],[1.8,[134,140,146,152,158,164,170,176,182,188]],[1.9,[194,200,218,237,257,278,300,322,344,366]],[2,[388,410,432,454,476,498,520,545,575,605]],[2.1,[655,725,800,880,960,1040,1120,1200,1230,1260]]]);
+const BH_POLE=makeCurve([[.6,[2.95,3.2],.05],[.7,[3.45,3.75],.05],[.8,[4.05,4.4],.05],[.9,[4.8,4.9,4.95,5.05,5.1,5.2,5.3,5.4,5.5,5.6]],[1,[5.7,5.82,5.95,6.07,6.15,6.3,6.42,6.55,6.65,6.8]],[1.1,[6.9,7.03,7.2,7.31,7.48,7.6,7.75,7.9,8.08,8.25]],[1.2,[8.45,8.6,8.8,9,9.2,9.4,9.6,9.92,10.15,10.45]],[1.3,[10.8,11.12,11.45,11.75,12.2,12.6,13,13.5,13.93,14.5]],[1.4,[14.9,15.3,15.95,16.45,17,17.5,18.35,19.2,20.1,21.1]],[1.5,[22.7,24.5,25.6,27.1,28.8,30.5,32,34,36.5,37.5]],[1.6,[40,42.5,45,47.5,50,52.5,55.8,59.5,62.3,66]],[1.7,[70.5,75.3,79.5,84,88.5,93.2,98,103,108,114]],[1.8,[119,124,130,136,141,148,156,162,170,178]],[1.9,[188,197,207,215,226,235,245,256,265,275]],[2,[290,302,315,328,342,361,380,399,418,437]]]);
+const R20=[.8,.9,1,1.12,1.25,1.4,1.6,1.8,2,2.24,2.5,2.8,3.15,3.55,4,4.5,5,5.6,6.3,7.1,8],R40=[.85,.95,1.06,1.18,1.32,1.5,1.7,1.9,2.12,2.36,2.65,3,3.35,3.75,4.25,4.75,5.3,6,6.7,7.5];
+const near=(x,y)=>Math.abs(x-y)<1e-6;
+const cornerR=a=>a<1?a/2:a<=1.6?.5:a<=2.24?.65:.8;
+const wireArea=(a,b)=>a*b-(4-Math.PI)*cornerR(a)**2;
+const WIRES=(()=>{const all=[...R20,...R40].sort((x,y)=>x-y),A=all.filter(x=>x>=.8&&x<=3.55),B=all.filter(x=>x>=2&&x<=8),L=[];
+ for(const a of A)for(const b of B){const r=b/a;if(r<1.4||r>8||(R40.some(y=>near(y,a))&&R40.some(y=>near(y,b))))continue;L.push({a,b,S:wireArea(a,b)})}return L})();
+const isStdWire=(a,b)=>WIRES.some(w=>near(w.a,a)&&near(w.b,b));
+function wireInsulation(type,a,b){const g=type!=='enamel';
+ return {ia:a<=2?(g?.27:.41):a<=3.75?(g?.33:.47):(g?.40:.47),ib:b<=2.5?(g?.32:.51):b<=3.35?(g?.36:.51):b<=4.5?(g?.39:.53):b<=5.6?(g?.42:.55):(g?.44:.57)}}
+const BUSBAR=[[3,16,47.45],[3.35,16,53.05],[3.55,16,56.25],[4,16,63.14],[4.5,16,71.14],[2.83,16.8,47.06],[3.05,16.8,50.7],[3.28,16.8,54.62],[5.1,16.8,84.82],[5.5,16.8,91.54],[6,16.8,99.94],[2.83,18,50.46],[3,18,53.4],[3.05,18,54.42],[3.28,18,58.56],[3.35,18,59.75],[5.1,18,90.94],[5.6,18,99.7],[8,18,143.14],[2.83,19.5,54.7],[3.05,19.5,59],[3.28,19.5,63.48],[3.35,19.5,64.78],[3.55,19.5,68.68],[5.1,19.5,98.59],[5.5,19.5,106.39],[6.5,19.5,125.89],[8,19.5,155.14],[3,20,59.52],[3.35,20,66.45],[4,20,79.52],[5,20,99.14],[6,20,119.14],[8,20,159.14],[2.83,22,61.78],[3.05,22,66.62],[3.28,22,71.68],[4.4,22,95.94],[5.1,22,111.3],[6,22,131.14],[7,22,153.14],[3.35,22.4,74.49],[3,25,74.52],[3.28,25,81.52],[4,25,99.52],[4.4,25,109.14],[5,25,124.14],[5.1,25,126.64],[5.5,25,136.64],[6,25,149.14],[6.5,25,161.14],[8,25,198.1],[4,28,111.94],[4.4,28,122.34],[5.1,28,141.94],[6,28,167.14],[6.5,28,181.1],[4,30,119.52],[4.4,30,131.14],[5,30,149.14],[5.1,30,152.14],[5.5,30,164.14],[5.6,30,167.1],[6,30,179.1],[6.5,30,193.1],[7,30,208.1],[8,30,238.1],[6,32,191.1],[6.5,32,206.1],[4.4,35,153.14],[5,35,174.1],[5.5,35,191.6],[6,35,209.1],[6.5,35,225.6],[8,35,278.1],[4,40,159.52],[4.5,40,179.1],[5,40,199.1],[5.5,40,219.1],[6,40,239.1],[6.5,40,259.1],[7,40,278.1],[8,40,318.1],[4,45,179.52],[4.5,45,201.6],[5,45,224.1],[5.5,45,246.6],[6,45,269.1],[6.5,45,290.6],[7,45,313.1],[8,45,358.1],[5,50,249.1],[5.5,50,274.1],[6,50,299.1],[6.5,50,323.1],[7,50,348.1],[8,50,398.1],[5,55,274.1],[5.5,55,301.6],[6,55,329.1],[6.5,55,355.6],[7,55,383.1],[8,55,438.1],[5,60,299.1],[5.5,60,329.1],[6,60,359.1],[6.5,60,388.1],[7,60,418.1],[8,60,478.1],[5,65,324.1],[6,65,389.1]].map(([a,b,S])=>({a,b,S}));
+function lin(tab,x){if(x<=tab[0][0])return tab[0][1];for(let i=1;i<tab.length;i++)if(x<=tab[i][0]){const [x0,y0]=tab[i-1],[x1,y1]=tab[i];return y0+(y1-y0)*(x-x0)/(x1-x0)}return tab[tab.length-1][1]}
+function linX(tab,x,col){const k=x<=tab[0][0]?0:x>=tab[tab.length-1][0]?tab.length-2:tab.findIndex((r,i)=>i<tab.length-1&&x>=r[0]&&x<=tab[i+1][0]);const r0=tab[k],r1=tab[k+1];return r0[col]+(r1[col]-r0[col])*(x-r0[0])/(r1[0]-r0[0])}
+function bilinear(T,a,r){const seg=(arr,x)=>{const xc=clamp(x,arr[0],arr[arr.length-1]);let i=0;while(i<arr.length-2&&xc>arr[i+1])i++;return [i,(xc-arr[i])/(arr[i+1]-arr[i])]};
+ const [ia,ta]=seg(T.a,a),[ir,tr]=seg(T.r,r),row=j=>T.v[j][ia]+(T.v[j][ia+1]-T.v[j][ia])*ta;return row(ir)+(row(ir+1)-row(ir))*tr}
+function Hcurve(curve,B){if(B<=0)return 0;const n=curve.length;if(B>=curve[n-1][0]){const [b0,h0]=curve[n-2],[b1,h1]=curve[n-1];return h1+(B-b1)*(h1-h0)/(b1-b0)}
+ for(let i=1;i<n;i++)if(B<=curve[i][0]){const [b0,h0]=curve[i-1],[b1,h1]=curve[i];return h0+(B-b0)*(h1-h0)/(b1-b0)}}
+function toothField(Bapp,Kts){if(Bapp<=1.8)return {B:Bapp,H:Hcurve(BH_STATOR,Bapp)};let lo=0,hi=Bapp;
+ for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(mid+MU0*100*Kts*Hcurve(BH_STATOR,mid)>Bapp)hi=mid;else lo=mid}const B=(lo+hi)/2;return {B,H:Hcurve(BH_STATOR,B)}}
+function carterFactor(t,b,dc){return b/dc<=2?(t+10*dc)/(t-b+10*dc):t/(t-b*b/(5*dc+b))}
+function fractionOf(q){for(let d=1;d<=64;d++){const g=Math.round(q*d);if(Math.abs(g/d-q)<1e-7){const c=gcd(g,d);return {g:g/c,d:d/c}}}return null}
+
+/* Pre-design engine: NTU KhPI method, §1–§10 and §13, with documented corrections. */
+function compute(inp){
+ const lamAuto=inp&&(inp.lambda==='auto'||inp.lambda===''||inp.lambda==null),P2=parseNum(inp&&inp.poles);
+ if(!lamAuto||!(P2>=2))return computeCore(inp);
+ const pp=clamp(P2/2,1,10),lo=linX(LAMBDA_FIG,pp,1),hi=linX(LAMBDA_FIG,pp,2);
+ const runs=[['meio',(lo+hi)/2],['mín.',lo],['máx.',hi]].map(([tag,lam])=>{const r=computeCore(inp,{lam,tag});const ok=!r.errors.length;return {tag,lam,r,ok,score:ok?r.meta.nFailures*1000+r.meta.nWarnings:1e9}});
+ const best=runs.reduce((x,y)=>y.score<x.score?y:x),summary=runs.map(x=>`${x.tag} ${fmt(x.lam,2)}: ${x.ok?`dse ${fmt(x.r.meta.dse,0)} · ${x.r.meta.nFailures} incomp., ${x.r.meta.nWarnings} alertas`:'inviável'}`).join(' | ');
+ const r=best.r;r.hints.lambda=`Fig. 2.1 (p = ${fmt(P2/2,0)}): ${fmt(lo,2)}–${fmt(hi,2)} · variantes do §2.2 → ${best.tag} ${fmt(best.lam,2)}`;
+ for(const row of [...r.groups.geometria,...r.trace])if(row.label==='Relação λ = lδ/τp adotada')row.note=summary;
+ if(r.meta&&r.meta.v)r.meta.lambdaVariants=runs.map(x=>({tag:x.tag,lambda:x.lam,ok:x.ok,dse:x.ok?x.r.meta.dse:NaN,fails:x.ok?x.r.meta.nFailures:NaN,warns:x.ok?x.r.meta.nWarnings:NaN}));
+ return r;
+}
+function computeCore(inp,lamPick){
+ const v={...inp};
+ const errors=[],checks={estator:[],rotor:[],therm:[]},trace=[],groups={geometria:[],estator:[],rotor:[],desempenho:[]},hints={},resolved={};
+ const out=()=>({errors,checks,groups,trace,hints,resolved,meta:{}});
+ const sec=(g,title)=>groups[g].push({section:title});
+ const rec=(g,label,x,unit,ref,formula,note='')=>{const r={label,value:safe(x),unit,ref,formula,note};groups[g].push(r);trace.push({...r,group:g});return x};
+ const check=(group,pass,name,detail,level='fail',range=null)=>{checks[group].push({level:pass?'pass':level,name,detail,range});};
+ const checkRange=(group,name,value,lo,hi,ref,level='warn')=>check(group,value>=lo&&value<=hi,name,`Referência ${fmtAdaptive(lo)}–${fmtAdaptive(hi)} · ${ref}`,level,{value,lo,hi});
+ const isAuto=k=>v[k]==='auto';
+ const pick=(k,value,hint)=>{resolved[k]=value;if(hint)hints[k]=hint;return value};
+ for(const k of ['power','poles','freq'])v[k]=parseNum(v[k]);
+ for(const f of FIELD_LIST){const x=v[f.k];
+  if(f.type==='select'){v[f.k]=x==null?'':String(x);if(!f.opts.some(([o])=>o===v[f.k]))errors.push(`Opção inválida em “${f.label}”.`);continue}
+  if(f.auto&&(x==='auto'||x===''||x==null)){v[f.k]='auto';continue}
+  const n=parseNum(x);v[f.k]=n;
+  if(f.k==='DextManual'&&v.Dext!=='manual')continue;
+  if(f.k==='deltaManual'&&v.gapMode!=='manual')continue;
+  if(!Number.isFinite(n)){errors.push(`Informe um número em “${f.label}”.`);continue}
+  if(f.min!=null&&(f.minIncl?n<f.min:n<=f.min))errors.push(`“${f.label}” deve ser ${f.minIncl?'≥':'>'} ${fmtAdaptive(f.min)}.`);
+  if(f.max!=null&&(f.maxIncl?n>f.max:n>=f.max))errors.push(`“${f.label}” deve ser ${f.maxIncl?'≤':'<'} ${fmtAdaptive(f.max)}.`);
+  if(f.int&&!approximateInteger(n))errors.push(`“${f.label}” deve ser inteiro.`);
+ }
+ if(!['generator','motor'].includes(v.type))errors.push('Tipo de máquina inválido.');
+ if(!realPositive(v.power))errors.push('A potência deve ser positiva.');
+ if(!realPositive(v.freq))errors.push('A frequência deve ser positiva.');
+ if(!approximateInteger(v.poles)||v.poles<2||v.poles%2!==0||v.poles>60)errors.push('O número de polos deve ser par, entre 2 e 60.');
+ if(errors.length)return out();
+
+ /* §1 · nominal data */
+ const P2=v.poles,p=P2/2,m=3,gen=v.type==='generator',n=120*v.freq/P2,f=v.freq,w=2*PI*f;
+ const cosphi=v.cosphi,sinphi=Math.sqrt(Math.max(0,1-cosphi*cosphi)),sgn=v.pfMode==='under'?-1:1,etaN=v.etaNom/100;
+ const S_em=gen?v.power:v.power/(etaN*cosphi);
+ const U_phase=v.voltage*1000/Math.sqrt(3),Iphase=S_em*1000/(3*U_phase);
+ const Pout=gen?v.power*cosphi:v.power;
+ sec('geometria','§1 · Dados de cálculo');
+ rec('geometria','Pares de polos',p,'—','§1.2','p = 60 f / n = P/2');
+ rec('geometria','Velocidade síncrona',n,'rpm','§1.2','n = 120 f / P');
+ rec('geometria','Potência eletromagnética de cálculo',S_em,'kVA','§1.2',gen?'S_em = S_N (gerador)':'S_em = P_N / (η_N cos φ_N) (motor)');
+ rec('geometria','Potência ativa nominal',Pout,'kW','§1.1',gen?'P = S_N cos φ_N':'P_N no eixo');
+ rec('geometria','Tensão nominal de fase',U_phase,'V','§1.2','U_sN = U_N ×10³ / √3');
+ rec('geometria','Corrente nominal de fase',Iphase,'A','§3.17','I_sN = S_em ×10³ / (3 U_sN)');
+
+ /* §2 · main dimensions */
+ const keV=pick('ke',isAuto('ke')?(gen?1.08:1.03):v.ke,gen?'Gerador: 1,08':'Motor: 1,00–1,06 → 1,03');
+ const lamLo=linX(LAMBDA_FIG,clamp(p,1,10),1),lamHi=linX(LAMBDA_FIG,clamp(p,1,10),2),lamMid=(lamLo+lamHi)/2,lamExt=p<2||p>10;
+ const lambda=pick('lambda',isAuto('lambda')?(lamPick?lamPick.lam:lamMid):v.lambda,`Fig. 2.1 (p = ${fmt(p,0)}): ${fmt(lamLo,2)}–${fmt(lamHi,2)} · meio ${fmt(lamMid,2)}${lamExt?' · extrapolado':''}`);
+ const kdsLo=linX(KDS_TAB,clamp(p,1,10),1),kdsHi=linX(KDS_TAB,clamp(p,1,10),2),kdsMid=Math.max(1.1,(kdsLo+kdsHi)/2),kdsExt=p<3||p>10||![3,4,5,6,8,10].includes(p);
+ const tabNote=(name,x,keys,lo,hi,mid,dg,unit='')=>keys.includes(x)?`${name} (${x}): ${fmt(lo,dg)}–${fmt(hi,dg)}${unit}`:x>keys[0]&&x<keys[keys.length-1]?`${name} interpolada (${x}): ${fmt(lo,dg)}–${fmt(hi,dg)}${unit}`:`${name} vai de ${keys[0]} a ${keys[keys.length-1]} · extrapolado ≈ ${fmt(mid,dg)}${unit}`;
+ const kds=pick('kds',isAuto('kds')?kdsMid:v.kds,tabNote('Tab. 2.1, p',p,[3,4,5,6,8,10],kdsLo,kdsHi,kdsMid,2));
+ const C_A=6.1e10/(v.alpha*v.kf*v.kw0*v.A0*v.B0);
+ const diam=lam=>Math.cbrt(120*f*C_A*keV*S_em/(PI*lam*n*n));
+ const dPre=diam(lambda),dePre=kds*dPre;
+ const nearestStd=x=>STD_DSE.reduce((a,b)=>Math.abs(a-x)<=Math.abs(b-x)?a:b);
+ const dse=v.Dext==='auto'?nearestStd(dePre):v.Dext==='manual'?v.DextManual:Number(v.Dext);
+ hints.Dext=`d′se = kds·d′s = ${fmt(dePre,0)} mm → normalizado ${fmt(nearestStd(dePre),0)} mm`;resolved.Dext=dse;
+ if(!realPositive(dse)){errors.push('Diâmetro externo da chapa inválido.');return out()}
+ const ds=Math.round(dse/kds/5)*5;
+ if(!(ds>0&&ds<dse)){errors.push('A razão de diâmetros gerou um diâmetro interno incompatível.');return out()}
+ const tauP=PI*ds/P2,lDelta=C_A*S_em/(ds*ds*n);
+ const lpsOpts=[40,45,50].map(l=>{const x=(lDelta+v.duct)/(l+v.duct);return {l,x,frac:Math.abs(x-Math.round(x))}});
+ const lps=v.packet==='auto'?lpsOpts.reduce((a,b)=>b.frac<a.frac-1e-9?b:a).l:Number(v.packet);
+ hints.packet='nv = '+lpsOpts.map(o=>`${fmt(o.x,2)} (${o.l})`).join(' · ');resolved.packet=lps;
+ const nPackets=Math.max(1,Math.round((lDelta+v.duct)/(lps+v.duct)));
+ if(!Number.isFinite(nPackets)||nPackets>500){errors.push('Pacote axial fora do limite de exibição. Revise potência e cargas.');return out()}
+ const ls=lps*nPackets+v.duct*(nPackets-1),lef=v.kfeS*nPackets*lps;
+ sec('geometria','§2 · Dimensões principais');
+ rec('geometria','Constante de Arnold',C_A,'mm³·rpm/kVA','§2.1','C_A = 6,1×10¹⁰ / (αₑ k′f k′ws A′s B′δ)');
+ rec('geometria','Relação λ = lδ/τp adotada',lambda,'—','§2.2',isAuto('lambda')?'das variantes mín./meio/máx. da Fig. 2.1, a de menos incompatibilidades e alertas':'valor informado',`Fig. 2.1 para p = ${fmt(p,0)}: ${fmt(lamLo,2)}–${fmt(lamHi,2)}.`);
+ rec('geometria','Diâmetro interno preliminar',dPre,'mm','§2.2','d′s = ∛[120 f C_A kₑ S_em / (π λ n²)]');
+ for(const [tag,lam] of [['mín.',lamLo],['máx.',lamHi]]){const d=diam(lam),de=kds*d,dsx=Math.round(nearestStd(de)/kds/5)*5;rec('geometria',`Variante λ ${tag} (${fmt(lam,2)}) · d′s`,d,'mm','§2.2','mesma equação com o extremo da Fig. 2.1',`dse ${fmt(nearestStd(de),0)} mm · ds ${fmt(dsx,0)} mm · lδ ${fmt(C_A*S_em/(dsx*dsx*n),0)} mm`)}
+ rec('geometria','Razão de diâmetros kds',kds,'—','§2.3',isAuto('kds')?'centro da faixa da Tab. 2.1':'valor informado');
+ rec('geometria','Diâmetro externo preliminar',dePre,'mm','§2.3','d′se = kds d′s');
+ rec('geometria','Diâmetro externo da chapa',dse,'mm','§2.3',v.Dext==='auto'?'dse = normalizado mais próximo (1180 · 1430 · 1730 · 2150)':'dse escolhido');
+ rec('geometria','Diâmetro interno',ds,'mm','§2.4','ds = dse/kds, arredondado a 0 ou 5');
+ rec('geometria','Passo polar',tauP,'mm','§2.5','τp = π ds / 2p');
+ rec('geometria','Comprimento de cálculo do núcleo',lDelta,'mm','§2.6','lδ = C_A S_em / (ds² n)');
+ rec('geometria','Comprimento do pacote',lps,'mm','§2.7',v.packet==='auto'?'lps ∈ {40, 45, 50} com nv mais próximo de inteiro':'lps escolhido');
+ rec('geometria','Pacotes radiais',nPackets,'un.','§2.7','nv = arred[(lδ + bk)/(lps + bk)]');
+ rec('geometria','Dutos de ventilação',nPackets-1,'un.','§2.8','nv − 1');
+ rec('geometria','Comprimento total do núcleo',ls,'mm','§2.8','ls = lps nv + bk (nv − 1)');
+ rec('geometria','Comprimento efetivo de ferro',lef,'mm','§2.9','lef = kFe,s nv lps');
+
+ /* §3.2–3.42 · winding, slot and conductors as one function of qₛ, so the automatic qₛ is searched with aₛ, wire and slot */
+ const band=TAUS_TAB.find(r=>tauP>=r[0]&&tauP<=r[1])||(tauP<100?TAUS_TAB[0]:TAUS_TAB[TAUS_TAB.length-1]),tauExt=tauP<100||tauP>800;
+ const qLo=PI*ds/(P2*m*band[3]),qHi=PI*ds/(P2*m*band[2]),qMid=(qLo+qHi)/2;
+ const J0=pick('J0',isAuto('J0')?clamp(4.5+1.5*(n-300)/700,4.5,6):v.J0,'4,5 A/mm² a 300 rpm → 6 A/mm² a 1000 rpm');
+ const fix={Nb:v.Nelb==='auto'?'auto':Number(v.Nelb),Nh:v.Nelh==='auto'?'auto':Number(v.Nelh),a:v.ael,b:v.bel};
+ const dcb=3.27,dch=6.42,hs1=.5,hs2=3.5,hs3=.5,delta1=.3,delta2=.3,fluxPre=v.B0*v.alpha*tauP*ls*1e-6;
+ const rangeDist=(x,lo,hi)=>x<lo?(lo-x)/lo:x>hi?(x-hi)/hi:0;
+ function statorFor(q){
+  const Qs=P2*m*q;if(!approximateInteger(Qs))return {ok:false,why:'Qs = 2p · 3 · qₛ não é inteiro. Ajuste qₛ.'};
+  if(Qs>720)return {ok:false,why:'Número de ranhuras acima de 720.'};
+  const qInt=approximateInteger(q),frac=qInt?null:fractionOf(q);if(!qInt&&!frac)return {ok:false,why:'qₛ fracionário deve ter denominador ≤ 64.'};
+  const symmetric=a=>qInt?approximateInteger(Qs/(m*a))&&approximateInteger(P2/a):frac.d%m!==0&&approximateInteger(Qs/frac.g)&&approximateInteger(P2/(a*frac.d));
+  const ySlots=Math.max(1,Math.round(v.betaPre*m*q)),beta=ySlots/(m*q),Kp=Math.sin(PI/2*beta),gq=qInt?q:frac.g;
+  const Kd=Math.sin(PI/(2*m))/(gq*Math.sin(PI/(2*m*gq))),Kw=Kp*Kd,NsPre=keV*U_phase/(4.44*Kw*f*fluxPre);
+  const windingFor=a=>{const z=rEven(a*NsPre/(p*q)),Ns=z*p*q/a,flux=keV*U_phase/(4.44*Kw*f*Ns),Bg=flux*1e6/(v.alpha*tauP*ls),Ias=Iphase/a,A=Ias*z*Qs*10/(PI*ds);
+   return {a,z,Ns,flux,Bg,Ias,A,dev:Math.max(Math.abs(Bg/v.B0-1),Math.abs(A/v.A0-1)),sym:symmetric(a)}};
+  const asOpts=[1,2,3,4].map(windingFor);let wd;
+  if(v.parallel==='auto'){const sym=asOpts.filter(o=>o.sym),ok=sym.filter(o=>o.Ias<=200);
+   wd=ok.find(o=>o.dev<=.1)||(ok.length?ok.reduce((x,y)=>y.dev<x.dev?y:x):sym.length?sym.reduce((x,y)=>y.Ias<x.Ias?y:x):asOpts[0])}
+  else wd=asOpts[Number(v.parallel)-1];
+  const tauS=PI*ds/Qs,tauCross=PI*(ds+2*v.hsPre/3)/Qs,btPre=wd.flux*1e6/(v.alpha*m*q*lef*v.Bt0),bsPre=tauCross-btPre,Sef=wd.Ias/J0;
+  let wire=null;
+  for(const Nb of fix.Nb==='auto'?[1,2]:[fix.Nb]){const bPrel=(bsPre-(dcb+delta1+delta2))/Nb-.33;
+   for(const Nh of fix.Nh==='auto'?[1,2,3,4]:[fix.Nh]){const Nel=Nb*Nh;
+    if(fix.Nb==='auto'&&fix.Nh==='auto'&&((Sef<=20&&Nel>1)||(Sef>20&&Nel===1)))continue;
+    const SelReq=Sef/Nel;let pool;
+    if(fix.a!=='auto'&&fix.b!=='auto')pool=[{a:fix.a,b:fix.b,S:wireArea(fix.a,fix.b)}];
+    else{const bLo=fix.b==='auto'&&bPrel>0?.55*bPrel:0,bHi=fix.b==='auto'&&bPrel>0?1.35*bPrel+.3:99;pool=WIRES.filter(x=>(fix.a==='auto'||near(x.a,fix.a))&&(fix.b==='auto'||near(x.b,fix.b))&&x.a<=3.55&&x.b<=7.1&&x.b>=bLo&&x.b<=bHi);
+     if(!pool.length&&fix.b==='auto')pool=WIRES.filter(x=>(fix.a==='auto'||near(x.a,fix.a))&&x.a<=3.55&&x.b<=7.1);
+     if(!pool.length){const a0=fix.a!=='auto'?fix.a:clamp(SelReq/Math.max(fix.b,.1),.8,3.55),b0=fix.b!=='auto'?fix.b:Math.max(1.05*a0,Math.min(7.1,bPrel));pool=[{a:a0,b:b0,S:wireArea(a0,b0)}]}}
+    for(const x of pool){const eS=Math.abs(x.S-SelReq)/SelReq,eb=bPrel>0?Math.max(0,x.b-bPrel)/bPrel*2+Math.max(0,bPrel-x.b)/bPrel*.5:10,score=eS+eb+.03*(Nel-1);
+     if(!wire||score<wire.score)wire={Nb,Nh,Nel,a:x.a,b:x.b,S:x.S,bPrel,SelReq,score}}}}
+  if(!wire)return {ok:false,why:'Não foi possível escolher o fio. Revise os fios elementares.'};
+  const ins=wireInsulation(v.wireIns,wire.a,wire.b),disA=isAuto('disA')?ins.ia:v.disA,disB=isAuto('disB')?ins.ib:v.disB;
+  const insTurn=isAuto('insTurn')?(v.voltage>1&&v.wireIns==='glass'?.2:0):v.insTurn;
+  const bs=wire.Nb*(wire.b+disB)+dcb+delta1+delta2,hs=wd.z*wire.Nh*(wire.a+disA)+Math.max(0,wd.z*wire.Nh-2)*insTurn+dch+hs1+hs2+3*hs3+delta1+2*delta2;
+  const tauThird=PI*(ds+2*hs/3)/Qs,btThird=tauThird-bs,Btooth=wd.flux*1e6/(v.alpha*m*q*lef*btThird);
+  const hYoke=(dse-ds)/2-hs-v.yokeRelief,Bback=wd.flux*1e6/(2*hYoke*lef);
+  const Js=wd.Ias/(wire.Nel*wire.S),Psc=2*(hs-hs1-hs2)+bs,coolSurface=4800*Psc/(wd.A*Js*tauS);
+  const ok=bs>0&&bs<tauS&&btThird>0&&hYoke>0;
+  return {ok,why:ok?'':'Geometria da ranhura impossível: a ranhura ocupa todo o passo ou o jugo ficou negativo. Revise fio, qₛ, aₛ e diâmetros.',q,Qs,qInt,frac,ySlots,beta,Kp,Kd,Kw,NsPre,asOpts,wd,tauS,tauCross,btPre,bsPre,Sef,wire,ins,disA,disB,insTurn,bs,hs,tauThird,btThird,Btooth,hYoke,Bback,Js,Psc,coolSurface};
+ }
+ const scoreStator=T=>{if(!T.ok)return 1e9;const w=T.wd;let sc=(w.sym?0:1e4)+(w.Ias>200?1e3+w.Ias:0)+Math.max(0,w.dev-.1)*500;
+  sc+=rangeDist(T.q,qLo,qHi)*30+rangeDist(T.Btooth,1.4,1.7)*30+rangeDist(T.Bback,1.3,1.5)*5+rangeDist(T.Js,4.5,6)*5+rangeDist(T.coolSurface,8,15)*3;
+  sc+=P2<8?(T.qInt&&T.q>=3&&T.q<=5?0:2):(T.qInt?1:0)+(T.q>1.25&&T.q<4.5?0:1);return sc+Math.abs(T.q-qMid)/qMid};
+ let S;
+ if(isAuto('q')){const cands=new Set();for(let k=2;k<=12;k++)cands.add(k);
+  if(P2>=8)for(const d of [2,4,5,7,8])if(P2%d===0)for(let g=Math.ceil(1.25*d);g<4.5*d;g++)if(g%d&&gcd(g,d)===1&&g/d>1.25)cands.add(g/d);
+  let best=null;for(const qq of cands){const T=statorFor(qq),sc=scoreStator(T);if(!best||sc<best.sc)best={T,sc}}S=best.T}
+ else S=statorFor(v.q);
+ if(!S.ok){errors.push(S.why);return out()}
+ const {q,Qs,qInt,frac,ySlots,beta,Kp,Kd,Kw,NsPre,asOpts,wd,tauS,tauCross,btPre,bsPre,Sef,wire,ins,disA,disB,insTurn,bs,hs,tauThird,btThird,Btooth,hYoke,Bback,Js,Psc,coolSurface}=S;
+ const {a:as,z,Ns,flux,Bg:Bgap,Ias:Ibranch,A}=wd,{Nb:Nelb,Nh:Nelh,Nel,a:ael,b:bel,S:Sel}=wire;
+ pick('q',q,`τs ${band[2]}–${band[3]} mm (Tab. 3.1, τp ${fmt(tauP,0)} mm) → qₛ ${fmt(qLo,2)}–${fmt(qHi,2)}${P2<8?' · inteiro 3–5':' · fracionário recomendado'}${isAuto('q')?` → ${fmtQ(q)}`:''}`);
+ hints.parallel='Simétricos: '+(asOpts.filter(o=>o.sym).map(o=>`${o.a} (Δ ${fmt(o.dev*100,0)}%, ${fmt(o.Ias,0)} A)`).join(' · ')||'nenhum')+(v.parallel==='auto'?` → ${as}`:'');resolved.parallel=as;
+ pick('Nelb',Nelb,`b′el = ${fmt(wire.bPrel,2)} mm com ${Nelb} na largura`);
+ pick('Nelh',Nelh,`S_ef = ${fmt(Sef,1)} mm²${Sef>20?' > 20 mm²: dividir':' ≤ 20 mm²: sem divisão'}`+(fix.Nb==='auto'||fix.Nh==='auto'?` → ${Nelh} × ${Nelb}`:''));
+ pick('ael',ael,`Tab. 3.3 → ${fmt(ael,2)} × ${fmt(bel,2)} mm, S = ${fmt(Sel,3)} mm²`);pick('bel',bel,`b′el = ${fmt(wire.bPrel,2)} mm · S′el = ${fmt(wire.SelReq,2)} mm²`);
+ pick('disA',disA,`Tab. 3.4 (${v.wireIns==='enamel'?'esmalte + fibra':'fibra de vidro'}): ${fmt(ins.ia,2)} mm`);pick('disB',disB,`Tab. 3.4: ${fmt(ins.ib,2)} mm`);
+ pick('insTurn',insTurn,v.voltage>1?(v.wireIns==='glass'?'U_N > 1 kV com fibra de vidro: 0,2 mm':'esmalte + fibra dispensa a isolação extra'):'U_N ≤ 1 kV: 0');
+ sec('estator','§3.2–3.20 · Enrolamento');
+ rec('estator','Faixa de qₛ pela Tab. 3.1',qLo,'—','§3.2',`qₛ = π ds/(2p m τs), τs = ${band[2]}–${band[3]} mm`,`Até ${fmt(qHi,2)}.${tauExt?' τp fora da Tab. 3.1.':''}`);
+ rec('estator','Ranhuras por polo e fase',q,'—','§3.2',(qInt?'qₛ inteiro':`qₛ = ${fmtQ(q)} = ${frac.g}/${frac.d} (fracionário)`)+(isAuto('q')?' · escolhido junto com aₛ, fio e ranhura':''));
+ rec('estator','Número de ranhuras',Qs,'un.','§3.3','Qs = 2p mₛ qₛ');
+ rec('estator','Passo de bobina',ySlots,'ranhuras','§3.6','yQs = arred(β′ mₛ qₛ)');
+ rec('estator','Passo relativo',beta,'—','§3.7','βQ = yQs/(mₛ qₛ)');
+ rec('estator','Fator de encurtamento',Kp,'—','§3.8','Kp = sen(βQ · 90°)');
+ rec('estator','Fator de distribuição',Kd,'—','§3.9',qInt?'Kd = sen(90°/mₛ)/[qₛ sen(90°/(mₛ qₛ))]':'Kd = sen(90°/mₛ)/[g sen(90°/(mₛ g))], qₛ = g/d');
+ rec('estator','Fator de enrolamento',Kw,'—','§3.10','KWs = Kp Kd');
+ rec('estator','Fluxo preliminar por polo',fluxPre,'Wb','§3.11','Φ′ = B′δ αₑ τp ls ×10⁻⁶');
+ rec('estator','Espiras preliminares por fase',NsPre,'espiras','§3.12','N′s = kₑ U_sN/(4,44 KWs f Φ′)');
+ rec('estator','Caminhos paralelos',as,'—','§3.13',v.parallel==='auto'?'simétrico, ≤ 200 A e menor desvio de Bδ e As':'escolhido');
+ rec('estator','Condutores efetivos por ranhura',z,'cond.','§3.13','zQs = par mais próximo de aₛ N′s/(p qₛ), ≥ 4');
+ rec('estator','Espiras por fase',Ns,'espiras','§3.14','Ns = zQs p qₛ / aₛ');
+ rec('estator','Fluxo por polo',flux,'Wb','§3.15','Φ = kₑ U_sN/(4,44 KWs f Ns)');
+ rec('estator','Indução no entreferro',Bgap,'T','§3.16','Bδ = Φ ×10⁶/(αₑ τp ls)');
+ rec('estator','Corrente por caminho paralelo',Ibranch,'A','§3.18','I_asN = I_sN/aₛ');
+ rec('estator','Carga linear',A,'A/cm','§3.19','As = I_asN zQs Qs ×10/(π ds)');
+ rec('estator','Passo de ranhura no entreferro',tauS,'mm','§3.40','τs = π ds/Qs');
+
+
+ /* §3.4 · core segmentation */
+ const segmented=dse>990;let seg=null;
+ if(segmented){const chordOf=k=>dse*Math.sin(PI*k/Qs),maxK=Math.max(1,Math.floor(Qs/2)),autoK=isAuto('segSteps'),autoW=v.sheetWidth==='auto';
+  const ks=autoK?Array.from({length:maxK},(_,i)=>i+1):[v.segSteps],ws=autoW?SHEETS:[Number(v.sheetWidth)];
+  const better=(c,b)=>{const fc=c.mg>=8,fb=b.mg>=8;if(fc!==fb)return fc;if(!fc)return c.mg>b.mg;const ic=c.mg<=12,ib=b.mg<=12;if(ic!==ib)return ic;
+   if(ic&&autoK&&autoW&&Math.abs(c.h-b.h)>1e-6)return c.h>b.h;if(Math.abs(c.mg-b.mg)>1e-6)return c.mg<b.mg;return c.intS&&!b.intS};
+  for(const k of ks)for(const W of ws){const h=chordOf(k),c={k,W,h,mg:W-h,intS:approximateInteger(Qs/k)};if(!seg||better(c,seg))seg=c}
+  pick('segSteps',seg.k,`Corda ${fmt(seg.h,0)} mm em chapa de ${seg.W} mm (sobra ${fmt(seg.mg,1)} mm)`);pick('sheetWidth',seg.W);
+  sec('estator','§3.4 · Segmentação do núcleo');
+  rec('estator','Passos de ranhura por segmento',seg.k,'—','§3.4',isAuto('segSteps')?'menor sobra de chapa com corda ≥ 8 mm menor que a tira':'escolhido');
+  rec('estator','Largura da bobina de aço',seg.W,'mm','§3.4',v.sheetWidth==='auto'?'série do §3.4':'escolhida');
+  rec('estator','Corda do segmento',seg.h,'mm','§3.4','hseg = dse sen(180° Qseg/Qs)');
+  rec('estator','Segmentos por volta',Qs/seg.k,'un.','§3.4','s = Qs/Qseg',seg.intS?'Inteiro: montagem em camadas fechadas.':'Fracionário: montagem em espiral contínua.');
+  rec('estator','Pinos por segmento',seg.h<490?2:3,'un.','§3.4','hseg < 490 mm → 2; hseg ≥ 490 mm → 3 ou mais',seg.k%2===0?'Juntas deslocadas de ½ segmento por camada.':'Juntas deslocadas de ⅓ de segmento por camada.');
+ }else hints.segSteps='dse ≤ 990 mm: chapas inteiras, sem segmentação.';
+
+ sec('estator','§3.21–3.42 · Ranhura e condutores');
+ rec('estator','Passo de ranhura preliminar a ⅓ da altura',tauCross,'mm','§3.21','τ′⅓ = π(ds + ⅔ h′s)/Qs');
+ rec('estator','Largura preliminar do dente',btPre,'mm','§3.22','b′t⅓ = Φ ×10⁶/(αₑ mₛ qₛ lef B′t⅓)');
+ rec('estator','Largura preliminar da ranhura',bsPre,'mm','§3.23','b′s = τ′⅓ − b′t⅓');
+ rec('estator','Densidade de corrente preliminar',J0,'A/mm²','§3.24',isAuto('J0')?'interpolada pela rotação na faixa 4,5–6':'informada');
+ rec('estator','Seção do condutor efetivo',Sef,'mm²','§3.25','S_ef = I_asN/J′s');
+ rec('estator','Fios elementares',Nel,'un.','§3.26',`Nel = Nel,h × Nel,b = ${Nelh} × ${Nelb}`);
+ rec('estator','Largura preliminar do fio nu',wire.bPrel,'mm','§3.28','b′el = [b′s − (3,27 + 0,3 + 0,3)]/Nel,b − 0,33');
+ rec('estator','Seção preliminar por fio',wire.SelReq,'mm²','§3.27','S′el = S_ef/Nel');
+ rec('estator','Fio adotado · lado menor',ael,'mm','§3.29',isStdWire(ael,bel)?'Tab. 3.3':'dimensão informada (fora da série da Tab. 3.3)');
+ rec('estator','Fio adotado · lado maior',bel,'mm','§3.29',isStdWire(ael,bel)?'Tab. 3.3':'dimensão informada');
+ rec('estator','Seção do fio',Sel,'mm²','§3.29','Sel = a b − (4 − π) r², r do canto pela série');
+ rec('estator','Isolação bilateral do fio (a / b)',disA,'mm','§3.30',`Tab. 3.4 · δis,b = ${fmt(disB,2)} mm`);
+ rec('estator','Isolação entre espiras',insTurn,'mm','§3.30','0,2 mm acima de 1 kV com fibra de vidro');
+ rec('estator','Largura da ranhura',bs,'mm','§3.31','bs = Nel,b(bel + δis,b) + 3,27 + 0,3 + 0,3');
+ rec('estator','Altura da ranhura',hs,'mm','§3.32','hs = zQs Nel,h(ael + δis,a) + (zQs Nel,h − 2)δc,is + 6,42 + 0,5 + 3,5 + 3×0,5 + 0,3 + 2×0,3');
+ rec('estator','Passo a ⅓ da altura',tauThird,'mm','§3.33','τ⅓ = π(ds + ⅔ hs)/Qs');
+ rec('estator','Largura do dente a ⅓',btThird,'mm','§3.34','bt⅓ = τ⅓ − bs');
+ rec('estator','Indução no dente a ⅓',Btooth,'T','§3.35','Bt⅓ = Φ ×10⁶/(αₑ mₛ qₛ lef bt⅓)');
+ rec('estator','Altura do jugo',hYoke,'mm','§3.36','hys = (dse − ds)/2 − hs − hysd');
+ rec('estator','Indução no jugo',Bback,'T','§3.37','Bys = Φ ×10⁶/(2 hys lef)');
+ rec('estator','Densidade de corrente',Js,'A/mm²','§3.38','Js = I_sN/(aₛ Nel Sel)');
+ rec('estator','Perímetro de refrigeração da ranhura',Psc,'mm','§3.41','Psc = 2(hs − hs1 − hs2) + bs');
+ rec('estator','Superfície específica de refrigeração',coolSurface,'cm²/W','§3.42','Sθs = 4800 Psc/(As Js τs)');
+ /* §3.43–3.55 · end winding, resistance, leakage */
+ const hs123=hs1+hs2+hs3,sinA=(bs+v.headSpacing)*Qs/(PI*(ds+2*hs123));
+ if(!(sinA<1)){errors.push('Cabeças de bobina impossíveis: (bs + Δ) maior que o passo de ranhura.');return out()}
+ const cosA=Math.sqrt(1-sinA*sinA);
+ const lFh=PI*(ds+hs)*beta/(P2*cosA)+hs+2*v.headExtension;
+ const lFh1=((v.headRadius+v.headExtension/2)*(1/sinA-1)+PI*(ds+(hs+3*hs123)/2)*ySlots/Qs)*sinA/cosA;
+ const lWav=2*(ls+lFh),R20=.0175*Ns*lWav/(as*Nel*Sel)*1e-3,R75=1.22*R20,Rpu=R75*Iphase/U_phase;
+ const hs4=(disA+dcb)/2+2*.12,hs5=disA+dcb+hs3,hs6=hs-hs1-hs2-2*hs3-disA-dch;
+ const lamSlot=(hs123+hs4)/bs*(.2+.8*beta)+hs5/(4*bs)+(hs6-hs5)/(3*bs)*(.4+.6*beta);
+ const lamTooth=(.71*Math.log10(tauS/bs)+.16*(q-1))*(.25+.75*beta);
+ const lamHead=.34*q/ls*(lFh-.64*beta*tauP),lam=lamSlot+lamTooth+lamHead;
+ const Xs=4*PI*MU0*f*Ns*Ns*ls*lam/(p*q)*1e-3,Xpu=Xs*Iphase/U_phase;
+ sec('estator','§3.43–3.55 · Cabeças, resistência e dispersão');
+ rec('estator','Inclinação das cabeças',Math.asin(sinA)*180/PI,'°','§3.45','sen α = (bs + Δ)Qs/[π(ds + 2hs123)]');
+ rec('estator','Comprimento médio de uma cabeça',lFh,'mm','§3.43*','lfhs = π(ds + hs)βQ/(2p cos α) + hs + 2l₁','O PDF imprime (bs + Δ)/τp na raiz; usada a inclinação pelo passo de ranhura, como no §3.45.');
+ rec('estator','Avanço axial da cabeça',lFh1,'mm','§3.45','lfhs1 = [(rel + l₁/2)(1/sen α − 1) + π(ds + (hs + 3hs123)/2) yQs/Qs] tg α');
+ rec('estator','Comprimento médio de espira',lWav,'mm','§3.46','lWav = 2(ls + lfhs)');
+ rec('estator','Resistência por fase a 20 °C',R20,'Ω','§3.47','Rs = 0,0175 Ns lWav/(aₛ Nel Sel) ×10⁻³');
+ rec('estator','Resistência por fase a 75 °C',R75,'Ω','§3.48','Rs,75 = 1,22 Rs');
+ rec('estator','Resistência relativa',Rpu,'pu','§3.49','Rs* = Rs,75 I_sN/U_sN');
+ rec('estator','Permeância de ranhura λsn',lamSlot,'—','§3.50','(hs123 + hs4)(0,2 + 0,8β)/bs + hs5/(4bs) + (hs6 − hs5)(0,4 + 0,6β)/(3bs)');
+ rec('estator','Permeância das coroas λsd',lamTooth,'—','§3.51','[0,71 lg(τs/bs) + 0,16(qₛ − 1)](0,25 + 0,75β)');
+ rec('estator','Permeância das cabeças λs,fh',lamHead,'—','§3.52','0,34 qₛ(lfhs − 0,64 β τp)/ls');
+ rec('estator','Reatância de dispersão',Xs,'Ω','§3.54','Xσs = 4π μ₀ f Ns² ls Σλ/(p qₛ) ×10⁻³');
+ rec('estator','Reatância de dispersão relativa',Xpu,'pu','§3.55','Xσs* = Xσs I_sN/U_sN');
+ if(!(lamHead>0&&Xs>0)){errors.push('Dispersão das cabeças não positiva. Revise l₁, Δ e o passo.');return out()}
+
+ /* stator checks */
+ checkRange('estator','Arco polar αₑ',v.alpha,.65,.75,'§2.1');
+ checkRange('estator','Fator de forma k′f',v.kf,1.08,1.15,'§2.1');
+ check('estator',gen?Math.abs(keV-1.08)<=.005:keV>=1&&keV<=1.06,'Relação FEM/tensão kₑ',`kₑ = ${fmt(keV,3)} · gerador 1,08; motor 1,00–1,06 (§2.2)`,'warn');
+ checkRange('estator','Carga linear preliminar A′s',v.A0,340,570,'§2.1');
+ checkRange('estator','Indução preliminar B′δ',v.B0,.72,.9,'§2.1');
+ checkRange('estator','Relação λ (Fig. 2.1)',lambda,lamLo,lamHi,'§2.2');
+ checkRange('estator','Razão de diâmetros kds (Tab. 2.1)',kds,kdsLo,kdsHi,'§2.3');
+ check('estator',q>=qLo-1e-9&&q<=qHi+1e-9,'qₛ na faixa da Tab. 3.1',`qₛ ${fmtQ(q)} · faixa ${fmt(qLo,2)}–${fmt(qHi,2)} (τs ${band[2]}–${band[3]} mm)`,'warn');
+ check('estator',P2<8?qInt&&q>=3&&q<=5:q>1.25&&q<4.5,'Tipo de qₛ recomendado',P2<8?`2p < 8: inteiro 3, 4 ou 5 · qₛ = ${fmtQ(q)}`:`2p ≥ 8: fracionário entre 1¼ e 4½ · qₛ = ${fmtQ(q)}`,'warn');
+ check('estator',wd.sym,'Simetria do enrolamento',qInt?`Qs/(mₛ aₛ) e 2p/aₛ inteiros · aₛ = ${as}`:`d = ${frac.d} não múltiplo de 3, Qs/g e 2p/(aₛ d) inteiros · aₛ = ${as}`);
+ check('estator',Ibranch<=200,'Corrente por caminho paralelo',`${fmt(Ibranch,1)} A · limite 200 A (§3.18)`);
+ check('estator',Math.abs(Bgap/v.B0-1)<=.1,'Bδ final frente a B′δ',`Desvio ${fmt((Bgap/v.B0-1)*100,1)}% · limite ±10% (§3.16)`);
+ check('estator',Math.abs(A/v.A0-1)<=.1,'As final frente a A′s',`Desvio ${fmt((A/v.A0-1)*100,1)}% · limite ±10% (§3.19)`);
+ if(segmented){check('estator',seg.mg>=8,'Estampagem dos segmentos',`Corda ${fmt(seg.h,1)} mm · tira ${seg.W} mm · sobra ${fmt(seg.mg,1)} mm (mín. 8)`);
+  check('estator',seg.mg<=12,'Aproveitamento da tira',`Sobra ${fmt(seg.mg,1)} mm · recomendado 8–12 mm (§3.4)`,'warn')}
+ check('estator',ael<=3.55&&bel<=7.1&&bel/ael>=1.05,'Proporções do fio',`${fmt(ael,2)} × ${fmt(bel,2)} mm · a ≤ 3,55; b ≤ 7,1; b/a ≥ 1,05 (§3.29)`,'warn');
+ check('estator',Sef<=20||Nel>1,'Divisão do condutor',`S_ef ${fmt(Sef,1)} mm² · Nel = ${Nel} (§3.26)`,'warn');
+ checkRange('estator','Indução no dente Bt⅓',Btooth,1.4,1.7,'§3.35');
+ checkRange('estator','Indução no jugo Bys',Bback,1.3,1.5,'§3.37');
+ checkRange('estator','Densidade de corrente Js',Js,4.5,6,'§3.38');
+ checkRange('estator','Superfície de refrigeração Sθs',coolSurface,8,15,'§3.42');
+ checkRange('estator','Resistência relativa Rs*',Rpu,.01,.05,'§3.49');
+ checkRange('estator','Reatância de dispersão Xσs*',Xpu,.05,.16,'§3.55');
+
+ /* §4 · rotor */
+ const kFer=v.poleSheet==='1.0'?.95:.97;
+ const lp1Lo=linX(POLE_TAB,P2,1),lp1Hi=linX(POLE_TAB,P2,2),kcLo=linX(POLE_TAB,P2,3),kcHi=linX(POLE_TAB,P2,4),tab41Ext=![6,8,10,12,16,20].includes(P2);
+ const lp1=pick('flange',isAuto('flange')?clamp((lp1Lo+lp1Hi)/2,10,80):v.flange,tabNote('Tab. 4.1, 2p',P2,[6,8,10,12,16,20],Math.min(lp1Lo,lp1Hi),Math.max(lp1Lo,lp1Hi),clamp((lp1Lo+lp1Hi)/2,10,80),0,' mm'));
+ const kc=pick('kc',isAuto('kc')?clamp((kcLo+kcHi)/2,.08,.5):v.kc,tabNote('Tab. 4.1, 2p',P2,[6,8,10,12,16,20],kcLo,kcHi,clamp((kcLo+kcHi)/2,.08,.5),2));
+ const kdamp=pick('kdamper',isAuto('kdamper')?(gen?.2:.3):v.kdamper,gen?'Gerador: 0,15–0,25':'Motor: 0,25–0,35');
+ const shaftKey=nearestStd(dse),shaftLo=linX(SHAFT_TAB[shaftKey],P2,1),shaftHi=linX(SHAFT_TAB[shaftKey],P2,2);
+ const dShaft=pick('shaft',isAuto('shaft')?(shaftLo+shaftHi)/2:v.shaft,tabNote(`Tab. 4.3 com dse ${shaftKey}${dse!==shaftKey?' (mais próximo)':''}, 2p`,P2,[6,8,10,12,16,20],shaftLo,shaftHi,(shaftLo+shaftHi)/2,0,' mm'));
+ const rhoDm=v.damperMat==='copper'?1:4,bpe=v.alpha*tauP,lp=ls,hp2Pre=kc*tauP+2*v.deltaph+40;
+ const Kts=tauThird/(btThird*v.kfeS)-1,lysPath=PI*(dse-hYoke)/(4*p);
+ const Phi0=U_phase/(4.44*f*Ns*Kw),Fam=Math.SQRT2/PI*m*Iphase*Ns*Kw/p;
+ const regularRule=qInt||(frac.d===2)||frac.g<=9;
+ const autoMargin=isAuto('barMargin'),irregular=gen&&!regularRule,minMargin=autoMargin?5:Math.max(5,v.barMargin);
+ const damperOpt=N=>{const Sdm=kdamp*z*Qs*Nel*Sel/(P2*N),ddm=rhalf(2*Math.sqrt(Sdm/PI));
+  const lo=irregular?tauS:.8*tauS,hi=irregular?tauS:gen?Math.min(tauS,tauP/(3*q+1)):tauS*(1-.75/(N-1));
+  const meets=t=>irregular?Math.abs(t-tauS)<1e-9:gen?t>.8*tauS&&t<tauS&&t<=tauP/(3*q+1):t>=.8*tauS&&Math.abs(t-tauS)>1e-6&&(N-1)*(1-t/tauS)>.75;
+  let pitch,bp1;
+  if(irregular||(autoMargin&&hi>lo)){pitch=irregular?tauS:(lo+hi)/2;bp1=(bpe-ddm-(N-1)*pitch)/2}
+  else{bp1=autoMargin?5:v.barMargin;pitch=(bpe-ddm-2*bp1)/(N-1)}
+  if(!irregular&&autoMargin&&bp1<5){bp1=5;pitch=(bpe-ddm-10)/(N-1)}
+  const good=meets(pitch)&&bp1>=minMargin-1e-9&&pitch>0;
+  const miss=good?0:(pitch<lo?lo-pitch:Math.max(0,pitch-hi))+Math.max(0,minMargin-bp1);
+  return {N,Sdm,ddm,diameter:ddm,pitch,bp1,good,lo,hi,miss,Sring:.5*N*Sdm,ringMin:ddm*2/3}};
+ const damperOptions=[5,6,7,8,9,10,11].map(damperOpt);
+ let dm;
+ if(v.Ndamper==='auto'){const good=damperOptions.filter(o=>o.good);
+  dm=good.length?(irregular||autoMargin?good[good.length-1]:good.reduce((x,y)=>Math.abs(y.pitch-(y.lo+y.hi)/2)<Math.abs(x.pitch-(x.lo+x.hi)/2)?y:x)):damperOptions.reduce((x,y)=>y.miss<x.miss?y:x)}
+ else dm=damperOptions[Number(v.Ndamper)-5];
+ hints.Ndamper='Atendem: '+(damperOptions.filter(o=>o.good).map(o=>o.N).join(', ')||'nenhum')+(v.Ndamper==='auto'?` → ${dm.N}`:'');resolved.Ndamper=dm.N;
+ pick('barMargin',dm.bp1,irregular?`τr = τs: bp1 = (bpe − ddm − (Ndm − 1)τs)/2 = ${fmt(dm.bp1,1)} mm`:autoMargin?`τr no meio de ${fmt(dm.lo,1)}–${fmt(dm.hi,1)} mm → bp1 = ${fmt(dm.bp1,1)} mm`:`τr resultante ${fmt(dm.pitch,1)} mm (faixa ${fmt(dm.lo,1)}–${fmt(dm.hi,1)} mm)`);
+ const ringSel=BUSBAR.filter(x=>x.a>=dm.ringMin-1e-9&&x.S>=dm.Sring-1e-9).sort((x,y)=>x.S-y.S||x.a-y.a)[0]||BUSBAR.reduce((x,y)=>y.S>x.S?y:x);
+ const ddmr=dm.ddm+.1;
+ const deltaFormula=rhalf(v.kgap*v.Kk*A*tauP/(Bgap*1e4));
+
+ function design(delta,hp2,full,UE){
+  const deltaMax=1.5*delta,dc=delta+(deltaMax-delta)/3,Drotor=ds-2*delta;
+  const bp=flux*(tauP+8*delta)*1e6/((lp*kFer+lp1)*v.Bpole*tauP);
+  const rp=ds/(2+8*ds*(deltaMax-delta)/(bpe*bpe));
+  const hp1=v.kb*(bpe-bp)+dm.ddm,dyr=ds-2*(delta+hp1+hp2),lyr=lp+v.lengthExtra;
+  const hyr=flux*(1+8*delta/tauP)*1e6/(2*lyr*v.ByokeR);
+  const KCs=carterFactor(tauS,bs,dc),KCr=carterFactor(dm.pitch,v.bdmr,dc),KC=KCs*KCr;
+  const lyrPath=PI*(dyr-hyr)/(4*p);
+  const cp1=PI*(ds-2*delta-2*hp1-hp2)/P2-(bp+v.deltaph),cp2=tauP-bpe;
+  const Lp1=1.8/cp1*(hp2-v.deltaph)*(lp+2*lp1+bp)*1e-9;
+  const Lp2=Math.max(0,5/cp2*(hp1-.3*tauP/P2)*(lp+2*lp1+bpe)*1e-9),Lp=Lp1+Lp2;
+  const geo={delta,deltaMax,dc,Drotor,bp,rp,hp1,hp2,dyr,lyr,hyr,KCs,KCr,KC,lyrPath,cp1,cp2,Lp1,Lp2,Lp};
+  if(!(bp>0&&bp<bpe&&dyr>0&&hyr>0&&cp1>0&&dyr-hyr>0))return {...geo,bad:true};
+  const mag=(Phi,extra=0)=>{const Bd=Phi*1e6/(v.alpha*tauP*ls),Fd=Bd*KC*delta*1e-3/MU0;
+   const Bt=Phi*1e6/(v.alpha*m*q*lef*btThird),tf=toothField(Bt,Kts),Ft=.1*tf.H*hs;
+   const By=Phi*1e6/(2*hYoke*lef),Hy=Hcurve(BH_STATOR,By),xi=lin(XI_FIG,By),Fy=.1*Hy*lysPath*xi;
+   const Fs=Fd+Ft+Fy,Phs=Lp*(Fs+extra),Php=Phi+Phs;
+   const Bp=Php*1e6/(bp*lp*kFer),Hp=Hcurve(BH_POLE,Bp),Fp=.1*Hp*(hp1+hp2);
+   const Byr=Php*1e6/(2*kFer*lp*hyr),Hyr=Hcurve(BH_POLE,Byr),Fyr=.1*Hyr*lyrPath,Fj=v.jointGap*Bp*1e-3/MU0;
+   return {Phi,Bd,Fd,Bt,Btr:tf.B,Ht:tf.H,Ft,By,Hy,xi,Fy,Fs,Phs,Php,Bp,Hp,Fp,Byr,Hyr,Fyr,Fj,FE:Fs+Fp+Fyr+Fj}};
+  const o=mag(Phi0),kad=bilinear(KAD_FIG,v.alpha,delta/tauP),kaq=bilinear(KAQ_FIG,v.alpha,delta/tauP);
+  const Fk=kad*Fam+Xpu*(o.Fd+o.Fj),Kk=o.FE/Fk;
+  if(!full)return {...geo,o,kad,kaq,Fk,Kk};
+  const occ=[.58,1,1.21,1.33].map(k=>{const r=mag(k*Phi0);return {k,...r,FEpu:r.FE/o.FE,normal:lin(NORMAL_OCC.map(([i,e])=>[e,i]),k)}});
+  const lowFlux=mag(.05*Phi0),Fag=lowFlux.FE/.05;
+  const ra=gen?cosphi+Rpu:cosphi-Rpu,rb=sgn*sinphi+Xpu,Enom=Math.hypot(ra,rb);
+  const ks=clamp(1.7-cosphi,.5,1),nom=mag(Enom*Phi0,ks*kad*Fam);
+  const FEN=nom.FE/Enom*Math.hypot(ra,rb+Enom*Fam/nom.FE);
+  /* §6 · field winding */
+  const dpb=1.5,isE=.4,d3=1,lWEpre=2*(lp+bp-2*lp1)+PI*(2*lp1+2*dpb+v.bE0);
+  const SEpre=1.22*.0175*2*p*v.KE*FEN*lWEpre*1e-3/(UE-v.deltaUexc),IENpre=v.JE*SEpre;
+  const NE=Math.max(1,Math.round(FEN/IENpre)),aEpre=(hp2-2*v.deltaph-(NE-1)*isE)/NE;
+  const cond=BUSBAR.filter(x=>x.b/x.a<=20).map(x=>({...x,e:Math.abs(x.a-aEpre)/Math.max(Math.abs(aEpre),.5)+Math.abs(x.S-SEpre)/SEpre})).sort((x,y)=>x.e-y.e)[0];
+  const aE=cond.a,bE=cond.b,SE=cond.S,hp2New=NE*aE+(NE-1)*isE+2*v.deltaph+d3;
+  const lWE=2*(lp+bp-2*lp1)+PI*(2*lp1+2*dpb+bE),RE20=.0175*2*p*NE*lWE/SE*1e-3,RE=1.22*RE20;
+  const IEmax=(UE-v.deltaUexc)/RE,IEN=FEN/NE,KE=IEmax/IEN,JEr=IEN/SE,IEo=o.FE/NE,SthE=500/(JEr*JEr*bE);
+  const half=PI/P2,xc=bp/2+dpb+bE,yb=dyr/2+v.deltaph,window=2*(yb*Math.sin(half)-xc*Math.cos(half));
+  const fieldChecks=[SE>=30,bE/aE<=20,SthE>=.9&&SthE<=2,Math.abs(KE/v.KE-1)<=.05,IEmax<=1000,window>=7,Math.abs(hp2New/hp2-1)<=.05,JEr>=3&&JEr<=4.5];
+  return {...geo,o,kad,kaq,Fk,Kk,occ,Fag,Enom,ks,nom,FEN,UE,lWEpre,SEpre,IENpre,NE,aEpre,aE,bE,SE,hp2New,lWE,RE20,RE,IEmax,IEN,KE,JEr,IEo,SthE,window,xc,fieldFails:fieldChecks.filter(x=>!x).length};
+ }
+
+ let delta=deltaFormula,gapScan=null;
+ if(v.gapMode==='manual')delta=v.deltaManual;
+ else if(v.gapMode==='kk'){gapScan=[];for(let d=Math.max(.5,rhalf(.3*deltaFormula));d<=rhalf(3*deltaFormula)+1e-9;d+=.5){const r=design(d,hp2Pre,false);if(!r.bad)gapScan.push({d,Kk:r.Kk})}
+  if(gapScan.length)delta=gapScan.reduce((x,y)=>Math.abs(y.Kk/v.Kk-1)<Math.abs(x.Kk/v.Kk-1)?y:x).d}
+ hints.gapMode=v.gapMode==='kk'&&gapScan&&gapScan.length?`§4.1 daria ${fmt(deltaFormula,1)} mm → ajustado ${fmt(delta,1)} mm`:`§4.1: δ = ${fmt(deltaFormula,1)} mm`;resolved.gapMode=delta;
+ if(!realPositive(delta)){errors.push('Entreferro inválido.');return out()}
+ const UEopts=v.UE==='auto'?UE_STD:[Number(v.UE)];
+ const runs=[];
+ for(const UE of UEopts){if(UE<=v.deltaUexc)continue;let hp2=hp2Pre,first=null,last=null,iter=0,stalled=false,converged=false,need=NaN;
+  for(;iter<10;iter++){const r=design(delta,hp2,true,UE);if(r.bad||(first&&(r.window<0||r.dyr-2*r.hyr<dShaft))){stalled=true;need=hp2;break}if(!first)first=r;last=r;if(Math.abs(r.hp2New/hp2-1)<=.01){converged=true;break}hp2=r.hp2New}
+  if(first){const use=stalled?first:last;runs.push({UE,r:use,iter:Math.min(iter+1,10),firstChange:first.hp2New/hp2Pre-1,stalled,converged,need:stalled?need:use.hp2New,score:use.fieldFails+(stalled?10:0)+(converged?0:1)})}}
+ if(!runs.length){if(UEopts.every(x=>x<=v.deltaUexc)){errors.push('A tensão do excitador precisa ser maior que a queda nas escovas.');return out()}
+  const g=design(delta,hp2Pre,false);errors.push(`Rotor incompatível com o estator: ${!(g.bp>0&&g.bp<bpe)?'corpo polar mais largo que a sapata':!(g.dyr>0)?'diâmetro da coroa negativo':!(g.cp1>0)?'corpos polares sem espaço entre si':'jugo do rotor sem espaço até o centro'}. Revise δ, B′p, kc e a sapata.`);return out()}
+ const run=v.UE==='auto'?runs.reduce((x,y)=>y.score<x.score||(y.score===x.score&&y.UE>x.UE)?y:x):runs[0];
+ const R=run.r,UE=run.UE;
+ hints.UE='Sem falhas no §6: '+(runs.filter(x=>x.score===0).map(x=>x.UE+' V').join(', ')||'nenhuma')+(v.UE==='auto'?` → ${UE} V`:'');resolved.UE=UE;
+ const {deltaMax,dc,Drotor,bp,rp,hp1,hp2,dyr,lyr,hyr,KCs,KCr,KC,lyrPath,cp1,cp2,Lp1,Lp2,Lp,o,kad,kaq,Fk,Kk,occ,Fag,Enom,ks,nom,FEN}=R;
+ const vPeripheral=PI*Drotor*n/60000,lfhr=vPeripheral<30?15:95,lbar=lp+2*(lp1+lfhr);
+ sec('rotor','§4 · Entreferro, polo e amortecedor');
+ rec('rotor','Entreferro pela fórmula',deltaFormula,'mm','§4.1','δ = arred0,5[kgap K′k As τp/(Bδ ×10⁴)]');
+ rec('rotor','Entreferro adotado no centro do polo',delta,'mm',v.gapMode==='kk'?'§5.3':'§4.1',v.gapMode==='kk'?'passos de 0,5 mm até Kk mais próximo de K′k':v.gapMode==='manual'?'valor informado':'igual à fórmula');
+ rec('rotor','Entreferro nas bordas',deltaMax,'mm','§4.2','δmax = 1,5 δ');
+ rec('rotor','Diâmetro sobre as sapatas',Drotor,'mm','§4.1','ds − 2δ');
+ rec('rotor','Comprimento do polo',lp,'mm','§4.3','lp = ls');
+ rec('rotor','Largura equivalente da sapata',bpe,'mm','§4.4','bpe = αₑ τp');
+ rec('rotor','Largura do corpo polar',bp,'mm','§4.5','bp = Φ(τp + 8δ) ×10⁶/[(lp kFe,r + lp1) B′p τp]',`kFe,r = ${fmt(kFer,2)} · lp1 = ${fmt(lp1,1)} mm`);
+ rec('rotor','Altura preliminar do corpo polar',hp2Pre,'mm','§4.6','h′p2 = kc τp + 2δph + 40',`kc = ${fmt(kc,3)}`);
+ rec('rotor','Raio de curvatura da sapata',rp,'mm','§4.7','rp = ds/[2 + 8ds(δmax − δ)/bpe²]');
+ rec('rotor','Barras amortecedoras por polo',dm.N,'un.','§4.8.1',v.Ndamper==='auto'?'opção que atende ao §4.8.5 com τr no meio da faixa':'escolhida');
+ rec('rotor','Seção da barra',dm.Sdm,'mm²','§4.8.2','Sdm = k zQs Qs Nel Sel/(2p Ndm)',`k = ${fmt(kdamp,2)}`);
+ rec('rotor','Diâmetro da barra',dm.ddm,'mm','§4.8.3','ddm = arred0,5[2√(Sdm/π)]');
+ rec('rotor','Passo das barras',dm.pitch,'mm','§4.8.4',irregular?'τr = τs (qₛ fracionário com b·d + c > 9)':'τr = (bpe − ddm − 2bp1)/(Ndm − 1)',`bp1 = ${fmt(dm.bp1,1)} mm${autoMargin&&!irregular?' (para τr no meio da faixa do §4.8.5)':''}.`);
+ rec('rotor','Seção mínima do anel',dm.Sring,'mm²','§4.9','S′fhr = 0,5 Ndm Sdm');
+ rec('rotor','Espessura mínima do anel',dm.ringMin,'mm','§4.10','a′fhr = ⅔ ddm');
+ rec('rotor','Barra do anel (Tab. 4.2)',ringSel.S,'mm²','§4.11',`afhr × bfhr = ${fmt(ringSel.a,2)} × ${fmt(ringSel.b,1)} mm`);
+ rec('rotor','Diâmetro da ranhura da barra',ddmr,'mm','§4.12','ddmr = ddm + 0,1');
+ rec('rotor','Velocidade periférica do polo',vPeripheral,'m/s','§4.15*','vr = π(ds − 2δ) n/(60 ×10³)','A expressão impressa (sem π e sem conversão de unidades) não fecha; usada a relação física.');
+ rec('rotor','Comprimento da barra',lbar,'mm','§4.16','ldm = lp + 2(lp1 + lfhr)',`lfhr = ${lfhr} mm (vr ${vPeripheral<30?'< 30 m/s: 10–20':'≥ 30 m/s: 70–120'} mm)`);
+ rec('rotor','Altura da sapata',hp1,'mm','§4.17','hp1 = kb(bpe − bp) + ddm');
+ rec('rotor','Diâmetro externo da coroa',dyr,'mm','§4.18','dyr = ds − 2(δ + hp1 + hp2)',`Com hp2 final = ${fmt(hp2,1)} mm.`);
+ rec('rotor','Diâmetro do eixo sob a coroa',dShaft,'mm','§4.18',isAuto('shaft')?'centro da faixa da Tab. 4.3':'informado');
+ rec('rotor','Comprimento da coroa',lyr,'mm','§4.19','lyr = lp + K');
+ rec('rotor','Altura mínima do jugo do rotor',hyr,'mm','§4.20','hyr = Φ(1 + 8δ/τp) ×10⁶/(2 lyr B′yr)');
+ sec('rotor','§5.1 · Circuito magnético');
+ rec('rotor','Entreferro de cálculo',dc,'mm','§5.1.1','δc = δ + (δmax − δ)/3');
+ rec('rotor','Fator de Carter do estator',KCs,'—','§5.1.2*',bs/dc<=2?'KCs = (τs + 10δc)/(τs − bs + 10δc)':'KCs = τs/[τs − bs²/(5δc + bs)]',bs/dc<=2?'O PDF imprime bs + 10δc no denominador; a forma com o dente (τs − bs) dá KC → 1 quando bs → 0.':'');
+ rec('rotor','Fator de Carter da sapata',KCr,'—','§5.1.3*',v.bdmr/dc<=2?'KCr = (τr + 10δc)/(τr − bdmr + 10δc)':'KCr = τr/[τr − bdmr²/(5δc + bdmr)]',v.bdmr/dc<=2?'Mesma correção do §5.1.2.':'');
+ rec('rotor','Fator de Carter total',KC,'—','§5.1.4','KC = KCs KCr');
+ rec('rotor','Caminho médio no jugo do estator',lysPath,'mm','§5.1.5','lys = π(dse − hys)/4p');
+ rec('rotor','Caminho médio no jugo do rotor',lyrPath,'mm','§5.1.6','lyr = π(dyr − hyr)/4p');
+ rec('rotor','Distância entre corpos polares',cp1,'mm','§5.1.7','cp1 = π(ds − 2δ − 2hp1 − hp2)/2p − (bp + δph)');
+ rec('rotor','Distância entre sapatas',cp2,'mm','§5.1.8','cp2 = τp − bpe');
+ rec('rotor','Permeância entre corpos',Lp1,'H','§5.1.9','Λp1 = 1,8(hp2 − δph)(lp + 2lp1 + bp)/cp1 ×10⁻⁹');
+ rec('rotor','Permeância entre sapatas',Lp2,'H','§5.1.10','Λp2 = 5(hp1 − 0,3τp/2p)(lp + 2lp1 + bpe)/cp2 ×10⁻⁹',hp1-.3*tauP/P2<=0?'Sapata baixa demais para a expressão; tomado 0.':'');
+ rec('rotor','Permeância de dispersão polar',Lp,'H','§5.1.11','Λp = Λp1 + Λp2');
+ rec('rotor','Coeficiente do dente',Kts,'—','§5.1.12','Kt⅓ = τ⅓/(bt⅓ kFe,s) − 1');
+ sec('rotor','§5.2 · Característica em vazio (E = U_sN)');
+ rec('rotor','Fluxo em vazio',Phi0,'Wb','§5.2.1','Φδo = U_sN/(4,44 f Ns KWs)');
+ rec('rotor','Indução no entreferro',o.Bd,'T','§5.2.2','Bδo = Φδo ×10⁶/(αₑ τp ls)');
+ rec('rotor','FMM do entreferro',o.Fd,'A','§5.2.3','Fδo = KC δ Bδo ×10⁻³/μ₀');
+ rec('rotor','Indução no dente (aparente)',o.Bt,'T','§5.2.4','Bt⅓o = Φδo ×10⁶/(αₑ mₛ qₛ lef bt⅓)',o.Bt>1.8?`Acima de 1,8 T: indução real ${fmt(o.Btr,3)} T pelo §5.2.5.`:'');
+ rec('rotor','Intensidade de campo no dente',o.Ht,'A/cm','§5.2.5','Tab. 5.1; acima de 1,8 T, Bt = B + μ₀ H Kt ×10²');
+ rec('rotor','FMM dos dentes',o.Ft,'A','§5.2.6','Ft⅓o = 0,1 H hs');
+ rec('rotor','Indução no jugo do estator',o.By,'T','§5.2.7','Byso = Φδo ×10⁶/(2 hys lef)');
+ rec('rotor','FMM do jugo do estator',o.Fy,'A','§5.2.9','Fyso = 0,1 Hys lys ξ',`Hys ${fmt(o.Hy,2)} A/cm (Tab. 5.1) · ξ = ${fmt(o.xi,3)} (Fig. 5.1)`);
+ rec('rotor','Fluxo de dispersão polar',o.Phs,'Wb','§5.2.10','Φσo = Λp(Fδo + Ft⅓o + Fyso)');
+ rec('rotor','Fluxo no corpo polar',o.Php,'Wb','§5.2.11','Φpo = Φδo + Φσo',`σ = ${fmt(o.Php/Phi0,3)}`);
+ rec('rotor','Indução no corpo polar',o.Bp,'T','§5.2.12','Bpo = Φpo ×10⁶/(bp lp kFe,r)');
+ rec('rotor','FMM do polo',o.Fp,'A','§5.2.14','Fpo = 0,1 Hp(hp1 + hp2)',`Hp ${fmt(o.Hp,2)} A/cm (Tab. 5.2)`);
+ rec('rotor','Indução no jugo do rotor',o.Byr,'T','§5.2.15','Byro = Φpo ×10⁶/(2 kFe,r lp hyr)');
+ rec('rotor','FMM do jugo do rotor',o.Fyr,'A','§5.2.17','Fyro = 0,1 Hyr lyr',`Hyr ${fmt(o.Hyr,2)} A/cm (Tab. 5.2)`);
+ rec('rotor','FMM da junta polo–coroa',o.Fj,'A','§5.2.18','Fδyro = δp Bpo ×10⁻³/μ₀',`δp = ${fmt(v.jointGap,2)} mm`);
+ rec('rotor','FMM de excitação em vazio por polo',o.FE,'A','§5.2.19','FEo = Fδo + Ft⅓o + Fyso + Fpo + Fyro + Fδyro');
+ for(const x of occ.filter(x=>x.k!==1))rec('rotor',`Vazio com E* = ${fmt(x.k,2)}`,x.FEpu,'pu','§5.2.20',`FE*/FEo para Φ = ${fmt(x.k,2)} Φδo`,`Curva normal (Tab. 5.4): ${fmt(x.normal,2)} pu · FE ${fmt(x.FE,0)} A · Bt ${fmt(x.Bt,2)} T · Bp ${fmt(x.Bp,2)} T`);
+ sec('rotor','§5.3–5.4 · Curto-circuito e carga nominal');
+ rec('rotor','FMM de reação de armadura',Fam,'A','§5.3.1','Fam = (√2/π) mₛ I_sN Ns KWs/p');
+ rec('rotor','Coeficiente de reação longitudinal',kad,'—','§5.3.2','Fig. 5.2 com αₑ e δ/τp',`δ/τp = ${fmt(delta/tauP,4)}`);
+ rec('rotor','FMM de excitação em curto, I = I_sN',Fk,'A','§5.3.2','Fk = kad Fam + Xσs*(Fδo + Fδyro)');
+ rec('rotor','Relação de curto-circuito',Kk,'—','§5.3.3','Kk = FEo/Fk',`K′k adotado ${fmt(v.Kk,2)} · desvio ${fmt((Kk/v.Kk-1)*100,1)}%`);
+ rec('rotor','FEM interna nominal',Enom,'pu','§5.4.1',gen?'E* = √[(cos φ + Rs*)² + (±sen φ + Xσs*)²]':'E* = √[(cos φ − Rs*)² + (±sen φ + Xσs*)²]',`+sen φ sobre-excitada, −sen φ subexcitada (${v.pfMode==='under'?'subexcitada':'sobre-excitada'}).`);
+ rec('rotor','Fluxo no entreferro em carga',nom.Phi,'Wb','§5.4.2','Φδnom = E* Φδo');
+ rec('rotor','Coeficiente de carga da reação',ks,'—','§5.4.6','ks = 0,9 (cos φ 0,8) · 0,8 (cos φ 0,9), interpolado');
+ rec('rotor','Fluxo de dispersão em carga',nom.Phs,'Wb','§5.4.6','Φσnom = Λp(Fδnom + Ft⅓nom + Fysnom + ks kad Fam)');
+ rec('rotor','Indução no corpo polar em carga',nom.Bp,'T','§5.4.8','Bp,nom = Φp,nom ×10⁶/(bp lp kFe,r)');
+ rec('rotor','FMM para o fluxo de carga',nom.FE,'A','§5.4.11','FEnom = Σ das FMM com Φδnom e Φp,nom');
+ rec('rotor','FMM de excitação nominal por polo',FEN,'A','§5.4.12','FEN = (FEnom/E*)√[(cos φ ± Rs*)² + (±sen φ + Xσs* + E* Fam/FEnom)²]');
+ sec('rotor','§6 · Enrolamento de campo');
+ rec('rotor','Tensão do excitador',UE,'V','§6.1',v.UE==='auto'?'maior tensão da série que atende ao §6':'escolhida');
+ rec('rotor','Espira média preliminar',R.lWEpre,'mm','§6.2.1','l′WE = 2(lp + bp − 2lp1) + π(2lp1 + 2δpb + b′E)','δpb = 1,5 mm (moldagem de micanite, Tab. 6.1).');
+ rec('rotor','Seção preliminar da fita',R.SEpre,'mm²','§6.2.2','S′E = 1,22 × 0,0175 × 2p K′E FEN l′WE ×10⁻³/(U_E − ΔU_E)');
+ rec('rotor','Corrente de campo preliminar',R.IENpre,'A','§6.2.3','I′EN = J_E S′E');
+ rec('rotor','Espiras por bobina polar',R.NE,'esp.','§6.2.4','NE = arred(FEN/I′EN)');
+ rec('rotor','Altura preliminar da fita',R.aEpre,'mm','§6.2.5','a′E = [hp2 − 2δph − (NE − 1)0,4]/NE');
+ rec('rotor','Fita adotada (Tab. 4.2)',R.SE,'mm²','§6.2.6',`aE × bE = ${fmt(R.aE,2)} × ${fmt(R.bE,1)} mm · bE/aE = ${fmt(R.bE/R.aE,1)}`);
+ rec('rotor','Superfície específica de refrigeração do campo',R.SthE,'cm²/W','§6.2.7','SθE = 500/(JE² bE)',`JE real ${fmt(R.JEr,2)} A/mm²`);
+ rec('rotor','Altura do corpo polar pela bobina',R.hp2New,'mm','§6.2.8','hp2 = NE aE + (NE − 1)0,4 + 2δph + δ3, δ3 = 1 mm',run.stalled?`A bobina não cabe: cálculo magnético mantido com h′p2 = ${fmt(hp2,1)} mm.`:`Cálculo magnético refeito ${run.iter}× com hp2 = ${fmt(hp2,1)} mm; primeira correção ${fmt(run.firstChange*100,1)}%.`);
+ rec('rotor','Folga entre bobinas vizinhas',R.window,'mm','§6.2.9','na base da bobina: 2[(dyr/2 + δph) sen(π/2p) − (bp/2 + δpb + bE) cos(π/2p)]');
+ rec('rotor','Espira média',R.lWE,'mm','§6.2.10','lWE = 2(lp + bp − 2lp1) + π(2lp1 + 2δpb + bE)');
+ rec('rotor','Resistência do campo a 20 °C',R.RE20,'Ω','§6.2.11','RE = 0,0175 × 2p NE lWE/SE ×10⁻³');
+ rec('rotor','Resistência do campo a 75 °C',R.RE,'Ω','§6.2.12','RE,75 = 1,22 RE');
+ rec('rotor','Corrente de campo máxima',R.IEmax,'A','§6.2.14','IEmax = (U_E − ΔU_E)/RE,75',`Classe do excitador: ${IE_CLASSES.find(c=>c>=R.IEmax)||'> 1000'} A.`);
+ rec('rotor','Corrente de campo nominal',R.IEN,'A','§6.2.15','IEN = FEN/NE');
+ rec('rotor','Reserva de excitação',R.KE,'—','§6.2.16','KE = IEmax/IEN',`K′E adotado ${fmt(v.KE,2)}`);
+ rec('rotor','Corrente de campo em vazio',R.IEo,'A','§6.2.17','IEo = FEo/NE',`IEN/IEo = ${fmt(R.IEN/R.IEo,3)} pu`);
+ /* rotor checks */
+ checkRange('rotor','Relação de curto preliminar K′k',v.Kk,.8,1.2,'§4.1');
+ checkRange('rotor','Coeficiente do entreferro kgap',v.kgap,.35,.4,'§4.1');
+ checkRange('rotor','Indução preliminar no polo B′p',v.Bpole,1.3,1.6,'§4.5');
+ checkRange('rotor','Indução preliminar no jugo B′yr',v.ByokeR,.9,1.1,'§4.20');
+ checkRange('rotor','Flange lp1 (Tab. 4.1)',lp1,Math.min(lp1Lo,lp1Hi),Math.max(lp1Lo,lp1Hi),'§4.5');
+ checkRange('rotor','Coeficiente kc (Tab. 4.1)',kc,kcLo,kcHi,'§4.6');
+ check('rotor',dm.good,'Critério das barras amortecedoras',`Ndm = ${dm.N} · τr ${fmt(dm.pitch,1)} mm · τs ${fmt(tauS,1)} mm · bp1 ${fmt(dm.bp1,1)} mm · ${gen?(regularRule?`0,8τs < τr < τs e τr ≤ τp/(3qₛ+1) = ${fmt(tauP/(3*q+1),1)} mm`:'τr = τs com bp1 ≥ 5 mm'):'τr ≥ 0,8τs, τr ≠ τs, (Ndm−1)(1−τr/τs) > 0,75'} (§4.8.5)`);
+ check('rotor',dm.bp1>=5,'Barra extrema e borda da sapata',`bp1 ${fmt(dm.bp1,1)} mm · mín. 5 mm (§4.8.4)`,'warn');
+ check('rotor',dyr>dShaft,'Coroa maior que o eixo',`dyr ${fmt(dyr,0)} mm · eixo ${fmt(dShaft,0)} mm (§4.18)`);
+ check('rotor',dyr-2*hyr>=dShaft,'Espaço para o jugo do rotor',`dyr − 2hyr = ${fmt(dyr-2*hyr,0)} mm · eixo ${fmt(dShaft,0)} mm · o jugo precisa caber entre a raiz dos polos e o eixo (§4.20)`);
+ check('rotor',Math.abs(Kk/v.Kk-1)<=.1,'Kk calculado frente a K′k',`Kk ${fmt(Kk,3)} · K′k ${fmt(v.Kk,2)} · desvio ${fmt((Kk/v.Kk-1)*100,1)}% · limite ±10% (§5.3.3)`,'warn');
+ const occDev=occ.filter(x=>x.k!==1).map(x=>x.FEpu/x.normal-1),occWorst=occDev.reduce((a,b)=>Math.abs(b)>Math.abs(a)?b:a,0);
+ check('rotor',Math.abs(occWorst)<=.15,'Curva em vazio frente à normal',`Maior desvio ${fmt(occWorst*100,1)}% em FE* · tolerância ±15% adotada (§5.2.21, Tab. 5.4)`,'warn');
+ check('rotor',nom.Bp<=BH_POLE[BH_POLE.length-1][0]&&o.By<=BH_STATOR[BH_STATOR.length-1][0],'Induções dentro das Tabs. 5.1 e 5.2',`Bp em carga ${fmt(nom.Bp,2)} T · Bys ${fmt(o.By,2)} T`);
+ check('rotor',nom.Bp<=1.8,'Saturação do corpo polar em carga',`Bp,nom ${fmt(nom.Bp,2)} T · acima de ~1,8 T a Tab. 5.2 entra no joelho e a FMM de excitação dispara; reduza B′p (polo mais largo) (§5.4.8)`,'warn');
+ check('rotor',R.bE/R.aE<=20,'Proporção da fita de campo',`bE/aE ${fmt(R.bE/R.aE,1)} · máx. 20 (§6.2.6)`,'warn');
+ checkRange('rotor','Superfície de refrigeração do campo SθE',R.SthE,.9,2,'§6.2.7');
+ checkRange('rotor','Densidade de corrente no campo',R.JEr,3,4.5,'§6.2.3');
+ check('rotor',Math.abs(R.KE/v.KE-1)<=.05,'Reserva de excitação KE',`KE ${fmt(R.KE,3)} · K′E ${fmt(v.KE,2)} · ±5% (§6.2.16)`,'warn');
+ check('rotor',R.IEmax<=1000,'Corrente do excitador',`IEmax ${fmt(R.IEmax,0)} A · série até 1000 A (§6.1)`,'warn');
+ check('rotor',R.window>=7,'Janela entre bobinas',`${fmt(R.window,1)} mm · mín. 7 mm (§6.2.9)${R.window<0?' · bobinas vizinhas se sobrepõem':''}`,R.window<0?'fail':'warn');
+ check('rotor',!run.stalled,'Bobina de campo cabe no rotor',run.stalled?`A bobina pede hp2 ≈ ${fmt(run.need,0)} mm; com essa altura a coroa deixa de existir. Resultados mostrados com h′p2 = ${fmt(hp2,0)} mm. ${nom.Bp>1.8?`O polo satura em carga (${fmt(nom.Bp,2)} T): reduza B′p. `:''}Também ajudam δ ou K′k menores e J_E maior.`:`hp2 ${fmt(R.hp2New,1)} mm compatível com a coroa (§6.2.8)`);
+ if(!run.stalled)check('rotor',Math.abs(R.hp2New/hp2-1)<=.05,'Altura do corpo polar estável',`hp2 ${fmt(hp2,1)} → ${fmt(R.hp2New,1)} mm · limite 5% (§6.2.9)`,'warn');
+ check('rotor',bp+2*(1.5+R.bE)<=bpe,'Bobina sob a sapata',`bp + 2(δpb + bE) = ${fmt(bp+2*(1.5+R.bE),0)} mm · bpe ${fmt(bpe,0)} mm`,'warn');
+
+ /* §7 · losses and efficiency */
+ const Pcu=3*Iphase*Iphase*R75,Pexc=R.IEN*R.IEN*R.RE+2*v.deltaUexc*R.IEN;
+ const mys=7800*lef*PI*(dse-hYoke)*hYoke*1e-9,mts=7800*lef*hs*btThird*Qs*1e-9,fk=(f/50)**1.3;
+ const PmagY=v.kYs*v.pFe*fk*o.By**2*mys,PmagT=v.kTs*v.pFe*fk*o.Bt**2*mts;
+ const PmagP=P2*bpe*lp*(Qs*n)**1.5*(o.Bd*tauS*(KCs-1))**2*1e-12,Pmec=1.8*p*tauP**3*Math.sqrt(ls)*1e-6;
+ const Pad=(Pout<=1000?.005:.004)*m*U_phase*Iphase*cosphi;
+ const Ploss=Pcu+Pexc+PmagY+PmagT+PmagP+Pmec+Pad;
+ const etaManual=gen?1-Ploss/(v.power*1000+Ploss):1-Ploss/(v.power*1000);
+ const etaPhysical=Pout*1000/(Pout*1000+Ploss);
+ sec('desempenho','§7 · Perdas e rendimento');
+ rec('desempenho','Perdas Joule no estator',Pcu,'W','§7.1','Pel,s = 3 I_sN² Rs,75');
+ rec('desempenho','Perdas de excitação',Pexc,'W','§7.2','PE = IEN² RE,75 + 2 ΔU_E IEN');
+ rec('desempenho','Massa do jugo do estator',mys,'kg','§7.3','mys = 7800 lef π(dse − hys) hys ×10⁻⁹');
+ rec('desempenho','Perdas no jugo',PmagY,'W','§7.4','Pmag,ys = kys p1,0 (f/50)^1,3 Byso² mys');
+ rec('desempenho','Massa dos dentes',mts,'kg','§7.5','mts = 7800 lef hs bt⅓ Qs ×10⁻⁹');
+ rec('desempenho','Perdas nos dentes',PmagT,'W','§7.6','Pmag,ts = kts p1,0 (f/50)^1,3 Bt⅓o² mts');
+ rec('desempenho','Perdas superficiais nas sapatas',PmagP,'W','§7.7','Pmag,p = 2p bpe lp (Qs n)^1,5 [Bδo τs(KCs − 1)]² ×10⁻¹²');
+ rec('desempenho','Perdas mecânicas',Pmec,'W','§7.8','Pmec = 1,8 p τp³ √ls ×10⁻⁶');
+ rec('desempenho','Perdas adicionais',Pad,'W','§7.9',`Pad = ${Pout<=1000?'0,005':'0,004'} mₛ U_sN I_sN cos φ (P ${Pout<=1000?'≤':'>'} 1000 kW)`);
+ rec('desempenho','Perdas totais',Ploss,'W','§7.10','ΣP = Pel,s + PE + Pmag,ys + Pmag,ts + Pmag,p + Pmec + Pad');
+ rec('desempenho','Rendimento pelo balanço de potência ativa',etaPhysical*100,'%','§7.11*','η = P/(P + ΣP)',gen?'P = S_N cos φ. A fórmula impressa soma ΣP a S_N (kVA).':'P = P_N no eixo; entrada P + ΣP.');
+ rec('desempenho','Rendimento pela fórmula impressa',etaManual*100,'%','§7.11',gen?'η = 1 − ΣP/(S_N ×10³ + ΣP)':'η = 1 − ΣP/(P_N ×10³)','Mantido para comparação com o manual.');
+ if(!gen)rec('desempenho','Potência de entrada do motor',Pout/etaPhysical,'kW','§7.12','P_inN = P_N/η');
+ /* §8 · thermal */
+ const qths=(Pcu*ls/(ls+lFh)+PmagY+PmagT+Pad)/(PI*ds*ls),alpha0=ls/tauP<=2?8e-5:ls/tauP<=4?6.67e-5:5.7e-5;
+ const alphaHeat=alpha0*(1+.1*vPeripheral),deltaT=qths/alphaHeat;
+ const qthfh=A*Js*tauS/(2*4020*(hs+bs))*1e-2,alphaFh=1.33e-5*(1+.07*vPeripheral),dTfh=qthfh/alphaFh;
+ const dTis=v.kPad*A*Js*tauS*(bs-Nelb*bel)*1e-2/(4*4020*1.6e-4*(hs+bs));
+ const dTcu=((deltaT+dTis)*ls+(dTfh+dTis)*lFh)/(ls+lFh);
+ const qthE=R.bE*R.JEr**2/4020*.1,alphaE=lin(ALPHA_EV_FIG,vPeripheral)*1e-5*(ls/tauP)**-.4,dTE=qthE/alphaE;
+ sec('desempenho','§8 · Aquecimento');
+ rec('desempenho','Fluxo térmico no estator',qths,'W/mm²','§8.1','Φth,s = [Pel,s ls/(ls + lfhs) + Pmag,ys + Pmag,ts + Pad]/(π ds ls)');
+ rec('desempenho','Coeficiente de convecção do estator',alphaHeat,'W/(°C·mm²)','§8.2','αth,s = αth,s0(1 + 0,1 vr)',`αth,s0 = ${fmtAdaptive(alpha0)} (ls/τp = ${fmt(ls/tauP,2)})`);
+ rec('desempenho','Elevação do núcleo sobre o ar',deltaT,'°C','§8.3','Δθs = Φth,s/αth,s');
+ rec('desempenho','Fluxo térmico nas cabeças',qthfh,'W/mm²','§8.4','Φth,fh = As Js τs/[2 γCu,120 (hs + bs)] ×10⁻²','γCu,120 = 4020 cm/(Ω·mm²).');
+ rec('desempenho','Elevação na superfície das cabeças',dTfh,'°C','§8.6','Δθfh = Φth,fh/[1,33×10⁻⁵(1 + 0,07 vr)]');
+ rec('desempenho','Queda na isolação de ranhura',dTis,'°C','§8.7','Δθis = kPad As Js τs(bs − Nel,b bel) ×10⁻²/[4 γCu,120 λis(hs + bs)]','λis = 1,6×10⁻⁴ W/(°C·mm).');
+ rec('desempenho','Elevação média do cobre do estator',dTcu,'°C','§8.8','ΔθCu,s = [(Δθs + Δθis)ls + (Δθfh + Δθis)lfhs]/(ls + lfhs)');
+ rec('desempenho','Temperatura média do cobre do estator',v.coolAir+dTcu,'°C','§8.8*','Tar + ΔθCu,s');
+ rec('desempenho','Fluxo térmico na bobina de campo',qthE,'W/mm²','§8.9','Φth,E = bE JE² ×10⁻¹/γCu,120');
+ rec('desempenho','Coeficiente de convecção do campo',alphaE,'W/(°C·mm²)','§8.10','αth,E = αth,Ev (ls/τp)^−0,4',`αth,Ev = ${fmt(lin(ALPHA_EV_FIG,vPeripheral),1)}×10⁻⁵ (Fig. 8.1, vr ${fmt(vPeripheral,1)} m/s)`);
+ rec('desempenho','Elevação da bobina de campo',dTE,'°C','§8.11','ΔθE = Φth,E/αth,E');
+ /* §9 · reactances */
+ const Fgn=nom.Fd+nom.Fj,Xad=kad*Fam/Fgn,Xaq=kaq*Fam/Fgn*(1+KC)/2,Xd=Xpu+Xad,Xq=Xpu+Xaq;
+ const XsE=kad*Fam/Phi0*(Lp1/2.1+Lp2/2.5);
+ const gam=PI/2*dm.pitch/tauP,Kddm=Math.sin(gam*dm.N)/(dm.N*Math.sin(gam));
+ const cdq=CDQ_TAB[dm.N],rr=dm.pitch/tauP,Cd=cdq[0]*rr+cdq[1],Cq=cdq[2]*rr+cdq[3];
+ const rBase=2.16*rhoDm*Fam/(Phi0*f*dm.N)*1e-5,lbarTerm=lbar/(PI*dm.ddm**2);
+ const Rdmd=rBase/(1-Kddm)*(lbarTerm+tauP*Cd/ringSel.S),Rdmq=rBase/(1+Kddm)*(lbarTerm+tauP*Cq/ringSel.S);
+ const lamCore=v.bdmr>0?.75-v.bdmr/(2*ddmr)+v.hdmr/v.bdmr+dm.pitch/(16.5*delta):0;
+ const Ldmd=(lp/dm.N*lamCore+.19*dm.pitch*Cd/dm.N)*1e-9,Ldmq=(lp/dm.N*lamCore+.19*dm.pitch*Cq/dm.N)*1e-9;
+ const Xdmd=3.9*Fam/(Phi0*(1-Kddm))*Ldmd,Xdmq=3.9*Fam/(Phi0*(1+Kddm))*Ldmq;
+ const Xd1=Xpu+1/(1/Xad+1/XsE),Xd2=Xpu+1/(1/Xad+1/XsE+1/Xdmd),Xq2=Xpu+1/(1/Xaq+1/Xdmq),X2=(Xd2+Xq2)/2;
+ sec('desempenho','§9 · Reatâncias (pu)');
+ rec('desempenho','Reação de armadura longitudinal',Xad,'pu','§9.1','Xad* = kad Fam/(Fδnom + Fδyr,nom)');
+ rec('desempenho','Coeficiente de reação transversal',kaq,'—','§9.2','Fig. 9.1 com αₑ e δ/τp');
+ rec('desempenho','Reação de armadura transversal',Xaq,'pu','§9.2','Xaq* = kaq Fam/(Fδnom + Fδyr,nom) · (1 + KC)/2');
+ rec('desempenho','Reatância síncrona longitudinal',Xd,'pu','§9.3','Xd* = Xσs* + Xad*');
+ rec('desempenho','Reatância síncrona transversal',Xq,'pu','§9.4','Xq* = Xσs* + Xaq*');
+ rec('desempenho','Dispersão do campo referida ao estator',XsE,'pu','§9.5','XσE* = kad Fam/Φδo · (Λp1/2,1 + Λp2/2,5)');
+ rec('desempenho','Fator de distribuição do amortecedor',Kddm,'—','§9.6','Kddm = sen(90° τr Ndm/τp)/[Ndm sen(90° τr/τp)]');
+ rec('desempenho','Coeficientes das cabeças do amortecedor',Cd,'—','§9.7','Tab. 9.1 com τr/τp',`Cq = ${fmt(Cq,3)}`);
+ rec('desempenho','Resistência do amortecedor longitudinal',Rdmd,'pu','§9.8','Rdmd* = 2,16 ρb/Cu Fam/[Φδo f Ndm(1 − Kddm)] · [ldm/(π ddm²) + τp Cd/Sfhr] ×10⁻⁵',`ρb/Cu = ${rhoDm}`);
+ rec('desempenho','Resistência do amortecedor transversal',Rdmq,'pu','§9.10','mesma forma com (1 + Kddm) e Cq');
+ rec('desempenho','Dispersão do amortecedor longitudinal',Xdmd,'pu','§9.13','Xσdmd* = 3,9 Fam Λσdmd/[Φδo(1 − Kddm)]');
+ rec('desempenho','Dispersão do amortecedor transversal',Xdmq,'pu','§9.14','Xσdmq* = 3,9 Fam Λσdmq/[Φδo(1 + Kddm)]');
+ rec('desempenho','Reatância transitória longitudinal',Xd1,'pu','§9.15','X′d* = Xσs* + 1/(1/Xad* + 1/XσE*)');
+ rec('desempenho','Reatância subtransitória longitudinal',Xd2,'pu','§9.16','X″d* = Xσs* + 1/(1/Xad* + 1/XσE* + 1/Xσdmd*)');
+ rec('desempenho','Reatância subtransitória transversal',Xq2,'pu','§9.17','X″q* = Xσs* + 1/(1/Xaq* + 1/Xσdmq*)');
+ rec('desempenho','Reatância de sequência negativa',X2,'pu','§9.18','X2* = (X″d* + X″q*)/2');
+ /* §10 · time constants */
+ const REpuManual=R.RE*Iphase/U_phase,REpu=R.RE*kad*Fam*Ns*Kw/(Math.SQRT2*U_phase*2*p*R.NE*R.NE);
+ const TEo=(Xad+XsE)/(w*REpu),Td1=Xd1/(w*REpu),Td2=Xd2/(w*Rdmd),Tq2=Xq2/(w*Rdmq),Ta=X2/(w*Rpu);
+ sec('desempenho','§10 · Constantes de tempo');
+ rec('desempenho','Resistência do campo pela definição do §6.2.13',REpuManual,'pu','§6.2.13','RE* = RE,75 I_sN/U_sN','Não referida ao estator: com ela TEo e T′d variariam com a tensão escolhida para o excitador (∝ NE²).');
+ rec('desempenho','Resistência do campo referida ao estator',REpu,'pu','§10*','R′E* = RE,75 kad Fam Ns KWs/(√2 U_sN 2p NE²)','Mesma referência de Xad* e XσE*: reproduz TEo = L_E/R_E da bobina real.');
+ rec('desempenho','Constante de tempo do campo em vazio',TEo,'s','§10.1','TEo = (Xad* + XσE*)/(2πf R′E*)');
+ rec('desempenho','Transitória longitudinal',Td1,'s','§10.2','T′d = X′d*/(2πf R′E*)');
+ rec('desempenho','Subtransitória longitudinal',Td2,'s','§10.3','T″d = X″d*/(2πf Rdmd*)','O manual cita 0,05–0,06 s; com as barras do §4.8 e a resistência do §9.8, o valor costuma sair bem menor, sobretudo em latão.');
+ rec('desempenho','Subtransitória transversal',Tq2,'s','§10.4','T″q = X″q*/(2πf Rdmq*)');
+ rec('desempenho','Constante de tempo da armadura',Ta,'s','§10.5','Ts = X2*/(2πf Rs*)','A faixa 0,1–0,2 s citada no manual exigiria Rs* abaixo de 0,01, fora da faixa do §3.49.');
+ /* §13 · angle characteristic */
+ const Eq=FEN/Fag,Aa=Eq/Xd,Bb=.5*(1/Xq-1/Xd),thCr=Bb>1e-9?Math.acos((-Aa+Math.sqrt(Aa*Aa+32*Bb*Bb))/(8*Bb)):PI/2;
+ const Pmax=Aa*Math.sin(thCr)+Bb*Math.sin(2*thCr),Pn=cosphi,Kst=Pmax/Pn;
+ let thN=NaN;{let lo=0,hi=thCr;for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(Aa*Math.sin(mid)+Bb*Math.sin(2*mid)>Pn)hi=mid;else lo=mid}if(Pmax>=Pn)thN=(lo+hi)/2}
+ sec('desempenho','§13 · Característica angular (U* = 1)');
+ rec('desempenho','FEM não saturada com IEN',Eq,'pu','§13.1','E*nom = FEN/FE,ag (reta do entreferro)',`FE,ag = ${fmt(Fag,0)} A por polo`);
+ rec('desempenho','Ângulo crítico',thCr*180/PI,'° el','§13.1','θcr = arccos{[−A + √(A² + 32B²)]/(8B)}, A = E*/Xd*, B = ½(1/Xq* − 1/Xd*)');
+ rec('desempenho','Potência máxima',Pmax,'pu','§13.1','P*max = A sen θcr + B sen 2θcr');
+ rec('desempenho','Ângulo de carga nominal',thN*180/PI,'° el','§13.1','P*(θN) = cos φN');
+ rec('desempenho','Coeficiente de estabilidade estática',Kst,'—','§13.1','Kst = P*max/P*N');
+ /* performance checks */
+ check('therm',Math.abs(etaPhysical-etaN)<=.02,'Rendimento frente ao garantido',`η ${fmt(etaPhysical*100,2)}% · garantido ${fmt(v.etaNom,2)}% · ±2 p.p. (§7.11)`,'warn');
+ check('therm',dTis<=35,'Queda na isolação de ranhura',`${fmt(dTis,1)} °C · máx. 35 °C (§8.7, classe B)`,'warn');
+ check('therm',dTcu<=80,'Elevação do cobre do estator',`${fmt(dTcu,1)} °C · máx. 80 °C (§8.8, classe B)`,'warn');
+ check('therm',dTE<=90,'Elevação da bobina de campo',`${fmt(dTE,1)} °C · máx. 90 °C (§8.11, classe B)`,'warn');
+ checkRange('therm','Reatância síncrona Xd*',Xd,1,1.7,'§9.3');
+ checkRange('therm','Reatância síncrona Xq*',Xq,.6,1,'§9.4');
+ checkRange('therm','Reatância transitória X′d*',Xd1,.16,.35,'§9.15');
+ checkRange('therm','Reatância subtransitória X″d*',Xd2,.1,.19,'§9.16');
+ checkRange('therm','Reatância subtransitória X″q*',Xq2,.11,.23,'§9.17');
+ checkRange('therm','Sequência negativa X2*',X2,.1,.21,'§9.18');
+ checkRange('therm','Constante TEo',TEo,.8,2.5,'§10.1');
+ checkRange('therm','Constante T′d',Td1,.08,1.5,'§10.2');
+ check('therm',f===50,'Base das constantes empíricas',`${fmt(f,0)} Hz · constantes do manual para 50 Hz`,'warn');
+ const extrapolations=[];
+ if(v.power<300||v.power>4000)extrapolations.push('potência fora de 300–4.000');
+ if(f!==50)extrapolations.push('frequência ≠ 50 Hz');
+ if(n<300-1e-9||n>1000+1e-9)extrapolations.push('rotação fora de 300–1.000 rpm');
+ if(tab41Ext)extrapolations.push('2p fora da Tab. 4.1');
+ if(kdsExt&&isAuto('kds'))extrapolations.push('kds interpolado/extrapolado da Tab. 2.1');
+ if(lamExt)extrapolations.push('p fora da Fig. 2.1');
+ if(tauExt)extrapolations.push('τp fora da Tab. 3.1');
+ if(gen&&![.38,.66,6.3].some(x=>Math.abs(x-v.voltage)<1e-7))extrapolations.push('tensão fora das máquinas de referência');
+ if(!gen&&![.38,6.3].some(x=>Math.abs(x-v.voltage)<1e-7))extrapolations.push('tensão fora das máquinas de referência');
+ if(Math.abs(v.voltage-6.3)>.5)extrapolations.push('isolação de ranhura do manual é para 6,3 kV');
+ if(v.alpha<.65||v.alpha>.75||delta/tauP>.05)extrapolations.push('αₑ ou δ/τp fora das Figs. 5.2 e 9.1');
+ if(![Pcu,Pexc,PmagY,PmagT,PmagP,Pmec,Pad,Ploss,Xd,Xq,TEo].every(x=>Number.isFinite(x)&&x>=0))errors.push('Algum resultado ficou indefinido. Revise as entradas.');
+ const all=Object.values(checks).flat();
+ const nFailures=all.filter(c=>c.level==='fail').length,nWarnings=all.filter(c=>c.level==='warn').length;
+ const vr={...v,ke:keV,lambda,kds,packet:lps,q,parallel:as,segSteps:seg?seg.k:v.segSteps,J0,Nelb,Nelh,ael,bel,Sel,disA,disB,insTurn,flange:lp1,kc,Ndamper:dm.N,kdamper:kdamp,shaft:dShaft,UE};
+ return {errors,groups,trace,checks,hints,resolved,meta:{v:vr,p,n,m,S_em,U_phase,Iphase,Pout,C_A,dPre,dePre,dse,ds,tauP,lDelta,nPackets,ls,lef,Qs,q,ySlots,beta,Kp,Kd,Kw,flux,Bgap,Ibranch,A,tauS,seg,z,Ns,Nel,Sel,bs,hs,btThird,Btooth,hYoke,Bback,Js,coolSurface,lFh,lFh1,R75,Rpu,Xpu,delta,deltaFormula,deltaMax,dc,Drotor,bpe,bp,hp2,hp2Pre,hp1,dyr,lyr,hyr,vPeripheral,dm,damperOptions,ringSel,KCs,KCr,KC,Phi0,Fam,kad,kaq,Kk,occ,FEo:o.FE,FEN,Enom,field:R,UE,Pcu,Pexc,PmagY,PmagT,PmagP,Pmec,Pad,Ploss,etaManual,etaPhysical,deltaT,dTcu,dTis,dTfh,dTE,Xad,Xaq,Xd,Xq,XsE,Xd1,Xd2,Xq2,X2,Rdmd,Rdmq,TEo,Td1,Td2,Tq2,Ta,Eq,thCr,Pmax,thN,Kst,fieldKnown:true,extrapolations,nFailures,nWarnings}};
+}
+
+/* ================= UI ================= */
+const OPEN=new Set(['nominal']);
+function fieldHtml(f){
+ const {k,label,unit,type='number',opts,help,auto}=f,v=values[k],sel=type==='select',u=unit&&unit!=='—'&&!sel,isA=auto&&!sel&&(v==='auto'||v===''||v==null);
+ const shown=isA?'':typeof v==='number'&&k==='q'?fmtQ(v):v??'';
+ return `<div class="fld${isA?' auto':''}" data-key="${k}" data-search="${esc((label+' '+k+' '+(help||'')).toLowerCase())}"><label for="in-${k}">${label}<span class="k">${k}</span></label><div class="ctl ${u?'has-u':''}">${sel?`<select id="in-${k}" data-field="${k}">${opts.map(([a,b])=>`<option value="${a}" ${String(v)===String(a)?'selected':''}>${b}</option>`).join('')}</select>`:`<input id="in-${k}" data-field="${k}" inputmode="decimal" autocomplete="off" spellcheck="false" value="${esc(shown)}" placeholder="${auto?'auto':''}"/>`}${u?`<span class="u">${unit}</span>`:''}</div>${help?`<small>${help}</small>`:''}<small class="hint" id="hint-${k}" aria-live="polite"></small></div>`;
+}
+const SELECT_UNITS={Dext:' mm',packet:' mm',sheetWidth:' mm',UE:' V'};
+function showResolved(k,x){if(!Number.isFinite(x))return '';if(k==='q')return fmtQ(x);if(['shaft','DextManual','segSteps','packet','parallel','Nelb','Nelh','Ndamper','UE','sheetWidth','Dext'].includes(k))return fmt(x,0);return fmtAdaptive(x)}
+function syncDependent(){
+ const show=(k,on)=>{const el=document.querySelector(`.fld[data-key="${k}"]`);if(el)el.hidden=!on};
+ show('DextManual',values.Dext==='manual');show('deltaManual',values.gapMode==='manual');show('kgap',values.gapMode!=='manual');
+}
+function updateHints(r){
+ for(const f of FIELD_LIST){const h=$('hint-'+f.k);if(h)h.textContent=r&&r.hints&&r.hints[f.k]||'';
+  const x=r&&r.resolved?r.resolved[f.k]:undefined,el=$('in-'+f.k);if(!el)continue;
+  if(f.type==='select'){const o=el.querySelector('option[value="auto"]');if(o)o.textContent=Number.isFinite(x)?`Automático · ${showResolved(f.k,x)}${SELECT_UNITS[f.k]||''}`:o.textContent.replace(/ · .*$/,'')+''}
+  else if(f.auto)el.placeholder=Number.isFinite(x)?`auto · ${showResolved(f.k,x)}`:'auto';
+  const fld=el.closest('.fld');if(fld&&f.auto&&f.type!=='select')fld.classList.toggle('auto',values[f.k]==='auto');}
+}
+function hydrateUI(){
+ $('inputs-root').innerHTML=GROUPS.map(g=>`<div class="grp" data-g="${g.id}"><button class="grp-t" aria-expanded="${OPEN.has(g.id)}" data-target="g-${g.id}"><span class="ix">${g.index}</span>${g.title}<span class="mods"></span><svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2l4 4-4 4"/></svg></button><div class="grp-b" id="g-${g.id}" ${OPEN.has(g.id)?'':'hidden'}><p class="grp-d">${g.description}</p>${g.fields.map(fieldHtml).join('')}</div></div>`).join('');
+ markModified();syncDependent();if(calculated)updateHints(calculated);
+}
+function markModified(){let total=0;
+ GROUPS.forEach(g=>{let c=0;g.fields.forEach(({k})=>{const mod=String(values[k])!==String(refPreset[k]);document.querySelector(`.fld[data-key="${k}"]`)?.classList.toggle('mod',mod);if(mod)c++});
+  const el=document.querySelector(`.grp[data-g="${g.id}"] .mods`);if(el)el.textContent=c||'';total+=c});
+ for(const k of ['type','power','poles','freq','construction'])if(String(values[k])!==String(refPreset[k]))total++;
+ $('mod-total').textContent=`${total} alterado${total===1?'':'s'}`;
+ const presetValid=total===0;
+ document.querySelectorAll('[data-preset]').forEach(x=>{const on=presetValid&&x.dataset.preset===activePreset;x.classList.toggle('on',on);x.setAttribute('aria-pressed',String(on))});
+ $('case-label').textContent=presetValid&&activePreset==='ref'?'Referência didática · NTU KhPI':presetValid&&activePreset==='compact'?'Estudo construtivo · 4 polos · hipóteses extrapoladas':`Projeto personalizado · ${total} ajuste${total===1?'':'s'}`;
+}
+function applyValues(data,preset){values={...BASE,...data};viz.arch=values.construction==='integral'?'integral':'mounted';activePreset=preset||null;refPreset=preset==='compact'?COMPACT:BASE;hydrateUI();syncQuick();$('quick-error').textContent='';renderAll()}
+
+
+const table=rows=>`<table class="dt"><thead><tr><th>Grandeza · equação</th><th class="r">Valor</th><th>Unid.</th><th>Ref.</th></tr></thead><tbody>${rows.map(x=>x.section?`<tr class="sec"><td colspan="4">${esc(x.section)}</td></tr>`:`<tr><td>${esc(x.label)}<code>${esc(x.formula)}</code>${x.note?`<span class="nt">${esc(x.note)}</span>`:''}</td><td class="r val">${fmtAdaptive(x.value)}</td><td class="u">${esc(x.unit)}</td><td class="ref">${esc(x.ref)}</td></tr>`).join('')}</tbody></table>`;
+function checkHtml(c){
+ const ic=c.level==='pass'?'✓':c.level==='warn'?'!':'×';
+ let g='',val='';
+ if(c.range){const {value,lo,hi}=c.range,sp=hi-lo||1,mn=Math.min(lo-sp*.6,value),mx=Math.max(hi+sp*.6,value),P=x=>((x-mn)/(mx-mn)*100).toFixed(2);
+  val=fmtAdaptive(value);
+  g=`<div class="gauge"><div class="tr"></div><div class="ok" style="left:${P(lo)}%;width:${P(hi)-P(lo)}%"></div><div class="mk" style="left:${P(value)}%"></div><span class="lo" style="left:${P(lo)}%">${fmtAdaptive(lo)}</span><span class="hi" style="left:${P(hi)}%">${fmtAdaptive(hi)}</span></div>`;}
+ return `<div class="chk ${c.level}"><span class="ic">${ic}</span><span class="n" title="${esc(c.name)}">${esc(c.name)}</span><span class="v">${val}</span>${c.range?g:`<span class="d">${esc(c.detail)}</span>`}</div>`;
+}
+const checksHtml=l=>l.length?l.map(checkHtml).join(''):'<div class="empty">Sem verificações.</div>';
+function tabCount(id,list){const f=list.filter(c=>c.level==='fail').length,w=list.filter(c=>c.level==='warn').length,el=$(id);el.className='c '+(f?'bad':w?'warn':'');el.textContent=f||w||'';el.style.display=f||w?'':'none'}
+
+function drawStack(m){const n=m.nPackets,x0=40,W=680,sc=W/m.ls,pw=m.v.packet*sc,dw=m.v.duct*sc;let s='',x=x0;
+ for(let i=0;i<n;i++){s+=`<rect x="${x.toFixed(1)}" y="40" width="${Math.max(.5,pw).toFixed(1)}" height="70" rx="1.5" fill="var(--st)" stroke="var(--st2)" stroke-width=".6"/>`;x+=pw;
+  if(i<n-1){if(dw>3)s+=`<path d="M${(x+dw/2).toFixed(1)} 104V46M${(x+dw/2-2.5).toFixed(1)} 50l2.5-4 2.5 4" stroke="var(--acc)" stroke-width="1" fill="none" opacity=".8"/>`;x+=dw}}
+ s+=`<path d="M${x0} 124v6h${W}v-6" stroke="var(--text3)" fill="none" stroke-width=".8"/><text x="${x0+W/2}" y="148" text-anchor="middle" fill="var(--text)" style="font:600 12px var(--mono)">ls = ${fmt(m.ls,0)} mm</text><text x="${x0+W/2}" y="164" text-anchor="middle" fill="var(--text3)" style="font:10.5px var(--mono)">${n} × ${fmt(m.v.packet,0)} mm pacotes · ${n-1} × ${fmt(m.v.duct,0)} mm dutos · lef ${fmt(m.lef,0)} mm</text><text x="${x0}" y="26" fill="var(--text3)" style="font:500 10px var(--mono);letter-spacing:1px">VISTA AXIAL · FLUXO DE AR RADIAL ↑</text>`;
+ $('stack-svg').innerHTML=s}
+function drawWinding(m){const xs=30,w=620,ye=170,slots=Math.max(3,Math.ceil(3*m.v.q)),dx=w/slots,qn=Math.max(1,Math.round(m.v.q));
+ const ph=[['A','var(--acc)'],['−C','var(--info)'],['B','var(--warn)']];let s='';
+ for(let i=0;i<slots;i++){const k=Math.min(2,Math.floor(i/qn)),x=xs+i*dx;s+=`<rect x="${(x+dx*.22).toFixed(1)}" y="${ye-34}" width="${(dx*.56).toFixed(1)}" height="30" rx="2" fill="${ph[k][1]}" opacity=".85"/><text x="${(x+dx/2).toFixed(1)}" y="${ye+16}" text-anchor="middle" fill="var(--text3)" style="font:9.5px var(--mono)">${i+1}</text>`}
+ for(let k=0;k<3;k++){const xm=xs+(k*qn+qn/2)*dx;if(k*qn<slots)s+=`<text x="${xm.toFixed(1)}" y="${ye-42}" text-anchor="middle" fill="${ph[k][1]}" style="font:600 11px var(--mono)">${ph[k][0]}</text>`}
+ s+=`<line x1="${xs}" x2="${xs+w}" y1="${ye}" y2="${ye}" stroke="var(--line2)"/>`;
+ const x1=xs+dx/2,x2=xs+(Math.min(m.ySlots,slots-1)+.5)*dx;
+ s+=`<path d="M${x1} ${ye-36}C${x1} 40,${x2} 40,${x2} ${ye-36}" stroke="var(--text)" stroke-width="1.6" fill="none"/><text x="${(x1+x2)/2}" y="54" text-anchor="middle" fill="var(--text)" style="font:600 11.5px var(--mono)">y = ${m.ySlots} ranhuras · β = ${fmt(m.beta,3)}</text>`;
+ s+=`<text x="340" y="216" text-anchor="middle" fill="var(--text3)" style="font:11px var(--mono)">Kp ${fmt(m.Kp,4)} · Kd ${fmt(m.Kd,4)} · Kw ${fmt(m.Kw,4)}</text>`;
+ $('winding-svg').innerHTML=s}
+function drawLosses(m){const L=[['Cobre do estator',m.Pcu,'var(--acc)'],['Jugo do estator',m.PmagY,'var(--info)'],['Dentes do estator',m.PmagT,'#a78bfa'],['Superfície polar',m.PmagP,'var(--warn)'],['Mecânicas',m.Pmec,'#94a3b8'],['Adicionais',m.Pad,'#f472b6']];
+ if(m.fieldKnown)L.push(['Excitação',m.Pexc,'var(--bad)']);
+ const T=L.reduce((a,b)=>a+b[1],0),r=70,C=2*PI*r;let off=0,arcs='';
+ L.forEach(([,v,c])=>{const len=v/T*C;arcs+=`<circle cx="100" cy="100" r="${r}" fill="none" stroke="${c}" stroke-width="20" stroke-dasharray="${Math.max(0,len-1.5)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;off+=len});
+ $('loss-chart').innerHTML=`<svg viewBox="0 0 200 200" style="max-width:200px">${arcs}<text class="donut-c" x="100" y="102" text-anchor="middle">${fmt(T/1000,1)}</text><text class="donut-s" x="100" y="120" text-anchor="middle">kW TOTAL</text></svg><table class="dt"><tbody>${L.map(([n,v,c])=>`<tr><td><span class="sw" style="background:${c}"></span>${n}</td><td class="r val">${fmt(v/1000,2)}</td><td class="u">kW</td><td class="r u">${fmt(v/T*100,1)}%</td></tr>`).join('')}</tbody></table>`;
+ $('loss-total').textContent=`η ${fmt(m.etaPhysical*100,2)}%`;
+}
+function renderKpis(m){
+ const st=(x,lo,hi)=>x>=lo&&x<=hi?'ok':'warn';
+ const K=[['Ø interno ds',fmt(m.ds,0),'mm',`dse ${fmt(m.dse,0)} mm · ${m.Qs} ranhuras`,''],
+ ['Comprimento ls',fmt(m.ls,0),'mm',`${m.nPackets} pacotes · qₛ ${fmtQ(m.q)}`,''],
+ ['Entreferro δ',fmt(m.delta,1),'mm',`δmax ${fmt(m.deltaMax,2)} mm`,''],
+ ['Indução Bδ',fmt(m.Bgap,3),'T',`Δ ${fmt((m.Bgap/m.v.B0-1)*100,1)}% vs B′δ`,Math.abs(m.Bgap/m.v.B0-1)<=.1?'ok':'bad'],
+ ['Carga linear As',fmt(m.A,0),'A/cm',`Δ ${fmt((m.A/m.v.A0-1)*100,1)}% vs A′s`,Math.abs(m.A/m.v.A0-1)<=.1?'ok':'bad'],
+ ['Densidade Js',fmt(m.Js,2),'A/mm²','faixa 4,5–6,0',st(m.Js,4.5,6)],
+ ['Rendimento η',fmt(m.etaPhysical*100,2),'%',`garantido ${fmt(m.v.etaNom,1)}%`,Math.abs(m.etaPhysical*100-m.v.etaNom)<=2?'ok':'warn'],
+ ['Curto-circuito Kk',fmt(m.Kk,2),'—',`K′k ${fmt(m.v.Kk,2)} · IEN ${fmt(m.field.IEN,0)} A`,Math.abs(m.Kk/m.v.Kk-1)<=.1?'ok':'warn']];
+ $('kpis').innerHTML=K.map(([l,v,u,s,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}<small>${u}</small></div><div class="s ${c}">${s}</div></div>`).join('');
+}
+function renderHealth(all){
+ const p=all.filter(c=>c.level==='pass').length,w=all.filter(c=>c.level==='warn').length,f=all.filter(c=>c.level==='fail').length,t=all.length||1;
+ $('hbar').innerHTML=`<span style="width:${p/t*100}%;background:var(--ok)"></span><span style="width:${w/t*100}%;background:var(--warn)"></span><span style="width:${f/t*100}%;background:var(--bad)"></span>`;
+ $('hstat').innerHTML=`<span><i style="background:var(--ok)"></i><b>${p}</b>na faixa</span><span><i style="background:var(--warn)"></i><b>${w}</b>alertas</span><span><i style="background:var(--bad)"></i><b>${f}</b>incompatibilidades</span>`;
+ $('h-count').textContent=`${all.length} critérios`;
+ const order={fail:0,warn:1,pass:2};
+ const sorted=[...all].sort((a,b)=>order[a.level]-order[b.level]||(!!b.range-!!a.range));
+ const prio=sorted.filter(c=>c.level!=='pass');
+ const shown=showAllChecks?sorted:sorted.slice(0,6);
+ $('health').innerHTML=checksHtml(shown);
+ const hidden=all.length-shown.length;const btn=$('health-more');btn.hidden=!showAllChecks&&hidden===0;btn.textContent=showAllChecks?'Recolher verificações ↑':`Ver mais ${hidden} verificações ↓`;btn.setAttribute('aria-expanded',String(showAllChecks));
+}
+function renderTrace(){if(!calculated||calculated.errors.length)return;const q=$('trace-q').value.trim().toLowerCase();
+ const rows=calculated.trace.filter(x=>!q||(x.label+x.formula+x.ref+x.group).toLowerCase().includes(q));
+ $('trace-n').textContent=`${rows.length} de ${calculated.trace.length} grandezas`;
+ $('trace-table').innerHTML=rows.length?table(rows):'<div class="empty">Nenhuma grandeza encontrada.</div>'}
+function showFatal(errors){
+ $('health-more').hidden=true;['h-count','trace-n','loss-total','stamp','c-estator','c-rotor','c-therm'].forEach(id=>$(id).textContent='');
+ $('kpis').innerHTML=`<div class="err" style="grid-column:1/-1;border:0;border-radius:0"><b>Entradas inconsistentes — cálculo interrompido</b><ul style="margin:0;padding-left:18px">${errors.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`;
+ const s=$('status');s.className='pill bad';s.textContent='REVER ENTRADAS';
+ $('banner').className='banner';$('banner').innerHTML='Pré-dimensionamento interrompido. A ilustração construtiva continua disponível com proporções ilustrativas.';
+ ['t-geometria','t-estator','t-rotor','t-desempenho','k-estator','k-rotor','k-therm','bars-table','trace-table','loss-chart','health','hbar','hstat','stack-svg','winding-svg'].forEach(id=>$(id).innerHTML='');
+}
+const ICON_W='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5L15 14H1z"/><path d="M8 6v4M8 11.5v.5"/></svg>',ICON_OK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M5 8l2 2 4-4"/></svg>';
+function renderAll(){
+ syncQuick();
+ const r=compute(values);calculated=r;renderVisual();updateHints(r);if(r.errors.length){showFatal(r.errors);return}
+ const m=r.meta;renderKpis(m);
+ const b=$('banner');b.className='banner'+(m.extrapolations.length?'':' ok');
+ b.innerHTML=m.extrapolations.length?`${ICON_W}<div><b>Fora do domínio do manual.</b> ${m.extrapolations.map(esc).join(' · ')}. Coeficientes exigem validação para aplicação industrial.</div>`:`${ICON_OK}<div><b>Dentro do domínio de referência.</b> Dados nominais nas faixas típicas; isso não valida todas as escolhas construtivas.</div>`;
+ const s=$('status');s.className='pill '+(m.nFailures?'bad':m.extrapolations.length||m.nWarnings?'warn':'ok');
+ s.textContent=m.nFailures?`${m.nFailures} INCOMPATIBILIDADE${m.nFailures===1?'':'S'}`:m.nWarnings?`${m.nWarnings} ALERTA${m.nWarnings===1?'':'S'}`:m.extrapolations.length?'EXTRAPOLAÇÃO':'CRITÉRIOS ATENDIDOS';
+ for(const k of ['geometria','estator','rotor','desempenho'])$('t-'+k).innerHTML=table(r.groups[k]);
+ $('k-estator').innerHTML=checksHtml(r.checks.estator);$('k-rotor').innerHTML=checksHtml(r.checks.rotor);$('k-therm').innerHTML=checksHtml(r.checks.therm);
+ tabCount('c-estator',r.checks.estator);tabCount('c-rotor',r.checks.rotor);tabCount('c-therm',r.checks.therm);
+ renderHealth(Object.values(r.checks).flat());
+ $('bars-table').innerHTML=m.damperOptions.map(o=>`<tr class="${m.dm.N===o.N?'sel':''}"><td class="val">${o.N}${m.dm.N===o.N?' <span class="u">· selecionado</span>':''}</td><td class="r val">${fmt(o.Sdm,1)} <span class="u">mm²</span></td><td class="r val">${fmt(o.diameter,1)} <span class="u">mm</span></td><td class="r val">${fmt(o.pitch,1)} <span class="u">mm</span></td><td><span class="tag ${o.good?'ok':'no'}">${o.good?'ATENDE':'NÃO ATENDE'}</span></td></tr>`).join('');
+ $('notice-losses').innerHTML=`<b>Base da estimativa.</b> Excitação pela bobina dimensionada no §6 (U_E ${fmt(m.UE,0)} V, IEN ${fmt(m.field.IEN,0)} A); perdas no ferro com as induções em vazio do §5.2. O rendimento principal usa P/(P + ΣP); a fórmula impressa do §7.11 aparece na tabela para comparação.`;
+ drawStack(m);drawWinding(m);drawLosses(m);renderTrace();
+ $('stamp').textContent='recalculado '+new Date().toLocaleTimeString('pt-BR');
+}
+function exportCsv(){if(!calculated||calculated.errors.length)return;const L=[['Bloco','Parâmetro','Resultado','Unidade','Seção','Equação/observação']];for(const x of calculated.trace)L.push([x.group,x.label,Number.isFinite(x.value)?x.value:'não determinado',x.unit,x.ref,x.formula+(x.note?' | '+x.note:'')]);
+ download('memoria-maquina-sincrona.csv','\ufeff'+L.map(l=>l.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n'),'text/csv;charset=utf-8')}
+
+// Construction study: intentionally separate from the manual's dimensioning.
+let viz={arch:'integral',view:'radial',angle:0,playing:false,layers:{stator:true,coils:true,dampers:true,axes:true}},frame=0,lastFrame=0;
+const PARTS={
+ stator:['Estator e enrolamento de armadura','O pacote estatórico abriga as ranhuras do enrolamento trifásico. A disposição real das bobinas precisa de um diagrama de ligação próprio.'],
+ core:['Núcleo magnético do rotor','No laminado integral, corpos polares e sapatas pertencem ao mesmo pacote de chapas. Na montagem em coroa, cada polo é um conjunto separado.'],
+ coil:['Bobina de campo · corrente contínua','Envolve o pescoço de cada polo. As conexões alternam as polaridades N e S. O caminho de alimentação da excitação não está representado neste corte.'],
+ damper:['Barras amortecedoras','Os círculos são seções de barras axiais nas sapatas. As ligações de curto-circuito ficam nas extremidades e não aparecem no corte radial.'],
+ shaft:['Eixo','Transmite torque e sustenta o conjunto. “Núcleo integralmente laminado” não significa que eixo, chaveta e placas de aperto sejam laminados.'],
+ gap:['Entreferro','Separação entre sapata e estator. A folga é menor no centro do polo e maior perto das bordas. Está ampliada no desenho para permitir a leitura.']
+};
+const point=(r,a,cx=380,cy=292)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
+const pstr=p=>p.map(n=>n.toFixed(2)).join(' ');
+const linePath=pts=>'M'+pts.map(pstr).join('L');
+function ring(cx,cy,ro,ri){return `<path fill-rule="evenodd" d="M${cx-ro} ${cy}a${ro} ${ro} 0 1 0 ${2*ro} 0a${ro} ${ro} 0 1 0 ${-2*ro} 0M${cx-ri} ${cy}a${ri} ${ri} 0 1 0 ${2*ri} 0a${ri} ${ri} 0 1 0 ${-2*ri} 0Z"/>`}
+function annular(cx,cy,ri,ro,a,b){return `M${pstr(point(ro,a,cx,cy))}A${ro} ${ro} 0 ${b-a>PI?1:0} 1 ${pstr(point(ro,b,cx,cy))}L${pstr(point(ri,b,cx,cy))}A${ri} ${ri} 0 ${b-a>PI?1:0} 0 ${pstr(point(ri,a,cx,cy))}Z`}
+function sectionGeometry(P,alpha,R=193){
+ const h=PI/P*alpha,shoeHalf=(R-3)*Math.sin(h),b=shoeHalf*1.13;
+ const root=Math.max(R*(P<=4?.43:P<=6?.59:P<=10?.71:.79),b*.63),rootY=Math.sqrt(root*root-b*b/4);
+ const shoeY=(R-3)*Math.cos(h)-Math.max(8,R*.065),neckY=Math.max(rootY+6,shoeY);
+ const local=(x,y,a)=>[y*Math.cos(a)-x*Math.sin(a),y*Math.sin(a)+x*Math.cos(a)];
+ function pole(i){const a=-PI/2+i*2*PI/P;let pts=[local(-b/2,rootY,a),local(-b/2,neckY,a),local(-shoeHalf,neckY,a)];
+  for(let j=0;j<=20;j++){const t=-h+2*h*j/20,r=R-3*(t/h)**2;pts.push(point(r,a+t,0,0))}
+  pts.push(local(shoeHalf,neckY,a),local(b/2,neckY,a),local(b/2,rootY,a));return pts;
+ }
+ const poles=Array.from({length:P},(_,i)=>pole(i));
+ function outline(map=p=>p){let all=[];poles.forEach((pts,i)=>{all.push(...pts);const a=-PI/2+i*2*PI/P+Math.asin(b/(2*root)),end=-PI/2+(i+1)*2*PI/P-Math.asin(b/(2*root));for(let j=1;j<=10;j++)all.push(point(root,a+(end-a)*j/10,0,0))});return linePath(all.map(map))+'Z'}
+ return {P,h,shoeHalf,b,root,rootY,neckY,local,poles,outline};
+}
+function svgDefs(){return `<defs><pattern id="iron-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><rect width="6" height="6" fill="var(--iron)"/><path d="M0 0V6" stroke="var(--iron2)" stroke-width=".6" opacity=".4"/></pattern><pattern id="stator-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-40)"><rect width="7" height="7" fill="var(--st)"/><path d="M0 0V7" stroke="var(--st2)" stroke-width=".6" opacity=".3"/></pattern><pattern id="copper-turns" width="5" height="7" patternUnits="userSpaceOnUse"><rect width="5" height="7" fill="var(--copper)"/><path d="M0 6.5H5" stroke="var(--copper2)" stroke-width="1"/></pattern><marker id="dim-arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M8 0L0 4L8 8" fill="none" stroke="var(--text3)"/></marker></defs>`}
+function partGroup(name,body){return `<g class="svg-part" data-part="${name}" role="button" tabindex="0" aria-label="${PARTS[name][0]}"><title>${PARTS[name][0]}</title>${body}</g>`}
+function inspectPart(name){const p=PARTS[name];if(!p)return;$('part-inspector').innerHTML=`<span class="eyebrow">FUNÇÃO DA PEÇA</span><b>${p[0]}</b><p>${p[1]}</p>`}
+function vizNum(k,fallback){const r=calculated&&!calculated.errors.length&&calculated.meta&&calculated.meta.v?calculated.meta.v[k]:parseNum(values[k]);return Number.isFinite(r)&&r>0?r:fallback}
+function safePoles(){const P=Number(values.poles);return Number.isInteger(P)&&P>=2&&P<=60&&P%2===0?P:4}
+function renderVisual(){
+ const P=safePoles(),alpha=Math.min(.9,Math.max(.4,Number(values.alpha)||.7)),g=sectionGeometry(P,alpha);
+ const integral=viz.arch==='integral';
+ document.querySelectorAll('[data-arch]').forEach(b=>{const on=b.dataset.arch===viz.arch;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});
+ document.querySelectorAll('[data-view]').forEach(b=>{const on=b.dataset.view===viz.view;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1});
+ document.querySelectorAll('[data-layer]').forEach(e=>e.disabled=viz.view!=='radial');
+ $('spin-on').disabled=viz.view!=='radial';$('rotor-angle').disabled=viz.view!=='radial';
+ $('construction-text').innerHTML=integral?'<b>Um núcleo contínuo, sem aranha.</b> Chapas estampadas formam polos. Eixo e placas de aperto são peças distintas. <a href="#ref-nidec">[1]</a>':'<b>Polos separados, suporte compartilhado.</b> Os pacotes polares são fixados à coroa; os braços da aranha ligam a coroa ao cubo. <a href="#ref-nidec">[1]</a>';
+ $('pair-summary').textContent=`P = ${P} polos · p = ${P/2} pares · ligação Y / 3 fases`;
+ $('power-label').textContent=values.type==='motor'?'Potência mecânica no eixo':'Potência aparente nominal';
+ document.querySelectorAll('[data-pole]').forEach(b=>b.classList.toggle('on',Number(b.dataset.pole)===P));
+ const f=Number(values.freq)||50;$('speed-experiment').innerHTML=[4,6,8,12].map(p=>`<button data-pole="${p}" class="${P===p?'on':''}" aria-label="Explorar ${p} polos"><b>${fmt(120*f/p,0)}</b>${p} polos / rpm</button>`).join('');
+ $('dq-equation').textContent=`90° el = ${fmt(180/P,P>20?2:1)}° mec`;
+ let s=svgDefs()+`<title id="machine-title">${P} polos · ${integral?'núcleo laminado integral':'polos montados em coroa e aranha'}</title><desc id="machine-desc">Visualização construtiva em proporções ilustrativas. A construção e o número de polos são escolhas independentes. O entreferro foi ampliado. Use a legenda para inspecionar as peças.</desc>`;
+ if(viz.view==='radial')s+=drawRadial(g);else if(viz.view==='axial')s+=drawAxial(g);else s+=drawPoleDetail(g);
+ $('machine-svg').innerHTML=s;
+ $('view-label').textContent=viz.view==='radial'?'CORTE A–A / TRANSVERSAL':viz.view==='axial'?'VISTA DO NÚCLEO / SEM BOBINAS':'CORTE LOCAL / UM POLO';
+ $('drawing-caption').textContent=viz.view==='radial'?`${P} polos alternados N/S · entreferro ampliado · hachura representa material em corte`:(viz.view==='axial'?'Chapas em planos perpendiculares ao eixo · espessuras e separações ampliadas para leitura':'Bobina de campo e barras axiais são circuitos distintos · dimensões ilustrativas');
+ updateRotorAngle();
+ $('rotor-method-note').innerHTML=`<b>Geometria do modelo de referência.</b> As expressões abaixo dimensionam polo e jugo conforme o manual. ${integral?'O diâmetro de raiz é uma cota auxiliar: o núcleo integral não possui uma roda polar independente.':'O diâmetro de raiz não dimensiona sozinho braços, coroa ou fixações da aranha.'} As proporções do visualizador não são extraídas destas dimensões.`;
+}
+function drawRadial(g){
+ const {P,h,b,root,rootY,neckY,local}=g,cx=380,cy=292,R=193,stIn=201,out=240;
+ let s=`<circle cx="${cx}" cy="${cy}" r="260" fill="var(--bg2)" opacity=".88"/>`;
+ s+=`<path class="sv-center" d="M100 ${cy}H660M${cx} 14V568"/>`;
+ if(viz.layers.stator){
+  let st=`<g fill="url(#stator-hatch)" stroke="var(--st2)" stroke-width="1">${ring(cx,cy,out,stIn)}</g>`;
+  const q=Math.max(1,Math.min(20,vizNum('q',3))),nslots=Math.round(3*P*q),slots=Math.min(240,nslots);
+  for(let i=0;i<slots;i++){const a=-PI/2+i*2*PI/slots,w=2*PI/slots*.35;st+=`<path d="${annular(cx,cy,stIn-1,226,a-w/2,a+w/2)}" fill="var(--bg2)" stroke="var(--st2)" stroke-width=".35"/><path d="${annular(cx,cy,206,221,a-w*.35,a+w*.35)}" fill="var(--copper)" opacity=".85"/>`}
+  s+=partGroup('stator',st);
+  s+=`<path class="sv-line" d="M185 126L112 72H62"/><text class="sv-label" x="61" y="60">ESTATOR</text><text class="sv-tiny" x="61" y="88">${slots===nslots?nslots+' ranhuras':nslots+' ranhuras · amostradas no desenho'}</text>`;
+ }
+ s+=partGroup('gap',`<circle cx="${cx}" cy="${cy}" r="197" fill="none" stroke="var(--acc)" stroke-width="1" stroke-dasharray="2 6" opacity=".5"/><path class="sv-line" d="M565 228L642 157H695"/><text class="sv-label" x="619" y="145">ENTREFERRO</text><text class="sv-tiny" x="642" y="174">folga ampliada</text>`);
+ s+=`<g id="rotor-group" transform="rotate(${viz.angle} ${cx} ${cy})">`;
+ const map=p=>[p[0]+cx,p[1]+cy];
+ if(viz.arch==='integral'){
+  s+=partGroup('core',`<path d="${g.outline(map)}" fill="url(#iron-hatch)" stroke="var(--iron2)" stroke-width="1.2"/>`);
+ }else{
+  let support=`<g fill="var(--st)" stroke="var(--st2)" stroke-width=".7">${ring(cx,cy,root+5,root-16)}`;
+  const arms=Math.min(P,6),hub=Math.min(root*.48,42);
+  for(let i=0;i<arms;i++){const a=i*360/arms;support+=`<path d="M${cx-7} ${cy-hub}L${cx-13} ${cy-root+8}L${cx+13} ${cy-root+8}L${cx+7} ${cy-hub}Z" transform="rotate(${a} ${cx} ${cy})"/>`}
+  support+=`<circle cx="${cx}" cy="${cy}" r="${hub}"/></g>`;
+  g.poles.forEach(pts=>{support+=`<path d="${linePath(pts.map(map))}Z" fill="url(#iron-hatch)" stroke="var(--iron2)" stroke-width="1"/>`});
+  for(let i=0;i<P;i++){const a=-PI/2+i*2*PI/P,[x,y]=point(root+5,a);support+=`<path d="M${pstr(point(root+5,a-.045))}L${pstr(point(root+5,a+.045))}" stroke="var(--bg)" stroke-width="2"/><circle cx="${x}" cy="${y}" r="1.6" fill="var(--shaft)"/>`}
+  s+=partGroup('core',support);
+ }
+ if(viz.layers.coils){let coils='';for(let i=0;i<P;i++){const a=i*360/P,hh=Math.max(8,neckY-rootY-7),cw=Math.max(4,Math.min(21,(g.shoeHalf-b/2)*.8));
+  for(const sign of [-1,1]){const x=sign<0?cx-b/2-cw-2:cx+b/2+2;coils+=`<rect x="${x}" y="${cy-neckY+3}" width="${cw}" height="${hh}" rx="2" fill="url(#copper-turns)" stroke="var(--copper2)" stroke-width="1" transform="rotate(${a} ${cx} ${cy})"/>`}}
+  s+=partGroup('coil',coils);
+ }
+ if(viz.layers.dampers){let bars='';const nb=Math.max(3,Math.min(11,vizNum('Ndamper',8))),rr=Math.min(2.8,Math.max(1.2,45/P));for(let i=0;i<P;i++){const a=-PI/2+i*2*PI/P;for(let j=0;j<nb;j++){const t=(j/(nb-1)-.5)*h*1.65,[x,y]=point(R-8-3*(t/h)**2,a+t);bars+=`<circle cx="${x}" cy="${y}" r="${rr}" fill="var(--brass)" stroke="var(--copper2)" stroke-width=".6"/>`}}s+=partGroup('damper',bars)}
+ for(let i=0;i<P;i++){if(P>24)break;const [x,y]=point(R-21,-PI/2+i*2*PI/P);s+=`<text x="${x}" y="${y+3}" text-anchor="middle" fill="var(--bg)" style="font:700 ${P<=12?10:7}px var(--mono)">${i%2===0?'N':'S'}</text>`}
+ s+=partGroup('shaft',`<circle cx="${cx}" cy="${cy}" r="29" fill="var(--shaft)" stroke="var(--bg)" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="22" fill="none" stroke="var(--text3)" stroke-width=".7"/><rect x="${cx-4}" y="${cy-29}" width="8" height="7" rx=".7" fill="var(--iron2)"/><path d="M${cx-7} ${cy}H${cx+7}M${cx} ${cy-7}V${cy+7}" stroke="var(--bg)" stroke-width="1"/>`);
+ if(viz.layers.axes){const d=-PI/2,q=d+PI/P;for(const [a,l,c] of [[d,'d','var(--acc)'],[q,'q','var(--info)']]){const [x,y]=point(259,a),[tx,ty]=point(276,a);s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${c}" stroke-width="1.2" stroke-dasharray="7 5"/><text x="${tx}" y="${ty+4}" text-anchor="middle" fill="${c}" style="font:600 13px var(--mono)">${l}</text>`}}
+ s+='</g>';
+ s+=`<text class="sv-label" x="58" y="525">${P} POLOS / ${P/2} PARES</text><text class="sv-tiny" x="58" y="544">${viz.arch==='integral'?'NÚCLEO INTEGRALMENTE LAMINADO':'POLOS LAMINADOS + COROA + ARANHA'}</text><text class="sv-tiny" x="700" y="544" text-anchor="end">q a ${fmt(180/P,1)}° mec de d</text>`;
+ return s;
+}
+function drawAxial(g){
+ const project=(p,d=0)=>[265+p[0]*.76+d,327+p[1]*.88-d*.33],P=g.P,depth=159;
+ let s=`<text class="sv-label" x="55" y="60">LÂMINAS TRANSVERSAIS AO EIXO</text><text class="sv-tiny" x="55" y="79">Vista esquemática · bobinas removidas para revelar o núcleo</text>`;
+ s+=`<path d="M148 365L575 224" stroke="var(--info)" stroke-dasharray="8 5" stroke-width="1"/><text x="574" y="212" fill="var(--info)" style="font:10px var(--mono)">EIXO AXIAL →</text>`;
+ if(viz.arch==='mounted'){
+  for(const d of [depth,0]){const [cx,cy]=project([0,0],d);s+=`<g transform="translate(${cx} ${cy}) scale(.76 .88)" fill="var(--st)" stroke="var(--st2)" stroke-width="1">${ring(0,0,g.root+6,g.root-16)}`;for(let i=0;i<Math.min(P,6);i++)s+=`<rect x="-9" y="${-g.root+8}" width="18" height="${g.root-27}" transform="rotate(${i*360/Math.min(P,6)})"/>`;s+=`<circle r="34"/></g>`}
+ }
+ for(let j=28;j>=0;j--){const d=j/28*depth;const stroke=j===0?'var(--iron2)':'var(--iron2)';if(viz.arch==='integral')s+=`<path d="${g.outline(p=>project(p,d))}" fill="var(--iron)" stroke="${stroke}" stroke-width=".8"/>`;else g.poles.forEach(pts=>s+=`<path d="${linePath(pts.map(p=>project(p,d)))}Z" fill="var(--iron)" stroke="${stroke}" stroke-width=".8"/>`)}
+ const [sx,sy]=project([0,0]);s+=`<path d="M${sx} ${sy-25.5}L${sx-65} ${sy-4}L${sx-65} ${sy+47}L${sx} ${sy+25.5}Z" fill="var(--shaft)" stroke="var(--st2)"/><ellipse cx="${sx-65}" cy="${sy+21.5}" rx="22" ry="25.5" fill="var(--shaft)" stroke="var(--st2)"/>`;
+ const [px,py]=project([g.root*.7,-g.root*.7],80);s+=`<path class="sv-line" d="M${px} ${py}L550 115H694"/><text class="sv-label" x="550" y="103">${viz.arch==='integral'?'PACOTE INTEGRAL':'PACOTES POLARES'}</text><text class="sv-tiny" x="550" y="133">${viz.arch==='integral'?'mesmo contorno em cada chapa':'polos individuais laminados'}</text>`;
+ // A separated lamination makes the plane of each sheet explicit.
+ const mini=p=>[598+p[0]*.33,421+p[1]*.35];
+ for(let d=12;d>=0;d-=6){const map=p=>{const q=mini(p);return [q[0]+d,q[1]-d*.33]};if(viz.arch==='integral')s+=`<path d="${g.outline(map)}" fill="var(--iron)" stroke="var(--iron2)" stroke-width="1"/>`;else g.poles.forEach(pts=>s+=`<path d="${linePath(pts.map(map))}Z" fill="var(--iron)" stroke="var(--iron2)" stroke-width="1"/>`)}
+ const [mx,my]=mini([0,0]);if(viz.arch==='integral')s+=`<ellipse cx="${mx}" cy="${my}" rx="10" ry="10.6" fill="var(--bg2)" stroke="var(--iron2)"/>`;
+ s+=`<text class="sv-label" x="528" y="517">${viz.arch==='integral'?'LÂMINAS SEPARADAS':'LÂMINAS DOS POLOS'}</text><text class="sv-tiny" x="528" y="534">separação ampliada</text><text class="sv-label" x="56" y="530">${P} POLOS · ${viz.arch==='integral'?'SEM ARANHA':'SUPORTE EM COROA'}</text>`;
+ // Keep every user-facing label in Portuguese.
+ return s;
+}
+function drawPoleDetail(g){
+ let s=`<text class="sv-label" x="50" y="43">POLO EM CORTE / REGIÃO ATIVA</text><text class="sv-tiny" x="50" y="61">Detalhe ampliado · não representa a escala do conjunto</text>`;
+ s+=partGroup('stator',`<path d="M160 88Q380 50 600 88L600 123Q380 81 160 123Z" fill="url(#stator-hatch)" stroke="var(--st2)"/>`);
+ const pole=viz.arch==='integral'?'M180 154Q380 112 580 154L580 197H458V455Q493 465 530 455V481Q380 518 230 481V455Q267 465 302 455V197H180Z':'M180 154Q380 112 580 154L580 197H458V432H302V197H180Z';
+ s+=partGroup('core',`<path d="${pole}" fill="url(#iron-hatch)" stroke="var(--iron2)" stroke-width="1.5"/>`);
+ if(viz.arch==='mounted')s+=`<path d="M302 431H458L438 456H322Z" fill="var(--iron)" stroke="var(--iron2)"/><path d="M230 458H530V488H230Z" fill="var(--st)" stroke="var(--st2)"/><path d="M302 434H458" stroke="var(--bg)" stroke-width="2"/>`;
+ s+=partGroup('coil','<rect x="250" y="217" width="45" height="183" rx="5" fill="url(#copper-turns)" stroke="var(--copper2)" stroke-width="2"/><rect x="465" y="217" width="45" height="183" rx="5" fill="url(#copper-turns)" stroke="var(--copper2)" stroke-width="2"/><path d="M298 213V405M462 213V405" stroke="var(--brass)" stroke-width="2" opacity=".8"/>');
+ const N=Math.max(3,Math.min(11,vizNum('Ndamper',8)));let bars='';for(let j=0;j<N;j++){const x=212+j*336/(N-1),y=160-15*(1-((x-380)/180)**2);bars+=`<circle cx="${x}" cy="${y}" r="7" fill="var(--brass)" stroke="var(--copper2)"/>`}s+=partGroup('damper',bars);
+ s+=`<path class="sv-center" d="M380 75V518"/><text x="390" y="225" fill="var(--acc)" style="font:12px var(--mono)">d</text><text x="380" y="185" fill="var(--bg)" text-anchor="middle" style="font:700 14px var(--mono)">N</text>`;
+ s+=`<path class="sv-line" d="M575 163L650 145H706"/><text class="sv-label" x="621" y="134">BARRAS AXIAIS</text><path class="sv-line" d="M520 197L621 215H706"/><text class="sv-label" x="622" y="233">SAPATA</text><path class="sv-line" d="M380 310H600V288H706"/><text class="sv-label" x="621" y="277">CORPO POLAR</text><path class="sv-line" d="M270 310H140V280H50"/><text class="sv-label" x="50" y="268">BOBINA CC</text><text class="sv-tiny" x="50" y="298">isolação junto ao núcleo</text>`;
+ s+=partGroup('gap',`<path d="M590 117V150" stroke="var(--acc)" stroke-width="1" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/><path class="sv-line" d="M596 132L620 90H706"/><text class="sv-tiny" x="620" y="78">ENTREFERRO</text>`);
+ s+=`<text class="sv-label" x="50" y="540">${viz.arch==='integral'?'CONTINUIDADE DA CULATRA E DOS POLOS':'JUNTA DE FIXAÇÃO À COROA (ESQUEMÁTICA)'}</text><text class="sv-tiny" x="50" y="558">${viz.arch==='integral'?'Sem junta de montagem entre o corpo polar e o núcleo integral.':'A fixação real pode usar parafusos, tirantes ou cauda de andorinha.'}</text>`;
+ return s;
+}
+function updateRotorAngle(){
+ const P=safePoles(),angle=viz.angle%360;$('rotor-group')?.setAttribute('transform',`rotate(${angle} 380 292)`);
+ $('rotor-angle').value=angle.toFixed(0);$('angle-readout').textContent=`${fmt(angle,0)}° mec / ${fmt((angle*P/2)%360,0)}° el`;
+ $('spin-note').textContent=viz.playing?'Animação: 3 rpm demonstrativos':'Ângulo elétrico = p × ângulo mecânico';
+}
+function setPlaying(on){viz.playing=on&&viz.view==='radial';$('spin-on').classList.toggle('on',viz.playing);$('spin-off').classList.toggle('on',!viz.playing);$('spin-on').setAttribute('aria-pressed',viz.playing);$('spin-off').setAttribute('aria-pressed',!viz.playing);cancelAnimationFrame(frame);lastFrame=0;if(viz.playing)frame=requestAnimationFrame(animateRotor);updateRotorAngle()}
+function animateRotor(t){if(!viz.playing)return;if(lastFrame)viz.angle=(viz.angle+Math.min(t-lastFrame,100)*.018)%360;lastFrame=t;updateRotorAngle();frame=requestAnimationFrame(animateRotor)}
+function setView(view){setPlaying(false);viz.view=view;renderVisual()}
+function selectPoles(P){values.poles=Number(P);syncQuick();$('quick-poles').removeAttribute('aria-invalid');$('quick-error').textContent='';markModified();renderAll()}
+function toast(message){$('toast').textContent=message;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2500)}
+function exportSVG(){
+ const svg=$('machine-svg').cloneNode(true);svg.setAttribute('xmlns','http://www.w3.org/2000/svg');svg.setAttribute('width','1520');svg.setAttribute('height','1180');
+ const cs=getComputedStyle(document.documentElement);const vars=['bg','bg2','text','text2','text3','acc','info','st','st2','iron','iron2','copper','copper2','brass','shaft','mono'];
+ let rules='svg{'+vars.map(k=>`--${k}:${cs.getPropertyValue('--'+k)};`).join('')+'background:var(--bg2)}';rules+='.sv-label{fill:var(--text3);font:10px monospace}.sv-tiny{fill:var(--text3);font:8px monospace}.sv-line{stroke:var(--text3);stroke-width:1;fill:none}.sv-center{stroke:var(--text3);stroke-width:.7;stroke-dasharray:7 4 1 4;fill:none}';
+ const style=document.createElementNS('http://www.w3.org/2000/svg','style');style.textContent=rules;svg.prepend(style);download(`rotor-${safePoles()}-polos-${viz.arch}-${viz.view}.svg`,new XMLSerializer().serializeToString(svg),'image/svg+xml');toast('Vista vetorial exportada.');
+}
+function setupVisual(){
+ $('pole-shortcuts').innerHTML=[2,4,6,8,10,12,16,20].map(P=>`<button data-pole="${P}" aria-label="Explorar ${P} polos">${P}</button>`).join('');
+ document.addEventListener('click',e=>{const p=e.target.closest('[data-pole]');if(p)selectPoles(p.dataset.pole)});
+ document.querySelectorAll('[data-arch]').forEach(b=>b.onclick=()=>{viz.arch=b.dataset.arch;values.construction=viz.arch;markModified();renderVisual()});
+ const tabs=[...document.querySelectorAll('[data-view]')];tabs.forEach((b,i)=>{b.onclick=()=>setView(b.dataset.view);b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const j=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;setView(tabs[j].dataset.view);tabs[j].focus()}});
+ document.querySelectorAll('[data-layer]').forEach(e=>e.onchange=()=>{viz.layers[e.dataset.layer]=e.checked;renderVisual()});
+ $('machine-svg').addEventListener('click',e=>{const p=e.target.closest('[data-part]');if(p)inspectPart(p.dataset.part)});
+ $('machine-svg').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const p=e.target.closest('[data-part]');if(p){e.preventDefault();inspectPart(p.dataset.part)}});
+ $('part-legend').onclick=e=>{const p=e.target.closest('[data-part]');if(p)inspectPart(p.dataset.part)};
+ $('rotor-angle').oninput=e=>{setPlaying(false);viz.angle=Number(e.target.value);updateRotorAngle()};
+ $('spin-on').onclick=()=>setPlaying(true);$('spin-off').onclick=()=>setPlaying(false);
+ $('show-axial').onclick=()=>{setView('axial');$('visual-title').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})};
+ $('mobile-load').onclick=()=>$('btn-load').click();$('mobile-print').onclick=()=>$('btn-print').click();
+ const mq=matchMedia('(max-width:1050px)');const syncSide=()=>{$('side').inert=mq.matches&&!$('side').classList.contains('open')};mq.addEventListener('change',syncSide);syncSide();
+ $('btn-svg').onclick=exportSVG;document.addEventListener('visibilitychange',()=>{if(document.hidden)setPlaying(false)});
+ const side=$('side');$('btn-side').onclick=()=>{openSide(true);side.querySelector('button').focus()};
+}
+
+function setup(){
+ hydrateUI();syncQuick();
+ let timer;
+ const root=$('inputs-root');
+ root.addEventListener('click',e=>{const t=e.target.closest('.grp-t');if(!t)return;const b=$(t.dataset.target),ex=t.getAttribute('aria-expanded')==='true';t.setAttribute('aria-expanded',String(!ex));b.hidden=ex});
+ root.addEventListener('input',e=>{const t=e.target.closest('input[data-field]');if(!t)return;const k=t.dataset.field,f=FIELD[k],raw=t.value.trim();
+  if(raw===''&&f&&f.auto){t.removeAttribute('aria-invalid');values[k]='auto';markModified();clearTimeout(timer);timer=setTimeout(renderAll,120);return}
+  const v=parseNum(raw);
+  if(raw===''||!Number.isFinite(v)){t.setAttribute('aria-invalid','true');values[k]=NaN;clearTimeout(timer);renderAll();return}t.removeAttribute('aria-invalid');values[k]=v;markModified();clearTimeout(timer);timer=setTimeout(renderAll,120)});
+ root.addEventListener('change',e=>{const el=e.target.closest('select[data-field]');if(!el)return;values[el.dataset.field]=el.value;markModified();syncDependent();renderAll()});
+ // Painel de especificação nominal: entradas únicas; nunca reinicia os outros parâmetros.
+ for(const [k,id] of Object.entries(QUICK)){
+  const el=$(id);
+  const update=()=>{const raw=el.value.trim(),msg=validateQuick(k,raw);el.setAttribute('aria-invalid',String(!!msg));
+   $('quick-error').textContent=msg?`${({type:'Aplicação',power:'Potência nominal',poles:'Número de polos',freq:'Frequência'})[k]}: ${msg}`:'';
+   if(msg){clearTimeout(timer);showFatal([msg]);$('quick-speed').innerHTML='—';return;}
+   values[k]=k==='type'?raw:numeric(raw);markModified();
+   if(k==='type')$('quick-power-unit').textContent=raw==='generator'?'kVA':'kW';
+   clearTimeout(timer);timer=setTimeout(renderAll,k==='type'?0:180);
+  };
+  el.addEventListener(k==='type'?'change':'input',update);
+  if(k!=='type')el.addEventListener('blur',()=>{if(el.getAttribute('aria-invalid')==='true'){el.value=values[k];el.setAttribute('aria-invalid','false');$('quick-error').textContent='';renderAll();}});
+ }
+
+ $('q-in').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.grp').forEach(g=>{let any=false;g.querySelectorAll('.fld').forEach(f=>{const ok=!q||f.dataset.search.includes(q);f.style.display=ok?'':'none';any=any||ok});
+   g.style.display=any?'':'none';const t=g.querySelector('.grp-t'),b=g.querySelector('.grp-b');if(q){b.hidden=false;t.setAttribute('aria-expanded','true')}})});
+ document.addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();openSide(true);$('q-in').focus()}if(e.key==='Escape')openSide(false)});
+ const tabs=[...document.querySelectorAll('.tab')];
+ function activateTab(t){tabs.forEach(x=>{const on=x===t;x.classList.toggle('on',on);x.setAttribute('aria-selected',String(on));x.tabIndex=on?0:-1});document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='p-'+t.dataset.tab));}
+ tabs.forEach((t,i)=>{t.tabIndex=i===0?0:-1;t.addEventListener('click',()=>activateTab(t));t.addEventListener('keydown',e=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;activateTab(tabs[n]);tabs[n].focus()})});
+ document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+  const preset=b.dataset.preset;const d=preset==='compact'?COMPACT:BASE;
+  const hasChanges=Object.keys(values).some(k=>String(values[k])!==String(refPreset[k]));
+  if(hasChanges&&!confirm('Carregar outro exemplo substitui TODOS os parâmetros atuais. Deseja continuar?'))return;
+  applyValues(d,preset);
+ }));
+
+ $('btn-theme').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('vg-sync-theme',r.dataset.theme)}catch(e){}};
+ $('btn-reset').onclick=()=>{if(confirm('Restaurar TODOS os parâmetros para a referência didática (2 MVA, 12 polos)?'))applyValues(BASE,'ref')};
+ $('btn-print').onclick=()=>{if(calculated.errors.length){alert('Corrija as entradas antes de gerar o relatório.');return}window.print()};
+ $('btn-save').onclick=()=>{if(calculated.errors.length){toast('Corrija as entradas antes de salvar.');return;}download('projeto-maquina-sincrona.json',JSON.stringify({schema:'vg-sync-salient-v2',reference:'Yurieva; Shilkova. NTU KhPI (2024)',savedAt:new Date().toISOString(),parameters:values,automatic:calculated.resolved},null,2),'application/json');};
+ $('btn-load').onclick=()=>$('json-file').click();
+ $('json-file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>500000)throw Error('Arquivo excede 500 kB.');const raw=JSON.parse(await f.text());if(!raw||!['vg-sync-salient-v1','vg-sync-salient-v2'].includes(raw.schema)||typeof raw.parameters!=='object')throw Error('Formato não reconhecido.');const P={...raw.parameters};if(raw.schema==='vg-sync-salient-v1'){if(Number(P.etaNom)<=1)P.etaNom=Number(P.etaNom)*100;if(P.kfer!=null)P.poleSheet=Number(P.kfer)>=.96?'1.5':'1.0'}const keys=new Set(Object.keys(BASE)),d={};for(const [k,v] of Object.entries(P))if(keys.has(k)&&(typeof v==='number'||typeof v==='string'))d[k]=v;applyValues(d)}catch(ex){alert('Falha ao abrir: '+ex.message)}e.target.value=''});
+ $('btn-csv').onclick=exportCsv;
+ $('health-more').onclick=()=>{showAllChecks=!showAllChecks;if(calculated&&!calculated.errors.length)renderHealth(Object.values(calculated.checks).flat())};
+ $('trace-q').addEventListener('input',renderTrace);
+ const openSide=o=>{const mobile=matchMedia('(max-width:1050px)').matches;const side=$('side');side.classList.toggle('open',o);$('scrim').classList.toggle('on',o);side.inert=mobile&&!o;$('btn-side').setAttribute('aria-expanded',String(o));document.body.style.overflow=mobile&&o?'hidden':'';};
+ window.__openSide=openSide;
+ $('btn-side').onclick=()=>openSide(!$('side').classList.contains('open'));$('btn-close-side').onclick=()=>openSide(false);
+ $('scrim').onclick=()=>openSide(false);
+ function openSideRef(o){openSide(o)}
+ setupVisual();renderAll();
+}
+function openSide(o){window.__openSide&&window.__openSide(o)}
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',setup):setup();
+window.VGSyncLab={compute,carter:carterFactor,example:()=>({...BASE}),compact:()=>({...COMPACT}),industrial:()=>({...INDUSTRIAL})};
+})();
+</script>
+</body></html>

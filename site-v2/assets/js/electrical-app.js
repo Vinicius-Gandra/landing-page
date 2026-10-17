@@ -32,7 +32,7 @@
   };
   const fx = (x, d = 2) => finite(x) ? nf(d, d).format(x) : '—';
   const unit = (x, u, d) => finite(x) ? `${num(x, d)} ${u}` : '—';
-  const isMobile = () => matchMedia('(max-width: 1000px)').matches;
+  const isMobile = () => matchMedia('(max-width: 1050px)').matches;
   function parseNumber(text) {
     const raw = String(text).trim().replace(/\s| /g, '');
     if (!raw) return null;

@@ -97,6 +97,7 @@ html[data-theme="light"] .s-theme-moon { display: inline; }
 .f.is-empty .f-box input { border-style: dashed; }
 .f.is-bad .f-box :is(input, select, textarea) { border-color: var(--fail); box-shadow: 0 0 0 3px var(--fail-bg); }
 .f.is-off { opacity: .48; }
+.f[hidden] { display: none !important; }
 .f-foot { display: grid; gap: 3px; min-width: 0; }
 .f-foot:empty, .f-foot:not(:has(> :not([hidden]))) { display: none; }
 .f-help { color: var(--text-3); font-size: .66rem; line-height: 1.4; }
@@ -436,6 +437,7 @@ html[data-theme="light"] .s-theme-moon { display: inline; }
 .cv .cq-m { --q: var(--c-em); }
 .cv .cq-r { --q: var(--c-ink-2); }
 .cv .cq-n1, .cv .cq-n2 { --q: var(--c-s1); }
+.cv .cq-f { --q: var(--teal); }
 .cv .cv-line, .cv .cv-eline { fill: none; stroke: var(--q); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 .cv .cv-eline { stroke-width: 1.4; opacity: .3; }
 .cv .cv-eline.is-sel { stroke-width: 2.4; opacity: 1; }
@@ -630,7 +632,7 @@ html[data-theme="light"] .s-theme-moon { display: inline; }
 @media (max-width: 1280px) { :root { --inputs-w: 370px; } .hero { grid-template-columns: minmax(0, 1fr); } .hero-figure { max-width: 640px; } }
 @media (max-width: 1100px) { .s-act-label { display: none; } .s-act { padding: 0 10px; } .hero-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seq { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seq-stage:nth-child(3)::before { display: none; } .alerts { grid-template-columns: minmax(0, 1fr); } .sxd-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 1180px) and (min-width: 1001px), (max-width: 760px) { .cv-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 1000px) {
+@media (max-width: 1050px) {
   :root { --hh: 54px; --ah: 38px; --mb: calc(62px + env(safe-area-inset-bottom)); }
   body.shaft-app { padding-bottom: var(--mb); }
   .s-appbar-title, .s-header-divider, .s-back-label { display: none; }
@@ -690,7 +692,7 @@ html[data-theme="light"] .s-theme-moon { display: inline; }
   .ed-foot .ed-spacer { display: none; }
   .ed-paste { inset: auto 8px 120px 8px; }
 }
-@media (max-width: 900px) { .s-area-detail { display: none; } } /* quatro laboratórios na barra */
+@media (max-width: 900px) { .s-area-detail { display: none; } } /* cinco laboratórios na barra */
 @media (max-width: 420px) {
   .s-act { min-width: 34px; height: 36px; padding: 0 7px; }
   .s-actions { gap: 0; }
@@ -762,3 +764,17 @@ html[data-theme="light"] .s-theme-moon { display: inline; }
   .sxd-kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sx-head, .sx-nav, .sx-detail { padding-inline: 14px; }
 }
+
+/* Modelo, DIN 743 e casos de verificação */
+.vf-head { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; padding: 12px 16px; border: 1px solid var(--ok-line); border-left: 3px solid var(--ok); border-radius: 12px; background: var(--ok-bg); }
+.vf-head.is-bad { border-color: var(--fail-line); border-left-color: var(--fail); background: var(--fail-bg); }
+.vf-head p { color: var(--text-2); font-size: .8rem; line-height: 1.6; }
+.vf-head b { color: var(--text); }
+.vf-case { margin-top: 14px; }
+.vf-case h4 { font-size: .86rem; }
+.vf-case .vf-what { margin-top: 2px; color: var(--text-3); font-size: .72rem; line-height: 1.5; }
+.vf-tbl td.ok { color: var(--ok); font-weight: 750; }
+.vf-tbl td.fail { color: var(--fail); font-weight: 750; }
+.din-tbl td.l small { display: block; color: var(--text-3); font-size: .64rem; }
+.din-tbl tr.is-fail td:first-child { box-shadow: inset 3px 0 0 var(--fail); }
+.din-tag { margin-left: 6px; padding: 0 5px; border-radius: 4px; background: var(--warn-bg); color: var(--warn); font: 700 .56rem/1.6 var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }

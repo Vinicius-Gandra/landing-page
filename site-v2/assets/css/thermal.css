@@ -521,7 +521,7 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
 /* ---- Responsivo --------------------------------------------------------- */
 @media (max-width: 1280px) { :root { --inputs-w: 370px; } .hero { grid-template-columns: minmax(0, 1fr); } .hero-figure { max-width: 560px; } }
 @media (max-width: 1100px) { .t-act-label { display: none; } .t-act { padding: 0 10px; } .hero-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seq { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seq-stage:nth-child(3)::before { display: none; } }
-@media (max-width: 1000px) {
+@media (max-width: 1050px) {
   :root { --hh: 54px; --ah: 38px; --mb: calc(62px + env(safe-area-inset-bottom)); }
   body.thermal-app { padding-bottom: var(--mb); }
   .t-appbar-title, .t-header-divider, .t-back-label { display: none; }
@@ -581,7 +581,7 @@ html[data-theme="light"] .t-theme-moon { display: inline; }
   .pf-axis { font-size: 12.5px; }
   .pf-lab { font-size: 13.5px; }
 }
-@media (max-width: 900px) { .t-area-detail { display: none; } } /* quatro laboratórios na barra */
+@media (max-width: 900px) { .t-area-detail { display: none; } } /* cinco laboratórios na barra */
 @media (max-width: 420px) {
   .t-act { min-width: 36px; height: 36px; padding: 0 8px; }
   .t-actions { gap: 0; }

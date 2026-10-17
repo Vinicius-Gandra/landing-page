@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Laboratório de eixos: triagem do eixo do rotor de máquinas elétricas. Perfil por trechos, reações, momento, torque, coeficientes de segurança e Ø mínimo, flecha e inclinação por elementos finitos de viga com estudo de convergência da malha, velocidades críticas, balanceamento ISO 1940, chavetas, ajustes e folha A3.">
+  <meta name="description" content="Laboratório de eixos: eixo do rotor de máquinas elétricas por elementos finitos de viga (eixo e cubo do pacote ligados nos assentos), torção pelo caminho real do torque, resistência pela DIN 743 em cada entalhe, casos de verificação, convergência da malha, velocidades críticas, balanceamento ISO 1940, chavetas, ajustes e folha A3.">
   <meta name="theme-color" content="#09131f">
   <meta name="color-scheme" content="dark light">
-  <title>Laboratório de eixos · Eixo do rotor | Vinicius Gandra</title>
+  <title>Laboratório de eixos · Rotor completo | Vinicius Gandra</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2309131f'/%3E%3Cpath d='M8 27h8v-5h12v-4h10v4h12v5h6v10h-6v5H38v4H28v-4H16v-5H8z' fill='%23f5ad69'/%3E%3Cpath d='M5 32h54' stroke='%2309131f' stroke-width='2' stroke-dasharray='6 3 1.5 3'/%3E%3C/svg%3E">
   <script>try { var t = localStorage.getItem('vg-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,11 +14,14 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/shaft.css">
+  <link rel="stylesheet" href="assets/css/site-labs.css">
   <script defer src="assets/js/shaft-fem.js"></script>
+  <script defer src="assets/js/shaft-din743.js"></script>
   <script defer src="assets/js/shaft-engine.js"></script>
   <script defer src="assets/js/shaft-figures.js"></script>
   <script defer src="assets/js/shaft-drawing.js"></script>
   <script defer src="assets/js/shaft-app.js"></script>
+  <script defer src="assets/js/site-labs.js"></script>
 </head>
 <body class="shaft-app">
   <a class="s-skip" href="#s-output">Pular para o resultado</a>
@@ -27,7 +30,7 @@
     <a class="s-brand" href="../index.html" aria-label="Vinicius Gandra — voltar ao portfólio">VG<b>.</b></a>
     <a class="s-back" href="../index.html" title="Voltar ao portfólio"><span aria-hidden="true">←</span><span class="s-back-label">Portfólio</span></a>
     <span class="s-header-divider" aria-hidden="true"></span>
-    <div class="s-appbar-title"><span class="overline">Laboratório de eixos</span><strong>Eixo do rotor · tensões, flecha e críticas</strong></div>
+    <div class="s-appbar-title"><span class="overline">Laboratório de eixos</span><strong>Eixo do rotor · MEF e DIN 743</strong></div>
     <div class="s-actions" aria-label="Ações">
       <button class="s-act" id="s-reset" type="button" title="Preencher com o exemplo (gerador 8.000 kW, 1.800 rpm, 24 trechos)"><span aria-hidden="true">↺</span><span class="s-act-label">Exemplo</span></button>
       <button class="s-act" id="s-open" type="button" title="Abrir um caso salvo (JSON)"><span aria-hidden="true">⇪</span><span class="s-act-label">Abrir</span></button>
@@ -40,10 +43,11 @@
   </header>
 
   <nav class="s-areas" aria-label="Laboratórios">
-    <a class="s-area" href="laboratorio.html"><span class="s-area-number">01</span> Mecânica <span class="s-area-detail">· eixo e mancal</span></a>
+    <a class="s-area" href="laboratorio-mecanico.html"><span class="s-area-number">01</span> Mecânica <span class="s-area-detail">· eixo e mancal</span></a>
     <a class="s-area" href="laboratorio-eletrico.html"><span class="s-area-number">02</span> Elétrica <span class="s-area-detail">· bobina do estator</span></a>
     <a class="s-area" href="laboratorio-termico.html"><span class="s-area-number">03</span> Térmica <span class="s-area-detail">· trocador ar–água</span></a>
-    <a class="s-area" href="laboratorio-eixo.html" aria-current="page"><span class="s-area-number">04</span> Eixo <span class="s-area-detail">· rotor completo</span></a>
+    <a class="s-area" href="laboratorio-eixo.html" aria-current="page"><span class="s-area-number">04</span> Eixos <span class="s-area-detail">· rotor completo</span></a>
+    <a class="s-area" href="laboratorio-maquinas-sincronas.html"><span class="s-area-number">05</span> Síncrona <span class="s-area-detail">· rotor e campo</span></a>
   </nav>
 
   <div class="s-workspace" id="s-workspace" data-view="resultado">
@@ -57,14 +61,13 @@
       </div>
       <div class="s-legend" aria-hidden="true"><span><i></i>definido por você</span><span><i class="is-calc"></i>calculado (consequência)</span></div>
       <form id="s-form" novalidate></form>
-      <p class="s-inputs-foot">Unidades: mm, kN, kN·m e MPa; a força magnética entra em kgf, como na FTD. O perfil, as chavetas e os ajustes ficam no editor do grupo 03 (aceita colar do Excel). O caso fica salvo neste navegador; use Salvar para guardar em arquivo. Vírgula ou ponto decimal.</p>
+      <p class="s-inputs-foot">Unidades: mm, kN, kN·m e MPa; a força magnética entra em kgf, como na FTD. O perfil (com os raios dos ombros), as chavetas, os assentos e os entalhes ficam no editor do grupo 03 (aceita colar do Excel). O caso fica salvo neste navegador; use Salvar para guardar em arquivo. Vírgula ou ponto decimal.</p>
     </aside>
 
     <main class="s-results" id="s-main">
       <div class="s-intro">
         <p class="s-eyebrow">Máquinas elétricas · eixo do rotor</p>
         <h1>Laboratório de <em>eixos.</em></h1>
-        <p>Do perfil por trechos aos <b>coeficientes de segurança</b>, ao <b>Ø mínimo</b> de cada trecho e às <b>velocidades críticas</b>. Você define a FTD, o perfil, os mancais, as cargas e o material; o resto sai do cálculo por <b>elementos finitos de viga</b>, com a malha, a convergência e cada passo à mostra. É uma triagem: a verificação local (DIN 743) continua pendente.</p>
       </div>
       <div id="s-error" class="s-alert s-alert-fail" role="alert" hidden></div>
       <div id="s-output" aria-live="off"></div>
@@ -73,7 +76,7 @@
   </div>
 
   <div class="s-peek" id="s-peek" hidden>
-    <button type="button" id="s-peek-btn"><span class="s-peek-label">Triagem</span><strong id="s-peek-value">—</strong><span class="s-peek-go" aria-hidden="true">→</span></button>
+    <button type="button" id="s-peek-btn"><span class="s-peek-label">Resultado</span><strong id="s-peek-value">—</strong><span class="s-peek-go" aria-hidden="true">→</span></button>
   </div>
   <nav class="s-mobilebar" aria-label="Alternar entre dados e resultado">
     <button type="button" data-view="dados" aria-pressed="false"><span class="s-mb-icon" aria-hidden="true">✎</span>Dados<span class="s-mb-badge" id="s-mb-badge" hidden></span></button>

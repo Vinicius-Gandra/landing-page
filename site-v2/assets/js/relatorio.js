@@ -94,7 +94,7 @@
 
   $('imprimir').addEventListener('click', () => window.print());
   $('data').textContent = `Emitido em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeStyle: 'short' }).format(new Date())}`;
-  $('voltar').href = 'laboratorio.html' + location.hash;
+  $('voltar').href = 'laboratorio-mecanico.html' + location.hash;
 
   try {
     const state = location.hash ? F.deHash(location.hash) : { ...F.PADRAO };

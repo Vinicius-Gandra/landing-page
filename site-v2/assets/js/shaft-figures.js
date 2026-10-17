@@ -483,7 +483,8 @@
     Mmax: { label: 'Momento máximo', short: 'Mmáx', unit: 'kN·m', d: 4, cls: 'cq-m' },
     RA: { label: 'Reação em A', short: 'RA', unit: 'kN', d: 4, cls: 'cq-r' },
     nc1: { label: '1ª crítica', short: '1ª crítica', unit: 'rpm', d: 2, cls: 'cq-n1' },
-    nc2: { label: '2ª crítica', short: '2ª crítica', unit: 'rpm', d: 2, cls: 'cq-n2' }
+    nc2: { label: '2ª crítica', short: '2ª crítica', unit: 'rpm', d: 2, cls: 'cq-n2' },
+    Fseat: { label: 'Carga no assento mais carregado', short: 'Assento', unit: 'kN', d: 3, cls: 'cq-f' }
   };
   const CV = { W: 380, H: 236, x0: 64, x1: 366, y0: 26, y1: 196 };
   const pct = e => { const n = Math.round(Math.log10(e)); return `${fx(Math.pow(10, n + 2), Math.max(0, -(n + 2)))} %`; };

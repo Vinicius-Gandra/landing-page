@@ -23,7 +23,7 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined && text !== null) n.textContent = String(text); return n; };
   const add = (parent, tag, cls, text) => { const n = el(tag, cls, text); parent.append(n); return n; };
   const finite = x => typeof x === 'number' && Number.isFinite(x);
-  const isMobile = () => matchMedia('(max-width: 1000px)').matches;
+  const isMobile = () => matchMedia('(max-width: 1050px)').matches;
   const plural = (n, s, p) => n === 1 ? s : p;
   function parseNumber(text) {
     const raw = String(text).trim().replace(/\s| /g, '');

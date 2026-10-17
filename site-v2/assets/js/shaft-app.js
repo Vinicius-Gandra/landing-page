@@ -6,11 +6,11 @@
   const form = $('s-form'), output = $('s-output'), errorBox = $('s-error'), workspace = $('s-workspace');
   if (!engine || !figs || !form || !output) return;
 
-  const CASE_KEY = 'vg-shaft-case-v1', VIEW_KEY = 'vg-shaft-view', SEC_KEY = 'vg-shaft-sections', UI_KEY = 'vg-shaft-ui';
+  const CASE_KEY = 'vg-shaft-case-v2', VIEW_KEY = 'vg-shaft-view', SEC_KEY = 'vg-shaft-sections', UI_KEY = 'vg-shaft-ui';
   const { fx, f0, fsf } = engine;
   const controls = new Map(), helps = new Map(), readouts = new Map();
   const ss = { get(k, d) { try { const v = sessionStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } }, set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
-  let tables = { sections: [], keys: [], fits: [], refine: [], nodes: [] };
+  let tables = { sections: [], keys: [], fits: [], notches: [], refine: [], nodes: [] };
   let timer = null, last = null, lastErr = null, spy = null, lastTitle = '', sheetZoom = 1, mapCache = { key: '', map: null }, convCache = { key: '', data: null };
   let ui = Object.assign({ sel: null, lanes: ['m', 't', 'y', 'u'], dmin: true, mesh: false, cq: null }, ss.get(UI_KEY, {}));
   let secOpen = ss.get(SEC_KEY, {}) || {};
@@ -20,7 +20,7 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined && text !== null) n.textContent = String(text); return n; };
   const add = (parent, tag, cls, text) => { const n = el(tag, cls, text); parent.append(n); return n; };
   const finite = x => typeof x === 'number' && Number.isFinite(x);
-  const isMobile = () => matchMedia('(max-width: 1000px)').matches;
+  const isMobile = () => matchMedia('(max-width: 1050px)').matches;
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const plural = (n, s, p) => n === 1 ? s : p;
   const nb = (v, u) => `${v} ${u}`;
@@ -93,12 +93,12 @@
         const b1 = add(acts, 'button', 'btn-soft', '✎ Editar trechos');
         b1.type = 'button';
         profileCount = add(b1, 'span', 'btn-count', '');
-        const b2 = add(acts, 'button', 'btn-soft', 'Chavetas e ajustes');
+        const b2 = add(acts, 'button', 'btn-soft', 'Chavetas, assentos e entalhes');
         b2.type = 'button';
         fig.addEventListener('click', () => editor.open('sections'));
         b1.addEventListener('click', () => editor.open('sections'));
         b2.addEventListener('click', () => editor.open('keys'));
-        add(box, 'p', 'f-help f-wide', 'Cada trecho começa onde o anterior termina. Cole direto do Excel no editor (Ctrl+V).');
+        add(box, 'p', 'f-help f-wide', 'Cada trecho começa onde o anterior termina; o raio do ombro vai no fim do trecho. Assentos com início x levam o pacote no modelo. Cole direto do Excel no editor (Ctrl+V).');
         return;
       }
       for (const f of engine.FIELDS.filter(x => x.group === group.id)) {
@@ -187,8 +187,8 @@
   function onFieldInput(key, committed) {
     if (key === 'material') {
       const m = engine.MATERIALS.find(x => x.id === controls.get('material').value);
-      if (m) { controls.get('su').value = toInput(m.su); controls.get('sy').value = toInput(m.sy); }
-    } else if (key === 'su' || key === 'sy') {
+      if (m) { controls.get('su').value = toInput(m.su); controls.get('sy').value = toInput(m.sy); if (m.group && controls.get('matGroup')) controls.get('matGroup').value = m.group; }
+    } else if (key === 'strength') { editor.refresh(); } else if (key === 'su' || key === 'sy') {
       const m = engine.MATERIALS.find(x => x.id === controls.get('material').value);
       if (m && (parseNumber(controls.get('su').value) !== m.su || parseNumber(controls.get('sy').value) !== m.sy)) controls.get('material').value = 'custom';
     }
@@ -196,8 +196,11 @@
   }
   function syncOff() {
     const v = k => controls.get(k)?.value;
-    const off = { se: v('seMode') === 'marin', finish: v('seMode') !== 'marin', reliab: v('seMode') !== 'marin', auxTorque: v('torqueMode') !== 'linear', umpEcc: !String(v('gap') || '').trim() };
+    const off = { se: v('seMode') === 'marin', finish: v('seMode') !== 'marin', reliab: v('seMode') !== 'marin', umpEcc: !String(v('gap') || '').trim(),
+      matGroup: v('matBasis') !== 'norma', deff: v('matBasis') !== 'norma', xUmp: v('umpDist') === 'distribuida', hubPct: v('mount') !== 'assentos', krFactor: v('mount') !== 'assentos' };
     for (const [k, o] of Object.entries(off)) controls.get(k)?.closest('.f')?.classList.toggle('is-off', o);
+    const shig = v('strength') === 'shigley';
+    for (const f of engine.FIELDS) { if (!f.din && !f.shigley) continue; const w = controls.get(f.key)?.closest('.f'); if (w) w.hidden = f.din ? shig : !shig; }
   }
   function apply(values) {
     for (const [key, control] of controls) {
@@ -210,6 +213,7 @@
       sections: clone(Array.isArray(values.sections) ? values.sections : engine.EXAMPLE_SECTIONS),
       keys: clone(Array.isArray(values.keys) ? values.keys : engine.EXAMPLE_KEYS),
       fits: clone(Array.isArray(values.fits) ? values.fits : engine.EXAMPLE_FITS),
+      notches: clone(Array.isArray(values.notches) ? values.notches : engine.EXAMPLE_NOTCHES),
       refine: clone(Array.isArray(values.meshRefine) ? values.meshRefine : []),
       nodes: clone(Array.isArray(values.meshNodes) ? values.meshNodes : [])
     };
@@ -222,7 +226,7 @@
       const t = control.dataset.type;
       values[key] = t === 'select' || t === 'text' || t === 'textarea' ? control.value.trim() : parseNumber(control.value);
     }
-    values.sections = tables.sections; values.keys = tables.keys; values.fits = tables.fits; values.meshRefine = tables.refine; values.meshNodes = tables.nodes;
+    values.sections = tables.sections; values.keys = tables.keys; values.fits = tables.fits; values.notches = tables.notches; values.meshRefine = tables.refine; values.meshNodes = tables.nodes;
     return values;
   }
   function setHelp(key, text) { const h = helps.get(key); if (!h) return; h.node.textContent = text || ''; h.node.hidden = !text; }
@@ -248,7 +252,7 @@
       if (f.req) { req++; if (!empty && !msg) filled++; }
     }
     // tabelas
-    const tErr = Object.keys(fieldErrors).filter(k => /^(sec|key|fit):/.test(k)).length, mErr = Object.keys(fieldErrors).filter(k => /^(ref|nod):/.test(k)).length;
+    const tErr = Object.keys(fieldErrors).filter(k => /^(sec|key|fit|not):/.test(k)).length, mErr = Object.keys(fieldErrors).filter(k => /^(ref|nod):/.test(k)).length;
     groups.perfil = { total: 1, filled: 1, bad: tErr, changed: 0, premise: false, table: true };
     if (groups.mef) groups.mef.bad += mErr;
     bad += tErr + mErr;
@@ -291,6 +295,7 @@
     const d = r.d, gen = d.machine !== 'motor';
     set('rdP', `${fx(r.Pshaft, 2)} kW`, d.powerBase === 'rend' ? `Pel ${gen ? '÷' : '×'} η = ${fx(d.pElec, 0)} ${gen ? '÷' : '×'} ${fx(d.eff, 3)} · pelas perdas: ${fx(r.PshaftAlt, 2)}` : `${fx(d.pElec, 0)} ${gen ? '+' : '−'} ${fx(d.lossMech, 2)} ${gen ? '+' : '−'} ${fx(d.lossElec, 2)} · por η: ${fx(r.PshaftAlt, 2)}`);
     set('rdT', `${fx(r.T / 1000, 2)} · ${fx(r.Tpk / 1000, 2)} kN·m`, `T = P·60 000/(2π·${f0(d.speed)}) · pico ${fx(d.peak, 2)} × T`);
+ set('rdSeats', r.seats.length ? `${r.seats.map(z => `${z.name} ${fx(z.F / 1000, 1)}`).join(' · ')} kN` : '—', r.seats.length ? `pelo MEF · pacote ${fx(r.fe.Wcore / 1000, 1)} kN · torque ${r.seats.map(z => fx(z.T / 1000, 1)).join(' · ')} kN·m` : 'pacote distribuído direto no eixo');
     set('rdR', `${fx(r.RA / 1000, 2)} · ${fx(r.RB / 1000, 2)} kN`, `ΣF ${fx(-r.Fy / 1000, 2)} kN para baixo · ${f0(r.RA / engine.G0)} e ${f0(r.RB / engine.G0)} kgf`);
     if (r.fe && r.fe.ok) {
       const I = r.fe.info, R = r.fe.refine, worst = R ? Math.max(R.dSpan, R.dTh, R.dM, finite(R.dNc1) ? R.dNc1 : 0) : NaN;
@@ -310,18 +315,19 @@
 
   /* ---- Editor do perfil (diálogo) ------------------------------------------------------------- */
   const editor = (() => {
-    const TABS = { sections: { label: 'Trechos', cols: engine.SECTION_COLS, prefix: 'sec' }, keys: { label: 'Chavetas', cols: engine.KEY_COLS, prefix: 'key' }, fits: { label: 'Ajustes', cols: engine.FIT_COLS, prefix: 'fit' },
+    const TABS = { sections: { label: 'Trechos', cols: engine.SECTION_COLS, prefix: 'sec' }, keys: { label: 'Chavetas', cols: engine.KEY_COLS, prefix: 'key' }, fits: { label: 'Assentos', cols: engine.FIT_COLS, prefix: 'fit' }, notches: { label: 'Entalhes', cols: engine.NOTCH_COLS, prefix: 'not' },
       refine: { label: 'Refinos', cols: engine.REFINE_COLS, prefix: 'ref', mesh: true }, nodes: { label: 'Nós', cols: engine.NODE_COLS, prefix: 'nod', mesh: true } };
     let dlg = null, tab = 'sections', tbody = null, prev = null, sum = null, status = null, tabBtns = {}, pasteBox = null, focusRow = null;
     let eyebrow = null, titleEl = null, restoreBtn = null, hint = null, hintX = null, prevLay = null, drag = null;
     const meshMode = () => !!TABS[tab].mesh;
+    const colsFor = t => TABS[t].cols.filter(c => !(c.shigley && (controls.get('strength')?.value || 'din743') !== 'shigley'));
     function build() {
       dlg = add(document.body, 'dialog', 'ed');
       dlg.setAttribute('aria-labelledby', 'ed-title');
       const head = add(dlg, 'div', 'ed-head');
       const ht = add(head, 'div');
       eyebrow = add(ht, 'p', 's-eyebrow', 'Geometria do eixo');
-      titleEl = add(ht, 'h2', '', 'Perfil, chavetas e ajustes');
+      titleEl = add(ht, 'h2', '', 'Perfil, chavetas, assentos e entalhes');
       titleEl.id = 'ed-title';
       const tl = add(head, 'div', 'ed-tabs');
       tl.setAttribute('role', 'tablist');
@@ -352,7 +358,7 @@
       mk('Colar do Excel', '', () => openPaste(), 'Colar várias linhas copiadas de uma planilha');
       mk('Copiar tabela', '', () => copyTable(), 'Copiar no formato de planilha (TSV)');
       restoreBtn = mk('Restaurar exemplo', 'ed-ghost', () => {
-        tables[tab] = meshMode() ? [] : clone({ sections: engine.EXAMPLE_SECTIONS, keys: engine.EXAMPLE_KEYS, fits: engine.EXAMPLE_FITS }[tab]);
+        tables[tab] = meshMode() ? [] : clone({ sections: engine.EXAMPLE_SECTIONS, keys: engine.EXAMPLE_KEYS, fits: engine.EXAMPLE_FITS, notches: engine.EXAMPLE_NOTCHES }[tab]);
         renderTable(); changed(); toast(meshMode() ? 'Tabela limpa' : 'Tabela do exemplo restaurada');
       });
       add(foot, 'span', 'ed-spacer');
@@ -379,7 +385,7 @@
       const mesh = meshMode();
       for (const [k, b] of Object.entries(tabBtns)) { b.hidden = !!TABS[k].mesh !== mesh; b.setAttribute('aria-selected', String(k === id)); b.tabIndex = k === id ? 0 : -1; }
       eyebrow.textContent = mesh ? 'Elementos finitos' : 'Geometria do eixo';
-      titleEl.textContent = mesh ? 'Refinos locais e nós da malha' : 'Perfil, chavetas e ajustes';
+      titleEl.textContent = mesh ? 'Refinos locais e nós da malha' : 'Perfil, chavetas, assentos e entalhes';
       restoreBtn.textContent = mesh ? 'Limpar tabela' : 'Restaurar exemplo';
       dlg.classList.toggle('is-mesh', mesh);
       pasteBox.hidden = true;
@@ -388,7 +394,7 @@
     }
     function cellVal(v, c) { return c.type === 'text' ? (v ?? '') : toInput(v); }
     function renderTable() {
-      const cols = TABS[tab].cols, rows = tables[tab];
+      const cols = colsFor(tab), rows = tables[tab];
       tbody.replaceChildren();
       const thead = add(tbody, 'thead'), hr = add(thead, 'tr');
       add(hr, 'th', 'ed-n', '#');
@@ -418,7 +424,7 @@
         const del = add(acts, 'button', 'ed-act', '✕'); del.type = 'button'; del.title = 'Remover linha'; del.setAttribute('aria-label', `Remover a linha ${i + 1}`); del.dataset.act = 'del';
       });
       if (!rows.length) {
-        const td = add(add(tb, 'tr', 'ed-empty'), 'td', '', tab === 'refine' ? 'Nenhuma região de refino. Arraste sobre o eixo, acima, ou use ＋ Linha.' : 'Nenhum nó pedido. Clique no eixo, acima, ou use ＋ Linha.');
+        const td = add(add(tb, 'tr', 'ed-empty'), 'td', '', tab === 'refine' ? 'Nenhuma região de refino. Arraste sobre o eixo, acima, ou use ＋ Linha.' : tab === 'notches' ? 'Nenhum entalhe informado. Use para planos, furos transversais ou ranhuras: βσ e βτ dos diagramas da DIN 743-2 ou de um MEF 3D.' : tab === 'nodes' ? 'Nenhum nó pedido. Clique no eixo, acima, ou use ＋ Linha.' : 'Tabela vazia: use ＋ Linha.');
         td.colSpan = cols.length + 2;
       }
       markErrors(lastErr);
@@ -447,7 +453,8 @@
         const src = nx || cur;
         row = { name: `S${String(i + 2).padStart(2, '0')} novo`, end: Math.round(((e0 + (finite(e1) ? e1 : e0 + 100)) / 2) * 100) / 100, d: src.d, di: null, flats: null, kt: src.kt, kf: src.kf, tpct: null };
         if (!nx) row.end = Math.round((e0 + 100) * 100) / 100;
-      } else if (tab === 'keys') row = { name: 'nova', d: 200, b: 45, t: 15, h: null, L: 100, share: 100 };
+      } else if (tab === 'keys') row = { name: 'nova', x: null, d: 200, b: 45, t: 15, h: null, L: 100, share: 100, nk: null };
+      else if (tab === 'notches') { const d = last?.d, cur = rows[i]; row = { name: nextName(rows, 'Entalhe '), x: cur ? (parseNumber(cur.x) || 0) + 50 : d ? Math.round(d.L / 2) : 100, bs: 2, bt: 1.5 }; }
       else if (tab === 'refine') {
         const d = last?.d, cur = rows[i];
         if (cur) { const a = parseNumber(cur.b) || 0, w = Math.max(50, (parseNumber(cur.b) || 0) - (parseNumber(cur.a) || 0)); row = { name: nextName(rows, 'Região '), a, b: Math.round(Math.min(d ? d.L : a + w, a + w) * 10) / 10, h: cur.h }; }
@@ -456,7 +463,7 @@
       } else if (tab === 'nodes') {
         const d = last?.d, cur = rows[i], x = cur ? (parseNumber(cur.x) || 0) + 100 : d ? (d.xA + d.xB) / 2 : 100;
         row = { name: nextName(rows, 'N'), x: Math.round(Math.min(d ? d.L : x, x) * 10) / 10 };
-      } else row = { name: 'novo', d: 300, L: 200, hub: null, share: 100 };
+      } else row = { name: 'novo', x: null, d: 300, L: 200, hub: null, share: 100 };
       rows.splice(i + 1, 0, row);
       renderTable();
       changed();
@@ -473,7 +480,7 @@
     function pasteRows(text, r0, c0, replace) {
       const lines = String(text).replace(/\r/g, '').split('\n').filter(l => l.trim() !== '');
       if (!lines.length) return 0;
-      const cols = TABS[tab].cols;
+      const cols = colsFor(tab);
       let grid = lines.map(l => l.split('\t'));
       if (grid.length && grid[0].length === 1 && lines[0].includes(';')) grid = lines.map(l => l.split(';'));
       if (replace && grid.length > 1 && grid[0].slice(1).every(c => !finite(parseNumber(c)))) grid.shift();     // cabeçalho
@@ -490,7 +497,7 @@
     }
     function openPaste() { pasteBox.hidden = false; pasteBox.querySelector('textarea').focus(); }
     function copyTable() {
-      const cols = TABS[tab].cols;
+      const cols = colsFor(tab);
       const lines = [cols.map(c => c.label + (c.unit ? ` (${c.unit})` : '')).join('\t')].concat(tables[tab].map(r => cols.map(c => c.type === 'text' ? (r[c.key] ?? '') : toInput(r[c.key])).join('\t')));
       copyText(lines.join('\n'), 'Tabela copiada: cole na planilha');
     }
@@ -503,7 +510,7 @@
         inp.title = msg ? msg.charAt(0).toUpperCase() + msg.slice(1) : '';
         inp.setAttribute('aria-invalid', msg ? 'true' : 'false');
       });
-      const n = Object.keys(fields).filter(k => (meshMode() ? /^(ref|nod):/ : /^(sec|key|fit):/).test(k)).length, general = meshMode() && err?.errors?.length;
+      const n = Object.keys(fields).filter(k => (meshMode() ? /^(ref|nod):/ : /^(sec|key|fit|not):/).test(k)).length, general = meshMode() && err?.errors?.length;
       if (status) { status.textContent = n ? `${n} ${plural(n, 'célula', 'células')} a revisar` : general ? 'Malha grande demais' : 'Tudo certo'; status.classList.toggle('is-bad', n > 0 || !!general); }
     }
     // malha: prévia interativa (clique põe um nó; arrastar marca uma região de refino)
@@ -630,7 +637,7 @@
         const text = e.clipboardData?.getData('text/plain') || '';
         if (!inp || !/[\t\n]/.test(text.trim())) return;          // valor simples: colagem normal
         e.preventDefault();
-        const cols = TABS[tab].cols;
+        const cols = colsFor(tab);
         const n = pasteRows(text, +inp.dataset.row, cols.findIndex(c => c.key === inp.dataset.col), false);
         toast(`${n} ${plural(n, 'linha colada', 'linhas coladas')}`);
       });
@@ -655,7 +662,7 @@
     const hero = add(output, 'section', 'hero');
     hero.setAttribute('aria-label', 'Resultado da triagem');
     const main = add(hero, 'div', 'hero-main');
-    add(main, 'p', 's-eyebrow', 'Triagem do eixo · fórmula simplificada');
+    add(main, 'p', 's-eyebrow', r.strength.method === 'din743' ? 'Eixo por elementos finitos · resistência DIN 743' : 'Triagem do eixo · Shigley por trecho');
     const h = add(main, 'h2', 'hero-title');
     h.append(nF ? `${nF} de ${N} ` : `${N} de ${N} `);
     add(h, 'small', '', nF ? plural(nF, 'trecho abaixo', 'trechos abaixo') : 'trechos atingem');
@@ -664,7 +671,7 @@
     const split = add(main, 'p', 'hero-split');
     split.append(`${nF ? 'Pior' : 'Mais carregado'}: `);
     add(split, 'b', '', `${c.name}`);
-    split.append(` · ${c.gov === 'esc' ? `SF escoamento ${fsf(c.sfy)} (mín. ${fx(d.sfY, 1)})` : `SF fadiga ${fsf(c.sff)} (mín. ${fx(d.sfF, 1)})`}`);
+    split.append(` · ${c.gov === 'esc' ? `${r.strength.y} ${fsf(c.sfy)} (mín. ${fx(r.strength.minY, 1)})` : `${r.strength.f} ${fsf(c.sff)} (mín. ${fx(r.strength.minF, 1)})`}`);
     const sub = add(main, 'p', 'hero-sub');
     const dyn = r.dyn && r.dyn.design && r.dyn.design.ok ? r.dyn.design : null;
     sub.append('Torque ');
@@ -906,7 +913,7 @@
     ex.read.replaceChildren();
     const item = (k, label, value, key) => { const sp = add(ex.read, 'span', 'sx-ri'); if (key) add(sp, 'i', 'tip-key').style.background = key; add(sp, 'em', '', label); add(sp, 'b', '', value); return sp; };
     item('x', 'x', `${fx(x, 1)} mm`);
-    add(ex.read, 'span', 'sx-ri sx-ri-sec', `${s.code} · Ø${fx(s.d, 1)} · SF ${fsf(s.sfy)} / ${fsf(s.sff)}`).classList.toggle('is-fail', !s.ok);
+    add(ex.read, 'span', 'sx-ri sx-ri-sec', `${s.code} · Ø${fx(s.d, 1)} · ${r.strength.y} ${fsf(s.sfy)} / ${r.strength.f} ${fsf(s.sff)}`).classList.toggle('is-fail', !s.ok);
     item('m', 'M', `${fx(figs.valueAt(S.m, x), 2)} kN·m`, LANE_KEY.m);
     item('t', 'T', `${fx(figs.valueAt(S.t, x), 2)} kN·m`, LANE_KEY.t);
     item('v', 'V', `${fx(figs.valueAt(S.v, x), 2)} kN`, LANE_KEY.v);
@@ -952,8 +959,8 @@
     add(head, 'span', 'chip ' + (s.ok ? (s.util > 0.9 ? 'chip-warn' : 'chip-ok') : 'chip-fail'), s.ok ? (s.util > 0.9 ? '△ perto do limite' : '✓ atinge') : '✗ abaixo');
     const grid = add(box, 'div', 'sxd-grid');
     const bars = add(grid, 'div', 'sxd-bars');
-    sfBar(bars, 'Escoamento (com pico)', s.sfy, d.sfY, s.gov === 'esc');
-    sfBar(bars, `Fadiga · ${engine.CRITERIA[d.fatigue]}`, s.sff, d.sfF, s.gov === 'fad');
+    sfBar(bars, r.strength.method === 'din743' ? 'Escoamento S_F (com pico)' : 'Escoamento (com pico)', s.sfy, r.strength.minY, s.gov === 'esc');
+    sfBar(bars, r.strength.method === 'din743' ? 'Fadiga S_D · DIN 743' : `Fadiga · ${engine.CRITERIA[d.fatigue]}`, s.sff, r.strength.minF, s.gov === 'fad');
     const dm = add(bars, 'p', 'sxd-dmin');
     dm.append('Ø mínimo da fórmula ');
     add(dm, 'b', '', nb(fx(s.dmin, 1), 'mm'));
@@ -995,7 +1002,7 @@
     const wrap = add(det, 'div', 'tbl-wrap');
     const t = add(wrap, 'table', 'tbl st-table');
     const hr = add(add(t, 'thead'), 'tr');
-    for (const h of ['Trecho', 'x (mm)', 'Ø (mm)', 'M (kN·m)', 'T (kN·m)', 'σvm (MPa)', 'SF esc.', 'SF fad.', 'Ø mín. (mm)', 'Utilização']) add(hr, 'th', '', h);
+    for (const h of ['Trecho', 'x (mm)', 'Ø (mm)', 'M (kN·m)', 'T (kN·m)', 'σvm (MPa)', r.strength.y, r.strength.f, 'Ø mín. (mm)', 'Utilização']) add(hr, 'th', '', h);
     const tb = add(t, 'tbody');
     for (const s of r.res) {
       const tr = add(tb, 'tr', 'st-row' + (s.i === ui.sel ? ' sel' : '') + (s.ok ? '' : ' is-fail'));
@@ -1010,8 +1017,8 @@
       add(tr, 'td', '', fx(s.m / 1e6, 2));
       add(tr, 'td', '', fx(s.torque / 1000, 2));
       add(tr, 'td', '', fx(s.vm, 1));
-      add(tr, 'td', s.sfy < d.sfY ? 'fail' : '', fsf(s.sfy));
-      add(tr, 'td', s.sff < d.sfF ? 'fail' : '', fsf(s.sff));
+      add(tr, 'td', s.sfy < r.strength.minY ? 'fail' : '', fsf(s.sfy));
+      add(tr, 'td', s.sff < r.strength.minF ? 'fail' : '', fsf(s.sff));
       add(tr, 'td', s.dmin > s.d ? 'fail' : '', fx(s.dmin, 1));
       const tdu = add(tr, 'td', 'st-u');
       const bar = add(tdu, 'span', 'st-bars');
@@ -1023,7 +1030,7 @@
     }
     const lg = add(det, 'p', 'st-legend');
     for (const [cls, t2] of [['is-y', 'escoamento'], ['is-f', 'fadiga']]) { const s = add(lg, 'span'); add(s, 'i', 'st-key ' + cls); s.append(t2); }
-    lg.append(` · barra cheia = 1,5 × o mínimo; marca em 1,0. Torque ${d.torqueMode === 'linear' ? 'pelo caminho real' : 'integral'}${r.res.some(s => s.tpct !== null && s.tpct !== undefined) ? ' (com frações por trecho)' : ''}.`);
+    lg.append(` · barra cheia = 1,5 × o mínimo; marca em 1,0. Torque ${d.torqueMode === 'mef' ? 'pelo caminho real (MEF de torção)' : 'integral'}${r.res.some(s => s.tpct !== null && s.tpct !== undefined) ? ' (com frações por trecho)' : ''}.`);
     const mem = add(det, 'div', 'sec-memory');
     mem.id = 'memoria-trecho';
     ex.memory = mem;
@@ -1039,6 +1046,59 @@
     const list = add(mem, 'div', 'steps');
     for (const st of engine.sectionSteps(r, s)) stepRow(list, st);
   }
+  function dinTable(det, r) {
+    add(det, 'p', 'sub-h', `Pontos da DIN 743 · S mínimo ${fx(r.d.sMin, 2)} · ordenados por x`);
+    const P = [...r.din].sort((a, b) => a.x - b.x || a.id - b.id);
+    table(det, ['Ponto', 'x (mm)', 'Ø (mm)', 'M (kN·m)', 'T (kN·m)', 'βσ · βτ', 'Kσ · Kτ', 'σba (MPa)', 'τtm (MPa)', 'S_D', 'S_F', 'Utilização'], P.map(p => ({
+      cells: [p.name + (p.rAssumed && p.res.alpha.b > 1 ? ' · r assumido' : ''), fx(p.x, 1), fx(p.d, 1), fx(Math.abs(p.M) / 1e6, 2), fx(Math.abs(p.T) / 1000, 2), `${fx(p.res.beta.b, 2)} · ${fx(p.res.beta.t, 2)}`, `${fx(p.res.K.b, 2)} · ${fx(p.res.K.t, 2)}`, fx(p.res.s.sba, 1), fx(p.res.s.ttm, 1), fsf(p.SD), fsf(p.SF), fx(p.util, 2)],
+      cls: ['l', '', '', '', '', '', '', '', '', p.SD < r.d.sMin ? 'fail' : '', p.SF < r.d.sMin ? 'fail' : '', p.util > 1 ? 'fail' : p.util > 0.9 ? 'warn' : '']
+    })), 'din-tbl');
+    add(det, 'p', 'step-note', 'Ombro: α pela geometria (D, d, r), n pelo gradiente G′ e β = α/n. Rasgo de chaveta e borda livre de ajuste prensado: β da norma no Ø de ensaio de 40 mm, levado ao Ø da peça por K3. Utilização = S mínimo / menor S. A memória completa do pior ponto de cada trecho aparece abaixo, ao escolher o trecho no explorador.').style.marginTop = '8px';
+  }
+  function modelExtras(det, r) {
+    if (!r.seats.length) return;
+    add(det, 'p', 'sub-h', 'Divisão no modelo de duas vigas · carga do pacote e torque por assento');
+    table(det, ['Assento', 'x (mm)', 'Ø × L (mm)', 'Ø cubo (mm)', 'Carga no eixo (kN)', 'Parcela', 'Momento (kN·m)', 'q pico (N/mm)', 'p flexão (MPa)', 'Torque (kN·m)', 'Parcela do torque'], r.seats.map(z => ({
+      cells: [z.name, `${f0(z.a)}–${f0(z.b)}`, `${fx(z.d, 1)} × ${fx(z.L, 1)}`, `${f0(z.Dh)}${z.DhAssumed ? ' (assumido)' : ''}`, fx(z.F / 1000, 2), `${fx(z.share * 100, 1)} %`, fx(z.Mc, 2), fx(z.qmax, 0), fx(z.p0, 2), fx(z.T / 1000, 2), `${fx(z.Tshare * 100, 1)} %`],
+      cls: ['l', '', '', z.DhAssumed ? 'dim-n' : '', z.F < 0 ? 'warn' : '', '', '', '', '', '', '']
+    })));
+    add(det, 'p', 'step-note', 'Carga positiva = o cubo empurra o eixo para baixo; negativa = o assento fica tracionado (só a interferência segura). Momento em torno do meio do assento. p flexão = 2q/(π·d), a comparar com a pressão do ajuste: enquanto for menor, o contato colado vale.').style.marginTop = '8px';
+    const S = r.sens;
+    if (!S) return;
+    add(det, 'p', 'sub-h', 'Sensibilidade às premissas do modelo');
+    const rowOf = (lab, o) => ({ cells: [lab, ...r.seats.map((z, k) => fx(o.seats[k] / 1000, 1)), fx(o.Mmax, 2), fx(o.span, 4), f0(o.nc1)] });
+    const rows = [rowOf(`Atual · contato × ${fx(S.base.kr, 2)} · cubo ${f0(S.base.c)} %`, S.base)].concat(S.rows.map(o => rowOf(`Contato × ${fx(o.kr, 2)} · cubo ${f0(o.c)} %`, o)));
+    if (S.dist) rows.push({ cells: ['Pacote distribuído no eixo (sem cubo)', ...r.seats.map(() => '—'), fx(S.dist.Mmax, 2), fx(S.dist.span, 4), f0(S.dist.nc1)], cls: ['l dim'] });
+    rows[0].sel = true;
+    table(det, ['Variante', ...r.seats.map(z => `${z.name} (kN)`), 'M máx. eixo (kN·m)', 'Flecha no vão (mm)', '1ª crítica (rpm)'], rows);
+    add(det, 'p', 'step-note', 'A rigidez do contato muda pouco a divisão; a rigidez do cubo (Ø externo e contribuição) muda bastante a divisão e a 1ª crítica. Informe o Ø externo do cubo de cada assento no editor para tirar a hipótese de 1,6 × d.').style.marginTop = '8px';
+  }
+  function verificationExtras(det, r) {
+    const box = add(det, 'div', 'vf-box');
+    const run = () => {
+      if (box.dataset.done) return;
+      box.dataset.done = '1';
+      const V = engine.verification(r);
+      const head = add(box, 'div', 'vf-head' + (V.ok ? '' : ' is-bad'));
+      add(head, 'span', 'cv-status-mark', V.ok ? '✓' : '!').setAttribute('aria-hidden', 'true');
+      const p = add(head, 'p');
+      add(p, 'b', '', V.ok ? `${V.n} de ${V.n} grandezas dentro da tolerância. ` : `${V.nBad} de ${V.n} grandezas fora da tolerância. `);
+      p.append(`${V.cases.length} casos com solução exata conhecida, calculados agora pelo mesmo código que calcula o eixo (${f0(V.ms)} ms).`);
+      for (const c of V.cases) {
+        const cb = add(box, 'div', 'vf-case');
+        add(cb, 'h4', '', `${c.ok ? '✓' : '✗'} ${c.group} · ${c.title}`);
+        add(cb, 'p', 'vf-what', `${c.what}. Referência: ${c.ref}.`);
+        table(cb, ['Grandeza', 'Exato', 'Calculado', 'Erro relativo', 'Tolerância', ''], c.rows.map(x => ({
+          cells: [`${x.label}${x.unit ? ` (${x.unit})` : ''}`, sigTxt(x.exact), sigTxt(x.calc), x.err < 1e-12 ? '< 10⁻¹²' : x.err.toExponential(1).replace('.', ','), x.tol.toExponential(0).replace('.', ','), x.ok ? '✓' : '✗'],
+          cls: ['l', '', '', '', 'dim-n', x.ok ? 'ok' : 'fail']
+        })), 'vf-tbl');
+        if (c.note) add(cb, 'p', 'step-note', c.note).style.marginTop = '6px';
+      }
+    };
+    if (det.open) idle(run);
+    det.addEventListener('toggle', () => { if (det.open) idle(run); });
+  }
+  const sigTxt = v => !finite(v) ? '—' : Math.abs(v) >= 1e4 ? fx(v, 1) : Math.abs(v) >= 100 ? fx(v, 3) : Math.abs(v) >= 1 ? fx(v, 5) : fx(v, 6);
   function criticalExtras(det, r) {
     const d = r.d, D = r.dyn;
     if (!D) return;
@@ -1125,7 +1185,7 @@
     add(det, 'p', 'step-note', 'SF = menor entre cisalhamento (Sy/√3 ÷ τ) e esmagamento (Sy ÷ p) com o torque de pico. Para a pressão no cubo, informe a altura da chaveta no editor. "Torque" é a parcela que cada chaveta leva sozinha: 100 % é o caso conservador do script.').style.marginTop = '8px';
     add(det, 'p', 'sub-h', `Ajustes por interferência · atrito ${fx(d.mu, 2)} · interferência ${fx(d.interf, 2)} ± ${fx(d.interfTol, 2)} mm`);
     table(det, ['Assento', 'Ø × L (mm)', 'Torque', 'p requerida (MPa)', 'p no pico', 'p gerada a n (MPa)', 'Transmite / T', 'Cubo σvm (MPa)'], r.fitRes.map(f => ({
-      cells: [f.name, `${fx(f.d, 1)} × ${fx(f.L, 1)}`, `${f0(f.share)} %`, fx(f.pReq, 2), fx(f.pReqPk, 2), f.hub ? `${fx(f.pN, 1)} (parado ${fx(f.p0, 1)})` : 'informe o cubo', f.hub ? `${fx(f.sfN, 2)} ×` : '—', f.hub ? f0(f.hubVm) : '—'],
+      cells: [f.name, `${fx(f.d, 1)} × ${fx(f.L, 1)}`, f.byFE ? `${fx(f.T / 1000, 1)} kN·m (MEF)` : `${f0(f.share)} %`, fx(f.pReq, 2), fx(f.pReqPk, 2), f.hub ? `${fx(f.pN, 1)} (parado ${fx(f.p0, 1)})` : 'informe o cubo', f.hub ? `${fx(f.sfN, 2)} ×` : '—', f.hub ? f0(f.hubVm) : '—'],
       cls: ['l', 'l', '', '', '', f.hub ? '' : 'dim', f.hub ? (f.ok ? 'ok' : 'fail') : '', '']
     })));
     add(det, 'p', 'step-note', `Pressão gerada por Lamé com a interferência mínima (${fx(d.interf - d.interfTol, 2)} mm) menos o alisamento (${fx(d.smooth, 3)} mm) e a perda por rotação: o cubo cresce mais que o eixo, ΔU = (3 + ν)·ρ·ω²·d·b²/(4E). Eixo maciço e cubo como disco livre; tensão no cubo com a interferência máxima.`).style.marginTop = '8px';
@@ -1142,7 +1202,7 @@
     r.bearings.forEach((b, i) => {
       const q = new URLSearchParams({ equipamento: (r.info.equipamento || '').slice(0, 60), tipo_maquina: d.machine === 'motor' ? 'Motor' : 'Gerador', potencia: String(Math.round(r.Pshaft * 100) / 100), unidade_potencia: 'kW', modo_rotacao: 'rpm', rotacao: String(d.speed), mancal_diametro: String(b.D), mancal_largura: String(Math.round(b.B * 100) / 100), carga_modo: 'carga', mancal_carga: String(Math.round(Math.abs(b.F))), aba: 'mancal' });
       const a = add(p, 'a', 'lab-link', `mancal ${b.name} →`);
-      a.href = `laboratorio.html#${q.toString()}`;
+      a.href = `laboratorio-mecanico.html#${q.toString()}`;
       if (i === 0) p.append(' · ');
     });
     p.append('.');
@@ -1167,7 +1227,7 @@
     add(det, 'p', 'sub-h', 'O que a triagem não cobre');
     const ul = add(det, 'ul', 'pend pend-scope');
     for (const t of [
-      'Resistência local de raios, ombros, furos e rasgos (Kt e Kf são estimados por trecho): para liberar, DIN 743 completa ou elementos finitos 3D.',
+      'Concentração de tensão em planos e furos transversais: a DIN 743 não traz fórmula; informe β na aba Entalhes (diagramas da norma ou MEF 3D).',
       'Torque transitório real: curto-circuito, ressincronização e torcional do conjunto turbina–gerador–acoplamento.',
       'Críticas amortecidas e efeito giroscópico: a análise aqui é não amortecida, com mancais rígidos ou molas lineares.',
       'Pressão gerada nos ajustes sem o Ø do cubo; fixadores, furo axial e a montagem do pacote.',
@@ -1467,14 +1527,15 @@
     ['Qualidade de balanceamento', 'Uper = 1000·G·m/ω; G 2,5 para máquinas elétricas acima de 950 rpm; divisão nos planos dos mancais com limites de 30 % e 70 % para rotor entre mancais.', 'ISO 1940-1 / ISO 21940-11, cl. 6 e 7'],
     ['Sobrevelocidade', 'Ensaio de sobrevelocidade das máquinas girantes; 1,2 × a rotação máxima na maioria dos casos.', 'IEC 60034-1'],
     ['Ajuste por interferência', 'Pressão de Lamé entre eixo e cubo, perda por alisamento das rugosidades e perda por rotação do cubo.', 'DIN 7190 · Shigley, cap. 3'],
-    ['Resistência local de eixos', 'Fatores de entalhe por forma, tamanho e acabamento para liberar o eixo; a triagem aqui não substitui essa verificação.', 'DIN 743-1 a 4']
+    ['Resistência de eixos pela DIN 743', 'Fatores de tamanho (K1, K2, K3), rugosidade (KF), entalhe (α, G′, n, β) para ombros, rasgos de chaveta e ajustes prensados; casos de carga 1 e 2; S_D e S_F. Conferido contra o exemplo do Beiblatt 1.', 'DIN 743-1, -2 e -3:2012 · DIN 743 Beiblatt 1'],
+    ['Cubo nos assentos e massa de Timoshenko', 'Duas vigas ligadas por contato elástico distribuído (Winkler) só nos assentos; massa consistente do próprio elemento de Timoshenko, que converge para a solução exata das frequências.', 'Przemieniecki (1968) · Friedman & Kosmatka (1993) · Hetényi, Beams on Elastic Foundation']
   ];
   function refsExtras(det) {
     const box = add(det, 'div', 'refs');
     for (const [t, p, s] of REFS) { const c = add(box, 'div', 'ref'); add(c, 'strong', '', t); add(c, 'p', '', p); add(c, 'span', '', s); }
     const sc = add(det, 'p', 'scope');
     add(sc, 'b', '', 'Escopo. ');
-    sc.append('Porte do calcular.py (com o método do script, mesmos números com as mesmas premissas) com acréscimos: estática por elementos finitos de viga com estudo de convergência da malha, caminho do torque, critérios de fadiga, Se por Marin, fator de pico admissível, flecha no vão e inclinação nos mancais, críticas por elementos finitos com mapa de rigidez e rigidez magnética, balanceamento ISO 1940, pressões nas chavetas, Lamé nos ajustes e pressão específica nos colos. Triagem: não libera o eixo.');
+    sc.append('Eixo e cubo do pacote por elementos finitos de viga de Timoshenko ligados nos assentos (divisão da carga e do torque pelo modelo), torção por elementos finitos, resistência pela DIN 743 em cada entalhe (ou Shigley por trecho), casos de verificação contra soluções exatas, convergência da malha, críticas com mapa de rigidez e rigidez magnética, balanceamento ISO 1940, chavetas, Lamé nos ajustes e pressão nos colos. Com o pacote distribuído, Shigley e torque integral, reproduz o calcular.py.');
   }
   function sheetSection(det, r) {
     if (!drawing) { add(det, 'p', 'step-note', 'Módulo de desenho não carregado.'); return; }
@@ -1514,13 +1575,16 @@
   }
 
   const SECTIONS = [
-    ['torque', 'Potência e torque', 'Da FTD à potência no eixo; torque nominal, de pico e ângulo de torção.'],
+    ['torque', 'Potência e torque', 'Da FTD à potência no eixo; torque nominal, de pico e ondulação.'],
+    ['modelo', 'Modelo e caminho da carga', 'Eixo e cubo do pacote em duas vigas, ligados só nos assentos: quanto da carga e do torque passa por cada assento, e quanto isso depende das premissas.'],
     ['cargas', 'Massas e cargas', 'Peso de cada trecho, massa do rotor distribuída, força magnética e acoplamento.'],
     ['reacoes', 'Reações nos mancais', 'Equilíbrio de forças e de momentos com apoios simples em A e B.'],
     ['esforcos', 'Esforços ao longo do eixo', 'Momento fletor por superposição, cortante e momentos nos mancais.'],
-    ['trechos', 'Coeficientes por trecho e Ø mínimo', 'Von Mises com pico e Kt no escoamento; flexão alternada e torque constante na fadiga.'],
+    ['torcao', 'Torção e caminho do torque', 'MEF de torção: o torque entra no acoplamento, passa do eixo para o cubo pelos assentos e sai no pacote.'],
+    ['trechos', 'Resistência por ponto e por trecho', 'DIN 743 em cada ombro, rasgo de chaveta, borda de ajuste, entalhe informado e seção lisa.'],
     ['flecha', 'Flecha e inclinação', 'Dupla integração de M/(E·I) com flecha zero nos mancais, conferida por elementos finitos.'],
-    ['mef', 'Elementos finitos e malha', 'Discretização, malha com refinos e nós pedidos, resultados em cada nó, comparação com o script e estudo de convergência.'],
+    ['mef', 'Elementos finitos e malha', 'Discretização, malha com refinos e nós pedidos, resultados em cada nó, comparação com a solução analítica e estudo de convergência.'],
+    ['verificacao', 'Casos de verificação', 'Soluções exatas conhecidas calculadas pelo mesmo código do MEF e da DIN 743: erro e tolerância de cada grandeza.'],
     ['criticas', 'Velocidades críticas', 'Viga de Timoshenko em elementos finitos: mancais rígidos, elásticos e rigidez magnética.'],
     ['balanceamento', 'Balanceamento', 'Desbalanceamento residual admissível (ISO 1940) e força girante nos mancais.'],
     ['interfaces', 'Chavetas e ajustes', 'Cisalhamento e esmagamento das chavetas; pressão requerida e gerada nos ajustes.'],
@@ -1530,7 +1594,7 @@
     ['refs', 'Referências', 'Shigley, Bathe, Reddy, Roache, ISO 1940, IEC 60034-1, DIN 7190 e DIN 743.'],
     ['desenho', 'Folha A3 · opcional', 'Eixo em escala, diagramas, tabelas e carimbo. Abra para gerar a folha.']
   ];
-  const SEC_DEFAULT_CLOSED = new Set(['refs', 'desenho', 'pendencias']);
+  const SEC_DEFAULT_CLOSED = new Set(['refs', 'desenho', 'pendencias', 'verificacao']);
   // textos de abertura que dependem do método e da teoria de viga
   function sectionIntro(id, r, intro) {
     const d = r.d, mef = r.method === 'mef';
@@ -1544,10 +1608,13 @@
     const d = r.d, nW = r.checks.filter(c => c.sev === 'warn').length, nF = r.checks.filter(c => c.sev === 'fail').length, D = r.dyn?.design;
     return {
       torque: ['T · Tpico', `${fx(r.T / 1000, 2)} · ${fx(r.Tpk / 1000, 1)} kN·m`],
+      modelo: ['Assentos', r.seats.length ? `${r.seats.map(z => fx(z.F / 1000, 0)).join(' · ')} kN` : 'distribuído'],
+      torcao: ['Giro', `${fx(r.twist * 180 / Math.PI, 3)}°`],
+      verificacao: ['Casos', 'abra para rodar'],
       cargas: ['Massa girante', `${f0(r.mass.total)} kg`],
       reacoes: ['RA · RB', `${fx(r.RA / 1000, 1)} · ${fx(r.RB / 1000, 1)} kN`],
       esforcos: ['Mmáx', `${fx(Math.abs(r.Mmax.v) / 1e6, 2)} kN·m`],
-      trechos: ['Abaixo', r.fails.length ? r.fails.map(s => s.code).join(', ') : 'nenhum'],
+      trechos: [r.strength.method === 'din743' ? 'S mín. · DIN 743' : 'Abaixo', r.strength.method === 'din743' && r.dinCrit ? fsf(Math.min(r.dinCrit.SD, r.dinCrit.SF)) : r.fails.length ? r.fails.map(s => s.code).join(', ') : 'nenhum'],
       flecha: ['Vão · ponta', `${fx(r.defl.span, 3)} · ${fx(r.defl.max, 3)} mm`],
       mef: ['Malha', r.fe && r.fe.ok ? `${f0(r.fe.info.ne)} el. · ${r.fe.refine ? (Math.max(r.fe.refine.dSpan, r.fe.refine.dTh, r.fe.refine.dM, finite(r.fe.refine.dNc1) ? r.fe.refine.dNc1 : 0) * 100 <= d.convTol ? 'convergida' : 'refinar') : d.beam}` : '—'],
       criticas: ['1ª crítica', D && D.ok ? `${f0(D.rpm[0])} rpm` : '—'],
@@ -1613,9 +1680,11 @@
       const key = add(sm, 'div', 'sec-key');
       add(key, 'small', '', kl);
       add(key, 'b', '', kv);
-      const steps = r.steps.filter(x => x.section === id);
+      const steps = r.steps.filter(x => x.section === id || (id === 'trechos' && x.section === 'din743'));
       if (steps.length) { const list = add(det, 'div', 'steps'); for (const st of steps) stepRow(list, st); }
-      if (id === 'trechos') sectionsTable(det, r);
+      if (id === 'trechos') { if (r.strength.method === 'din743') dinTable(det, r); sectionsTable(det, r); }
+      if (id === 'modelo') modelExtras(det, r);
+      if (id === 'verificacao') verificationExtras(det, r);
       if (id === 'mef') mefExtras(det, r);
       if (id === 'criticas') criticalExtras(det, r);
       if (id === 'balanceamento') balanceExtras(det, r);
