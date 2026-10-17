@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Laboratório elétrico: a partir dos dados da FTD, calcula a bobina pré-formada do estator conforme o Design de Bobinas (condutor, ranhura, violino, resistências, cobre) e gera o desenho da bobina.">
+  <meta name="theme-color" content="#09131f">
+  <meta name="color-scheme" content="dark light">
+  <title>Laboratório elétrico · Bobina do estator | Vinicius Gandra</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2309131f'/%3E%3Cpath d='M8 36c7-25 13 25 20 0s13-25 20 0 9 4 12-8' fill='none' stroke='%23f5ad69' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <script>try { var t = localStorage.getItem('vg-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/electrical.css">
+  <link rel="stylesheet" href="assets/css/site-labs.css">
+  <script defer src="assets/js/electrical-engine.js"></script>
+  <script defer src="assets/js/electrical-drawing.js"></script>
+  <script defer src="assets/js/electrical-hmi.js"></script>
+  <script defer src="assets/js/electrical-app.js"></script>
+  <script defer src="assets/js/site-labs.js"></script>
+</head>
+<body class="electrical-app">
+  <a class="e-skip" href="#e-output">Pular para o resultado</a>
+
+  <header class="e-appbar">
+    <a class="e-brand" href="../index.html" aria-label="Vinicius Gandra — voltar ao portfólio">VG<b>.</b></a>
+    <a class="e-back" href="../index.html" title="Voltar ao portfólio"><span aria-hidden="true">←</span><span class="e-back-label">Portfólio</span></a>
+    <span class="e-header-divider" aria-hidden="true"></span>
+    <div class="e-appbar-title"><span class="overline">Laboratório elétrico</span><strong>Bobina do estator · FTD → máquina</strong></div>
+    <div class="e-actions" aria-label="Ações">
+      <button class="e-act" id="e-reset" type="button" title="Preencher com a FTD de exemplo (10.000 kVA, 13,8 kV)"><span aria-hidden="true">↺</span><span class="e-act-label">Exemplo</span></button>
+      <button class="e-act" id="e-clear" type="button" title="Apagar os dados da FTD para digitar outra"><span aria-hidden="true">⌫</span><span class="e-act-label">Limpar</span></button>
+      <button class="e-act" id="e-copy" type="button" title="Copiar o resumo da bobina"><span aria-hidden="true">⧉</span><span class="e-act-label">Copiar</span></button>
+      <button class="e-act e-act-primary" id="e-print" type="button" title="Imprimir ou salvar em PDF"><span aria-hidden="true">▣</span><span class="e-act-label">PDF</span></button>
+      <button class="e-act e-act-icon" id="e-theme" type="button" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro"><span class="e-theme-sun" aria-hidden="true">☼</span><span class="e-theme-moon" aria-hidden="true">☾</span></button>
+    </div>
+  </header>
+
+  <nav class="e-areas" aria-label="Laboratórios">
+    <a class="e-area" href="laboratorio-mecanico.html"><span class="e-area-number">01</span> Mecânica <span class="e-area-detail">· eixo e mancal</span></a>
+    <a class="e-area" href="laboratorio-eletrico.html" aria-current="page"><span class="e-area-number">02</span> Elétrica <span class="e-area-detail">· bobina do estator</span></a>
+    <a class="e-area" href="laboratorio-termico.html"><span class="e-area-number">03</span> Térmica <span class="e-area-detail">· trocador ar–água</span></a>
+    <a class="e-area" href="laboratorio-eixo.html"><span class="e-area-number">04</span> Eixos <span class="e-area-detail">· rotor completo</span></a>
+    <a class="e-area" href="laboratorio-maquinas-sincronas.html"><span class="e-area-number">05</span> Síncrona <span class="e-area-detail">· rotor e campo</span></a>
+  </nav>
+
+  <div class="e-workspace" id="e-workspace" data-view="resultado">
+    <aside class="e-inputs" id="e-inputs" aria-labelledby="e-form-title">
+      <div class="e-inputs-head">
+        <div>
+          <p class="e-eyebrow">Digite os dados da FTD</p>
+          <h2 id="e-form-title">Dados de entrada</h2>
+        </div>
+        <div class="e-progress" id="e-progress" aria-live="polite"></div>
+      </div>
+      <form id="e-form" novalidate></form>
+      <p class="e-inputs-foot">A etiqueta de cada campo é o rótulo na FTD. Os grupos 05 e 06 trazem medidas da máquina (POP-MTR-03005) e premissas de fabricação que a FTD não traz; já vêm com valores típicos. Vírgula ou ponto decimal.</p>
+    </aside>
+
+    <main class="e-results" id="e-main">
+      <div class="e-intro">
+        <p class="e-eyebrow">Máquinas elétricas · bobina pré-formada</p>
+        <h1>Laboratório <em>elétrico.</em></h1>
+      </div>
+      <div id="e-error" class="e-alert e-alert-fail" role="alert" hidden></div>
+      <div id="e-output" aria-live="off"></div>
+      <noscript><div class="e-alert e-alert-fail"><strong>JavaScript desativado.</strong> O laboratório calcula no próprio navegador e precisa de JavaScript.</div></noscript>
+    </main>
+  </div>
+
+  <div class="e-peek" id="e-peek" hidden>
+    <button type="button" id="e-peek-btn"><span class="e-peek-label">Condutor</span><strong id="e-peek-value">—</strong><span class="e-peek-go" aria-hidden="true">→</span></button>
+  </div>
+  <nav class="e-mobilebar" aria-label="Alternar entre dados e resultado">
+    <button type="button" data-view="dados" aria-pressed="false"><span class="e-mb-icon" aria-hidden="true">✎</span>Dados da FTD<span class="e-mb-badge" id="e-mb-badge" hidden></span></button>
+    <button type="button" data-view="resultado" aria-pressed="true"><span class="e-mb-icon" aria-hidden="true">◫</span>Bobina</button>
+  </nav>
+  <div class="e-toast" id="e-toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

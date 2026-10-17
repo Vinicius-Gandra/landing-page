@@ -1,0 +1,73 @@
+/* Navegação e proporções compartilhadas pelos cinco laboratórios. */
+:root {
+  --gut: clamp(16px, 3vw, 36px);
+  --appbar-h: 56px;
+  --lab-areas-h: 40px;
+  --inputs-w: 340px;
+  --side-w: 340px;
+}
+
+.lab-areas-label { display: none; }
+.lab-areas, .e-areas, .t-areas, .s-areas {
+  height: 40px;
+  min-height: 40px;
+  gap: 2px;
+  padding: 0 var(--gut, 36px) 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.lab-area, .e-area, .t-area, .s-area {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-bottom: 2px solid transparent;
+  font-size: .76rem;
+  font-weight: 650;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.lab-area[aria-current="page"], .e-area[aria-current="page"],
+.t-area[aria-current="page"], .s-area[aria-current="page"] {
+  border-bottom-color: var(--accent, var(--acc));
+}
+
+@media (min-width: 1800px) {
+  :root { --inputs-w: 360px; --side-w: 360px; }
+}
+@media (max-width: 1280px) {
+  :root { --inputs-w: 320px; --side-w: 320px; }
+}
+@media (max-width: 1100px) {
+  :root { --inputs-w: 300px; --side-w: 300px; }
+}
+@media (max-width: 1050px) {
+  :root { --appbar-h: 54px; --lab-areas-h: 38px; --hh: 54px; --ah: 38px; }
+  .lab-areas, .e-areas, .t-areas, .s-areas {
+    height: 38px;
+    min-height: 38px;
+    padding-inline: 8px;
+  }
+  .lab-area, .e-area, .t-area, .s-area {
+    min-height: 38px;
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 900px) {
+  .lab-area-detail, .e-area-detail, .t-area-detail, .s-area-detail { display: none; }
+}
+
+/* Transição entre documentos no mesmo domínio, quando o navegador a suporta. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: .12s ease-in both lab-leave; }
+::view-transition-new(root) { animation: .18s ease-out both lab-enter; }
+@keyframes lab-leave { to { opacity: 0; } }
+@keyframes lab-enter { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+@media print {
+  .lab-areas, .e-areas, .t-areas, .s-areas { display: none !important; }
+}
